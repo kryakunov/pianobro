@@ -1,22 +1,62 @@
-/** Названия для интерфейса (русская классическая система) */
-const NOTE_NAMES_RU = [
+/** Названия с диезами */
+const NOTE_NAMES_SHARP = [
   'До', 'До-диез', 'Ре', 'Ре-диез', 'Ми', 'Фа', 'Фа-диез', 'Соль', 'Соль-диез', 'Ля', 'Ля-диез', 'Си',
 ];
+
+/** Названия чёрных клавиш с бемолями */
+const FLAT_NAMES = {
+  1: 'Ре-бемоль',
+  3: 'Ми-бемоль',
+  6: 'Соль-бемоль',
+  8: 'Ля-бемоль',
+  10: 'Си-бемоль',
+};
+
+/** Позиция на стане для бемольного написания (белая нота строки) */
+const FLAT_STAFF_MIDI = {
+  1: 62, 3: 64, 6: 67, 8: 69, 10: 71,
+};
 
 /** Английские названия — только для MIDI/soundfont */
 const NOTE_NAMES_EN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-export function midiToName(midi) {
-  return NOTE_NAMES_RU[midi % 12];
+export function isBlackKey(midi) {
+  return [1, 3, 6, 8, 10].includes(midi % 12);
+}
+
+/**
+ * @param {'sharp'|'flat'} spelling
+ */
+export function midiToName(midi, spelling = 'sharp') {
+  const pc = midi % 12;
+  if (isBlackKey(midi) && spelling === 'flat') {
+    return FLAT_NAMES[pc];
+  }
+  return NOTE_NAMES_SHARP[pc];
+}
+
+/**
+ * Данные для отрисовки на нотном стане.
+ * @param {'sharp'|'flat'} spelling
+ */
+export function midiToStaffNote(midi, spelling = 'sharp') {
+  const pc = midi % 12;
+  const name = midiToName(midi, spelling);
+
+  if (!isBlackKey(midi)) {
+    return { staffMidi: midi, accidental: null, name };
+  }
+
+  if (spelling === 'flat') {
+    return { staffMidi: FLAT_STAFF_MIDI[pc], accidental: 'flat', name };
+  }
+
+  return { staffMidi: midi, accidental: 'sharp', name };
 }
 
 export function midiToSoundFontName(midi) {
   const octave = Math.floor(midi / 12) - 1;
   return NOTE_NAMES_EN[midi % 12] + octave;
-}
-
-export function isBlackKey(midi) {
-  return [1, 3, 6, 8, 10].includes(midi % 12);
 }
 
 export const PIANO_START = 21;

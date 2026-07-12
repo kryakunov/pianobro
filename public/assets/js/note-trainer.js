@@ -29,12 +29,28 @@ export const NOTE_LEVELS = [
     id: 'with-sharps',
     title: 'С диезами',
     desc: 'Все ноты C4–C5',
+    spelling: 'sharp',
+    buildPool: () => rangePool(60, 72, false),
+  },
+  {
+    id: 'with-flats',
+    title: 'С бемолями',
+    desc: 'Чёрные клавиши как бемоли',
+    spelling: 'flat',
     buildPool: () => rangePool(60, 72, false),
   },
   {
     id: 'wide',
     title: 'Широкий диапазон',
     desc: 'C3–C5 с диезами',
+    spelling: 'sharp',
+    buildPool: () => rangePool(48, 72, false),
+  },
+  {
+    id: 'wide-flats',
+    title: 'Широкий с бемолями',
+    desc: 'C3–C5, написание бемолями',
+    spelling: 'flat',
     buildPool: () => rangePool(48, 72, false),
   },
 ];
@@ -83,6 +99,7 @@ export class NoteTrainer {
     if (!level) return;
     this.level = level;
     this.pool = level.buildPool();
+    this.spelling = level.spelling ?? 'sharp';
     this.reset();
   }
 
@@ -122,7 +139,7 @@ export class NoteTrainer {
       this.bestStreak = Math.max(this.bestStreak, this.streak);
       this.total++;
       this.piano.flashCorrect(midi);
-      this.onFeedback?.(`Верно! ${midiToName(midi)}`, 'correct');
+      this.onFeedback?.(`Верно! ${midiToName(midi, this.spelling)}`, 'correct');
       this._nextNote();
       this._emitUpdate();
       return true;
@@ -133,7 +150,7 @@ export class NoteTrainer {
     this.total++;
     this.piano.flashWrong(midi);
     this.onFeedback?.(
-      `Неверно: ${midiToName(midi)}. Нужно ${midiToName(this.currentMidi)}`,
+      `Неверно: ${midiToName(midi, this.spelling)}. Нужно ${midiToName(this.currentMidi, this.spelling)}`,
       'wrong',
     );
     this._emitUpdate();
@@ -149,7 +166,7 @@ export class NoteTrainer {
     this.currentMidi = pickRandom(this.pool, prev);
     this.piano.clearStates(['correct', 'wrong', 'pressed']);
     this.piano.setTarget(this.currentMidi);
-    this.onNoteChange?.(this.currentMidi);
+    this.onNoteChange?.(this.currentMidi, { spelling: this.spelling });
   }
 
   _emitUpdate() {
