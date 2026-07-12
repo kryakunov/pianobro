@@ -1,0 +1,24 @@
+{
+    "id": "ode-to-joy",
+    "title": "Ода к радости",
+    "composer": "Beethoven",
+    "difficulty": "beginner",
+    "tempo": 110,
+    "notes": [
+        {"midi": 64, "duration": 400},
+        {"midi": 64, "duration": 400},
+        {"midi": 65, "duration": 400},
+        {"midi": 67, "duration": 400},
+        {"midi": 67, "duration": 400},
+        {"midi": 65, "duration": 400},
+        {"midi": 64, "duration": 400},
+        {"midi": 62, "duration": 400},
+        {"midi": 60, "duration": 400},
+        {"midi": 60, "duration": 400},
+        {"midi": 62, "duration": 400},
+        {"midi": 64, "duration": 400},
+        {"midi": 64, "duration": 600},
+        {"midi": 62, "duration": 200},
+        {"midi": 62, "duration": 800}
+    ]
+}

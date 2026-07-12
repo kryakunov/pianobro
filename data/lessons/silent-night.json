@@ -1,0 +1,28 @@
+{
+    "id": "silent-night",
+    "title": "Тихая ночь",
+    "composer": "Gruber",
+    "difficulty": "beginner",
+    "tempo": 90,
+    "notes": [
+        {"midi": 67, "duration": 600},
+        {"midi": 69, "duration": 200},
+        {"midi": 67, "duration": 400},
+        {"midi": 64, "duration": 800},
+        {"midi": 67, "duration": 600},
+        {"midi": 69, "duration": 200},
+        {"midi": 67, "duration": 400},
+        {"midi": 64, "duration": 800},
+        {"midi": 76, "duration": 800},
+        {"midi": 76, "duration": 800},
+        {"midi": 79, "duration": 800},
+        {"midi": 79, "duration": 800},
+        {"midi": 67, "duration": 600},
+        {"midi": 69, "duration": 200},
+        {"midi": 67, "duration": 400},
+        {"midi": 69, "duration": 200},
+        {"midi": 71, "duration": 400},
+        {"midi": 69, "duration": 400},
+        {"midi": 64, "duration": 1200}
+    ]
+}

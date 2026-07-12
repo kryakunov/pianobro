@@ -1,0 +1,32 @@
+{
+    "id": "canon-in-d",
+    "title": "Канон ре мажор",
+    "composer": "Pachelbel",
+    "difficulty": "intermediate",
+    "tempo": 80,
+    "notes": [
+        {"midi": 74, "duration": 500},
+        {"midi": 71, "duration": 500},
+        {"midi": 69, "duration": 500},
+        {"midi": 67, "duration": 500},
+        {"midi": 66, "duration": 500},
+        {"midi": 67, "duration": 500},
+        {"midi": 69, "duration": 500},
+        {"midi": 71, "duration": 500},
+        {"midi": 74, "duration": 500},
+        {"midi": 71, "duration": 500},
+        {"midi": 69, "duration": 500},
+        {"midi": 67, "duration": 500},
+        {"midi": 66, "duration": 500},
+        {"midi": 67, "duration": 500},
+        {"midi": 69, "duration": 500},
+        {"midi": 71, "duration": 500},
+        {"midi": 74, "duration": 750},
+        {"midi": 73, "duration": 250},
+        {"midi": 71, "duration": 500},
+        {"midi": 69, "duration": 500},
+        {"midi": 67, "duration": 500},
+        {"midi": 66, "duration": 500},
+        {"midi": 67, "duration": 1000}
+    ]
+}

@@ -1,0 +1,23 @@
+{
+    "id": "twinkle",
+    "title": "Twinkle Twinkle Little Star",
+    "composer": "Traditional",
+    "difficulty": "beginner",
+    "tempo": 100,
+    "notes": [
+        {"midi": 60, "duration": 400},
+        {"midi": 60, "duration": 400},
+        {"midi": 67, "duration": 400},
+        {"midi": 67, "duration": 400},
+        {"midi": 69, "duration": 400},
+        {"midi": 69, "duration": 400},
+        {"midi": 67, "duration": 800},
+        {"midi": 65, "duration": 400},
+        {"midi": 65, "duration": 400},
+        {"midi": 64, "duration": 400},
+        {"midi": 64, "duration": 400},
+        {"midi": 62, "duration": 400},
+        {"midi": 62, "duration": 400},
+        {"midi": 60, "duration": 800}
+    ]
+}

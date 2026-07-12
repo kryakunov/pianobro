@@ -1,0 +1,33 @@
+{
+    "id": "fur-elise-duo",
+    "title": "К Элизе (две руки)",
+    "composer": "Beethoven",
+    "difficulty": "advanced",
+    "tempo": 90,
+    "twoHands": true,
+    "events": [
+        {"duration": 350, "notes": [{"midi": 52, "hand": "left"}, {"midi": 76, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 75, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 52, "hand": "left"}, {"midi": 76, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 75, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 47, "hand": "left"}, {"midi": 76, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 71, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 74, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 72, "hand": "right"}]},
+        {"duration": 500, "notes": [{"midi": 40, "hand": "left"}, {"midi": 69, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 48, "hand": "left"}]},
+        {"duration": 350, "notes": [{"midi": 60, "hand": "left"}, {"midi": 64, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 69, "hand": "right"}]},
+        {"duration": 500, "notes": [{"midi": 45, "hand": "left"}, {"midi": 64, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 69, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 52, "hand": "left"}, {"midi": 76, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 75, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 52, "hand": "left"}, {"midi": 76, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 75, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 47, "hand": "left"}, {"midi": 76, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 71, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 74, "hand": "right"}]},
+        {"duration": 350, "notes": [{"midi": 72, "hand": "right"}]},
+        {"duration": 700, "notes": [{"midi": 40, "hand": "left"}, {"midi": 69, "hand": "right"}]}
+    ]
+}

@@ -1,0 +1,32 @@
+{
+    "id": "moonlight-duo",
+    "title": "Лунная соната (две руки)",
+    "composer": "Beethoven",
+    "difficulty": "advanced",
+    "tempo": 52,
+    "twoHands": true,
+    "events": [
+        {"duration": 600, "notes": [{"midi": 49, "hand": "left"}, {"midi": 61, "hand": "left"}, {"midi": 64, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 73, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 49, "hand": "left"}, {"midi": 61, "hand": "left"}, {"midi": 64, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 76, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 49, "hand": "left"}, {"midi": 61, "hand": "left"}, {"midi": 64, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 80, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 49, "hand": "left"}, {"midi": 61, "hand": "left"}, {"midi": 64, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 76, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 48, "hand": "left"}, {"midi": 60, "hand": "left"}, {"midi": 64, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 73, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 48, "hand": "left"}, {"midi": 60, "hand": "left"}, {"midi": 64, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 76, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 48, "hand": "left"}, {"midi": 60, "hand": "left"}, {"midi": 64, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 78, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 48, "hand": "left"}, {"midi": 60, "hand": "left"}, {"midi": 64, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 76, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 43, "hand": "left"}, {"midi": 59, "hand": "left"}, {"midi": 62, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 74, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 43, "hand": "left"}, {"midi": 59, "hand": "left"}, {"midi": 62, "hand": "left"}]},
+        {"duration": 600, "notes": [{"midi": 72, "hand": "right"}]},
+        {"duration": 600, "notes": [{"midi": 41, "hand": "left"}, {"midi": 57, "hand": "left"}, {"midi": 60, "hand": "left"}]},
+        {"duration": 1200, "notes": [{"midi": 69, "hand": "right"}]}
+    ]
+}
