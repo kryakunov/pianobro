@@ -1,6 +1,6 @@
 {
     "name": "piano/trainer",
-    "description": "Веб-приложение для обучения игре на цифровом пианино",
+    "description": "Piano Bro — онлайн обучение игре на цифровом пианино",
     "type": "project",
     "require": {
         "php": ">=8.1"

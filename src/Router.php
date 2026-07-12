@@ -53,6 +53,16 @@ final class Router
       return;
     }
 
+    if ($path === '/robots.txt' && $method === 'GET') {
+      $this->serveStatic('/robots.txt');
+      return;
+    }
+
+    if ($path === '/favicon.ico' && $method === 'GET') {
+      $this->serveStatic('/assets/favicon.svg');
+      return;
+    }
+
     if ($path !== '/' && !str_starts_with($path, '/assets/')) {
       http_response_code(404);
       echo '404 Not Found';
