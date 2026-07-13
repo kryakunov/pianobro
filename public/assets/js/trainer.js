@@ -1,4 +1,3 @@
-import { midiToName } from './notes.js';
 import { normalizeLesson, eventMidis, eventLabel } from './lesson-utils.js';
 
 export class MelodyTrainer {
@@ -17,8 +16,17 @@ export class MelodyTrainer {
     this.onFeedback = null;
   }
 
-  loadLesson(lesson) {
-    this.lesson = normalizeLesson(lesson);
+  loadLesson(lesson, { sessionLimit = null } = {}) {
+    const normalized = normalizeLesson(lesson);
+    if (sessionLimit && normalized.events.length > sessionLimit) {
+      this.lesson = {
+        ...normalized,
+        events: normalized.events.slice(0, sessionLimit),
+        eventCount: sessionLimit,
+      };
+    } else {
+      this.lesson = normalized;
+    }
     this.reset();
   }
 
@@ -71,7 +79,7 @@ export class MelodyTrainer {
       this.wrong++;
       this.piano.flashWrong(midi);
       this.onFeedback?.(
-        `Неверно: ${midiToName(midi)}. Нужно: ${eventLabel(event)}`,
+        'Неверно',
         'wrong',
       );
       this._emitUpdate();
@@ -86,7 +94,7 @@ export class MelodyTrainer {
     if (this._held.size < expected.size) {
       const remaining = [...expected].filter((m) => !this._held.has(m));
       this.onFeedback?.(
-        `Верно! Ещё: ${remaining.map(midiToName).join(', ')}`,
+        `Верно! Ещё: ${remaining.length}`,
         'correct',
       );
       this._emitUpdate();
@@ -95,7 +103,7 @@ export class MelodyTrainer {
 
     this.correct++;
     this.results[this.index] = 'correct';
-    this.onFeedback?.(`Верно! ${eventLabel(event)}`, 'correct');
+    this.onFeedback?.('Верно!', 'correct');
     this.index++;
     this._held.clear();
     this._emitUpdate();
@@ -132,7 +140,12 @@ export class MelodyTrainer {
       ? Math.round((this.correct / (this.correct + this.wrong)) * 100)
       : 0;
     this.onFeedback?.(`Мелодия завершена! Точность: ${accuracy}%`, 'complete');
-    this.onComplete?.({ correct: this.correct, wrong: this.wrong, accuracy });
+    this.onComplete?.({
+      correct: this.correct,
+      wrong: this.wrong,
+      accuracy,
+      total: this.lesson?.events?.length ?? 0,
+    });
     this._emitUpdate();
   }
 

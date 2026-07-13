@@ -4,44 +4,40 @@ import { MicPitchInput } from './mic-pitch.js';
 import { MelodyTrainer } from './trainer.js';
 import { NoteTrainer, NOTE_LEVELS } from './note-trainer.js';
 import { StaffView } from './staff.js';
-import { MelodyPlayer } from './melody-player.js';
-import { normalizeLesson, eventLabel } from './lesson-utils.js';
+import { normalizeLesson } from './lesson-utils.js';
 import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
+
+const SESSION_LIMIT = 10;
 
 const $ = (sel) => document.querySelector(sel);
 
 const els = {
-  sidebarMelody: $('#sidebar-melody'),
-  sidebarNotes: $('#sidebar-notes'),
-  modeTabs: document.querySelectorAll('.mode-tab'),
+  app: $('#app'),
+  mainHeader: $('#main-header'),
+  screenHome: $('#screen-home'),
+  screenMelodyPick: $('#screen-melody-pick'),
+  screenNotesPick: $('#screen-notes-pick'),
+  screenPractice: $('#screen-practice'),
+  btnGoMelodies: $('#btn-go-melodies'),
+  btnGoNotes: $('#btn-go-notes'),
+  btnBackMelody: $('#btn-back-melody'),
+  btnBackNotes: $('#btn-back-notes'),
+  btnBackPractice: $('#btn-back-practice'),
   lessonList: $('#lesson-list'),
   melodySearch: $('#melody-search'),
   midiUpload: $('#midi-upload'),
   btnMidiUpload: $('#btn-midi-upload'),
   difficultyTabs: document.querySelectorAll('.difficulty-tab'),
   levelList: $('#level-list'),
-  lessonTitle: $('#lesson-title'),
-  lessonMeta: $('#lesson-meta'),
-  statProgressLabel: $('#stat-progress-label'),
-  statProgress: $('#stat-progress'),
-  statCorrect: $('#stat-correct'),
-  statWrong: $('#stat-wrong'),
-  statBestWrap: $('#stat-best-wrap'),
-  statBest: $('#stat-best'),
-  statAccuracyWrap: $('#stat-accuracy-wrap'),
-  statAccuracy: $('#stat-accuracy'),
-  nextNotePanel: $('#next-note-panel'),
-  nextNoteName: $('#next-note-name'),
-  nextNoteHint: $('#next-note-hint'),
-  feedback: $('#feedback'),
+  practiceTitle: $('#practice-title'),
+  practiceProgress: $('#practice-progress'),
+  practiceFeedback: $('#practice-feedback'),
   staffViewport: $('#staff-viewport'),
+  practiceLayout: document.querySelector('.practice-layout'),
   pianoWrap: $('#piano-wrap'),
+  btnTogglePiano: $('#btn-toggle-piano'),
   piano: $('#piano'),
-  btnStart: $('#btn-start'),
-  btnPreview: $('#btn-preview'),
-  btnPause: $('#btn-pause'),
-  btnReset: $('#btn-reset'),
   btnConnectMidi: $('#btn-connect-midi'),
   btnConnectMic: $('#btn-connect-mic'),
   midiStatusText: $('#midi-status-text'),
@@ -52,103 +48,61 @@ const els = {
   midiDot: document.querySelector('.midi-dot'),
   toggleWait: $('#toggle-wait'),
   toggleKeyboard: $('#toggle-keyboard'),
-  togglePianoVisible: $('#toggle-piano-visible'),
   toggleMic: $('#toggle-mic'),
   controlsMelodyOnly: document.querySelector('.controls-melody-only'),
+  sessionModal: $('#session-modal'),
+  modalCorrect: $('#modal-correct'),
+  modalWrong: $('#modal-wrong'),
+  modalAccuracy: $('#modal-accuracy'),
+  btnModalRetry: $('#btn-modal-retry'),
+  btnModalPick: $('#btn-modal-pick'),
+  btnModalHome: $('#btn-modal-home'),
 };
 
+let currentScreen = 'home';
 let appMode = 'melody';
-let isPreviewing = false;
 let selectedLessonId = null;
 let selectedImportedId = null;
 let selectedLevelId = NOTE_LEVELS[0].id;
+let currentPracticeTitle = '';
 let lessons = [];
 let remoteSearchResults = [];
 let remoteSearchDone = false;
 let searchQuery = '';
 let searchRequestId = 0;
 let selectedDifficultyFilter = 'all';
+let lastSessionStats = null;
 
 const piano = new PianoKeyboard(els.piano, PIANO_START, PIANO_END);
 const midi = new MidiInput();
 const micPitch = new MicPitchInput();
 const melodyTrainer = new MelodyTrainer(piano);
 const noteTrainer = new NoteTrainer(piano);
-const melodyPlayer = new MelodyPlayer();
 const staffView = new StaffView(els.staffViewport);
 
-function stopPreview() {
-  if (!isPreviewing) return;
-  melodyPlayer.stop();
-  isPreviewing = false;
-  piano.clearStates(['pressed', 'target', 'target-left', 'target-right']);
-  els.btnPreview.textContent = 'Прослушать';
-  els.btnPreview.classList.remove('btn--primary');
-  els.btnPreview.classList.add('btn--secondary');
-  els.btnStart.disabled = !melodyTrainer.lesson;
-  els.btnPause.disabled = true;
-  els.btnReset.disabled = !melodyTrainer.lesson;
-
-  if (melodyTrainer.lesson) {
-    staffView.update({ index: 0, running: false, paused: false, preview: false });
-    updateMelodyUI(melodyTrainer.state);
-  }
-}
-
-async function startPreview() {
-  const lesson = melodyTrainer.lesson;
-  if (!lesson?.events?.length) return;
-
-  if (micPitch.isActive) {
-    stopMicListening();
-    if (els.toggleMic) els.toggleMic.checked = false;
-  }
-
-  melodyTrainer.reset();
-  stopPreview();
-  isPreviewing = true;
-
-  els.btnPreview.textContent = 'Стоп';
-  els.btnPreview.classList.remove('btn--secondary');
-  els.btnPreview.classList.add('btn--primary');
-  els.btnStart.disabled = true;
-  els.btnPause.disabled = true;
-  els.btnReset.disabled = true;
-
-  els.nextNotePanel.querySelector('.next-note-panel__label').textContent = 'Сейчас играет';
-  showFeedback('Загрузка звуков пианино…', 'info');
-
-  melodyPlayer.onLoadState = (state) => {
-    if (state === 'loading') showFeedback('Загрузка звуков пианино…', 'info');
+function showScreen(name) {
+  currentScreen = name;
+  const screens = {
+    home: els.screenHome,
+    'melody-pick': els.screenMelodyPick,
+    'notes-pick': els.screenNotesPick,
+    practice: els.screenPractice,
   };
 
-  await melodyPlayer.play(lesson, {
-    onEventStart: (index, event) => {
-      els.nextNoteName.textContent = eventLabel(event);
-      els.nextNoteHint.textContent = `Шаг ${index + 1} из ${lesson.events.length}`;
-      piano.clearStates(['pressed', 'target', 'target-left', 'target-right']);
-      for (const n of event.notes) {
-        piano.pressKey(n.midi);
-      }
-      staffView.update({ index, running: true, paused: false, preview: true });
-    },
-    onEventEnd: (_index, event) => {
-      for (const n of event.notes) piano.releaseKey(n.midi);
-    },
-    onComplete: () => {
-      isPreviewing = false;
-      piano.clearStates(['pressed', 'target', 'target-left', 'target-right']);
-      els.btnPreview.textContent = 'Прослушать';
-      els.btnPreview.classList.remove('btn--primary');
-      els.btnPreview.classList.add('btn--secondary');
-      els.btnStart.disabled = false;
-      els.btnReset.disabled = false;
-      staffView.update({ index: lesson.events.length, running: false, paused: false, preview: false });
-      els.nextNoteName.textContent = '✓';
-      els.nextNoteHint.textContent = 'Прослушивание завершено';
-      showFeedback('Мелодия завершена. Теперь попробуйте сыграть сами!', 'complete');
-    },
-  });
+  for (const [key, el] of Object.entries(screens)) {
+    if (!el) continue;
+    const active = key === name;
+    el.hidden = !active;
+    el.classList.toggle('screen--active', active);
+  }
+
+  const isPractice = name === 'practice';
+  els.app.classList.toggle('app--practice', isPractice);
+  els.mainHeader.hidden = isPractice;
+  document.body.classList.toggle('body--practice', isPractice);
+
+  const midiPanel = $('#midi-panel');
+  if (midiPanel) midiPanel.hidden = name === 'home';
 }
 
 function setMidiStatus(state, text) {
@@ -170,11 +124,11 @@ function setMicStatus(active, text) {
 }
 
 function showFeedback(text, type) {
-  els.feedback.textContent = text;
-  els.feedback.className = 'feedback';
-  if (type === 'correct') els.feedback.classList.add('feedback--correct');
-  else if (type === 'wrong') els.feedback.classList.add('feedback--wrong');
-  else if (type === 'complete') els.feedback.classList.add('feedback--complete');
+  els.practiceFeedback.textContent = text;
+  els.practiceFeedback.className = 'practice-feedback';
+  if (type === 'correct') els.practiceFeedback.classList.add('practice-feedback--correct');
+  else if (type === 'wrong') els.practiceFeedback.classList.add('practice-feedback--wrong');
+  else if (type === 'complete') els.practiceFeedback.classList.add('practice-feedback--complete');
 }
 
 function escapeHtml(str) {
@@ -187,50 +141,89 @@ async function fetchJson(url) {
   return res.json();
 }
 
-function setMode(mode) {
-  appMode = mode;
-  els.modeTabs.forEach((tab) => {
-    tab.classList.toggle('mode-tab--active', tab.dataset.mode === mode);
-  });
-
-  const isMelody = mode === 'melody';
-  els.sidebarMelody.hidden = !isMelody;
-  els.sidebarNotes.hidden = isMelody;
-  els.btnPause.hidden = !isMelody;
-  els.btnPreview.hidden = !isMelody;
-  els.toggleWait.closest('label').hidden = !isMelody;
-  els.statProgressLabel.textContent = isMelody ? 'Прогресс' : 'Серия';
-  els.statBestWrap.hidden = isMelody;
-
-  if (isMelody) {
-    noteTrainer.stop();
-    stopPreview();
-    els.btnStart.textContent = 'Начать';
-    if (melodyTrainer.lesson) {
-      updateMelodyUI(melodyTrainer.state);
-    } else {
-      resetMelodyPanel();
-    }
+function updatePracticeProgress(state) {
+  if (appMode === 'melody') {
+    els.practiceProgress.textContent = `${Math.min(state.index, state.total)} / ${state.total}`;
   } else {
-    stopPreview();
-    melodyTrainer.reset();
-    noteTrainer.setLevel(selectedLevelId);
-    els.btnStart.disabled = false;
-    els.btnReset.disabled = false;
-    updateNoteUI(noteTrainer.state);
-    showFeedback('Выберите уровень и нажмите «Начать»', 'info');
+    els.practiceProgress.textContent = `${state.correct} / ${state.sessionLimit}`;
   }
 }
 
-function resetMelodyPanel() {
-  els.lessonTitle.textContent = 'Выберите урок';
-  els.lessonMeta.textContent = '';
-  els.nextNoteName.textContent = '—';
-  els.nextNoteHint.textContent = 'Выберите урок и нажмите «Начать»';
-  els.btnStart.disabled = true;
-  els.btnPreview.disabled = true;
-  els.btnReset.disabled = true;
+function updateMelodyUI(state) {
+  updatePracticeProgress(state);
+  staffView.update(state);
+}
+
+function updateNoteUI(state) {
+  updatePracticeProgress(state);
+}
+
+function showSessionModal(stats) {
+  lastSessionStats = stats;
+  els.modalCorrect.textContent = String(stats.correct);
+  els.modalWrong.textContent = String(stats.wrong);
+  els.modalAccuracy.textContent = `${stats.accuracy}%`;
+  els.sessionModal.hidden = false;
+}
+
+function hideSessionModal() {
+  els.sessionModal.hidden = true;
+}
+
+function setPianoVisible(visible) {
+  els.pianoWrap.hidden = !visible;
+  els.pianoWrap.classList.toggle('practice-keyboard--hidden', !visible);
+  els.practiceLayout?.classList.toggle('practice-layout--keyboard-hidden', !visible);
+  if (els.btnTogglePiano) {
+    els.btnTogglePiano.setAttribute('aria-expanded', String(visible));
+    const label = els.btnTogglePiano.querySelector('.practice-spoiler__label');
+    if (label) label.textContent = visible ? 'Скрыть клавиатуру' : 'Показать клавиатуру';
+  }
+  if (visible) {
+    requestAnimationFrame(() => {
+      piano.relayout();
+      if (appMode === 'melody' && melodyTrainer.lesson) {
+        staffView.loadLesson(melodyTrainer.lesson);
+        staffView.update(melodyTrainer.state);
+      } else if (appMode === 'notes' && noteTrainer.currentMidi !== null) {
+        staffView.showDrillNote(noteTrainer.currentMidi, noteTrainer.spelling);
+      }
+    });
+  }
+}
+
+function enterPractice(mode, title) {
+  appMode = mode;
+  currentPracticeTitle = title;
+  els.practiceTitle.textContent = title;
+  els.controlsMelodyOnly.hidden = mode !== 'melody';
+  setPianoVisible(false);
+  showFeedback('', 'info');
+  showScreen('practice');
+
+  requestAnimationFrame(() => {
+    piano.relayout();
+    if (mode === 'melody' && melodyTrainer.lesson) {
+      staffView.loadLesson(melodyTrainer.lesson);
+      els.staffViewport.classList.toggle('staff-viewport--grand', melodyTrainer.lesson.twoHands);
+      melodyTrainer.start();
+    } else if (mode === 'notes') {
+      noteTrainer.start();
+    }
+  });
+}
+
+function exitPractice() {
+  melodyTrainer.reset();
+  noteTrainer.stop();
   staffView.clear();
+  piano.clearStates();
+  hideSessionModal();
+  showFeedback('', 'info');
+}
+
+function onSessionComplete(stats) {
+  showSessionModal(stats);
 }
 
 async function loadLessons() {
@@ -293,7 +286,7 @@ function groupLessonsByDifficultyAndCategory(items) {
   return groups;
 }
 
-function lessonCardHtml(lesson, { activeId, remote = false, imported = false } = {}) {
+function lessonCardHtml(lesson, { remote = false } = {}) {
   const hands = lesson.twoHands ? ' · 2 руки' : '';
   const metaParts = [];
   if (lesson.composer) metaParts.push(lesson.composer);
@@ -303,9 +296,7 @@ function lessonCardHtml(lesson, { activeId, remote = false, imported = false } =
   if (remote) metaParts.push('из интернета');
 
   const classes = ['lesson-card'];
-  if (lesson.id === activeId) classes.push('lesson-card--active');
   if (remote) classes.push('lesson-card--remote');
-  if (imported) classes.push('lesson-card--imported');
   if (lesson.category === 'popular') classes.push('lesson-card--popular');
 
   return `
@@ -321,13 +312,12 @@ function lessonCardHtml(lesson, { activeId, remote = false, imported = false } =
 function renderLessonList() {
   const query = searchQuery.trim();
   const localMatches = filterLocalLessons(query);
-  const activeId = selectedLessonId ?? selectedImportedId;
   const parts = [];
 
   if (query) {
     parts.push('<div class="lesson-section-label">В каталоге</div>');
     if (localMatches.length) {
-      parts.push(localMatches.map((lesson) => lessonCardHtml(lesson, { activeId })).join(''));
+      parts.push(localMatches.map((lesson) => lessonCardHtml(lesson)).join(''));
     } else {
       parts.push('<p class="lesson-list__empty">В каталоге ничего не найдено</p>');
     }
@@ -342,7 +332,7 @@ function renderLessonList() {
         noteCount: null,
         twoHands: false,
         difficulty: '',
-      }, { activeId, remote: true })).join(''));
+      }, { remote: true })).join(''));
     } else if (query.length >= 2 && !remoteSearchDone) {
       parts.push('<p class="lesson-list__empty">Ищем MIDI-файлы…</p>');
     } else if (query.length >= 2) {
@@ -356,7 +346,7 @@ function renderLessonList() {
         if (block.category && CATEGORY_LABELS[block.category]) {
           parts.push(`<div class="lesson-section-label lesson-section-label--sub">${CATEGORY_LABELS[block.category]}</div>`);
         }
-        parts.push(block.lessons.map((lesson) => lessonCardHtml(lesson, { activeId })).join(''));
+        parts.push(block.lessons.map((lesson) => lessonCardHtml(lesson)).join(''));
       }
     }
     if (!groups.length) {
@@ -410,21 +400,10 @@ async function runMelodySearch(query) {
 
 let searchDebounceTimer = null;
 
-function loadMelodyLesson(lesson, { activeId = null, feedback = 'Мелодия загружена. Нажмите «Прослушать» или «Начать».' } = {}) {
-  stopPreview();
+function loadMelodyLesson(lesson, { activeId = null } = {}) {
   const normalized = normalizeLesson(lesson);
-
-  melodyTrainer.loadLesson(normalized);
-  staffView.loadLesson(normalized);
-  els.staffViewport.classList.toggle('staff-viewport--grand', normalized.twoHands);
-  els.lessonTitle.textContent = normalized.title;
-
-  const handsLabel = normalized.twoHands ? ' · две руки' : '';
-  const sourceLabel = normalized.source === 'imported' ? ' · загружено' : '';
-  els.lessonMeta.textContent = `${normalized.composer || 'MIDI'} · ${normalized.eventCount ?? normalized.events.length} шагов · ${normalized.noteCount} нот${handsLabel}${sourceLabel} · темп ${normalized.tempo}`;
-  els.btnStart.disabled = false;
-  els.btnPreview.disabled = false;
-  els.btnReset.disabled = false;
+  melodyTrainer.loadLesson(normalized, { sessionLimit: SESSION_LIMIT });
+  noteTrainer.sessionLimit = SESSION_LIMIT;
 
   if (activeId?.startsWith('remote-')) {
     selectedLessonId = null;
@@ -434,26 +413,10 @@ function loadMelodyLesson(lesson, { activeId = null, feedback = 'Мелодия 
     selectedImportedId = null;
   }
 
-  renderLessonList();
-  updateMelodyUI({
-    index: 0,
-    total: normalized.events.length,
-    correct: 0,
-    wrong: 0,
-    running: false,
-    paused: false,
-    currentEvent: normalized.events[0] ?? null,
-    currentNote: normalized.events[0]?.notes[0] ?? null,
-    results: [],
-    events: normalized.events,
-    twoHands: normalized.twoHands,
-  });
-  staffView.update({ index: 0, running: false, paused: false });
-  showFeedback(feedback, 'info');
+  enterPractice('melody', normalized.title);
 }
 
 async function loadRemoteMidi(remoteId, title) {
-  showFeedback('Загрузка MIDI…', 'info');
   try {
     const res = await fetch(`/api/midi/${remoteId}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -462,12 +425,9 @@ async function loadRemoteMidi(remoteId, title) {
       title: title.trim() || 'MIDI мелодия',
       composer: 'FreeMidi',
     });
-    loadMelodyLesson(lesson, {
-      activeId: `remote-${remoteId}`,
-      feedback: `«${lesson.title}» загружена: ${lesson.eventCount} шагов.`,
-    });
+    loadMelodyLesson(lesson, { activeId: `remote-${remoteId}` });
   } catch {
-    showFeedback('Не удалось загрузить MIDI. Попробуйте другой вариант.', 'wrong');
+    alert('Не удалось загрузить MIDI. Попробуйте другой вариант.');
   }
 }
 
@@ -476,12 +436,11 @@ async function loadUploadedMidi(file) {
 
   const name = file.name.toLowerCase();
   if (!name.endsWith('.mid') && !name.endsWith('.midi')) {
-    showFeedback('Выберите файл с расширением .mid или .midi', 'wrong');
+    alert('Выберите файл с расширением .mid или .midi');
     els.midiUpload.value = '';
     return;
   }
 
-  showFeedback('Читаем MIDI-файл…', 'info');
   try {
     const lesson = await midiToLesson(await file.arrayBuffer(), {
       id: `upload-${Date.now()}`,
@@ -490,12 +449,9 @@ async function loadUploadedMidi(file) {
     });
     selectedLessonId = null;
     selectedImportedId = lesson.id;
-    loadMelodyLesson(lesson, {
-      activeId: lesson.id,
-      feedback: `Файл «${file.name}» загружен: ${lesson.eventCount} шагов.`,
-    });
+    loadMelodyLesson(lesson, { activeId: lesson.id });
   } catch (error) {
-    showFeedback(error?.message ?? 'Не удалось прочитать MIDI-файл', 'wrong');
+    alert(error?.message ?? 'Не удалось прочитать MIDI-файл');
   } finally {
     els.midiUpload.value = '';
   }
@@ -503,10 +459,9 @@ async function loadUploadedMidi(file) {
 
 function renderLevelList() {
   els.levelList.innerHTML = NOTE_LEVELS.map((l) => `
-    <button type="button" class="lesson-card ${l.id === selectedLevelId ? 'lesson-card--active' : ''}"
-            data-id="${l.id}">
+    <button type="button" class="lesson-card" data-id="${l.id}">
       <div class="lesson-card__title">${escapeHtml(l.title)}</div>
-      <div class="lesson-card__meta">${escapeHtml(l.desc)}</div>
+      <div class="lesson-card__meta">${escapeHtml(l.desc)} · ${SESSION_LIMIT} нот</div>
     </button>
   `).join('');
 
@@ -516,90 +471,23 @@ function renderLevelList() {
 }
 
 async function selectLesson(id) {
-  stopPreview();
-  selectedLessonId = id;
-  selectedImportedId = null;
-  renderLessonList();
-
   try {
     const lesson = normalizeLesson(await fetchJson(`/api/lessons/${id}`));
     loadMelodyLesson(lesson, { activeId: id });
   } catch {
-    showFeedback('Не удалось загрузить урок', 'wrong');
+    alert('Не удалось загрузить урок');
   }
 }
 
 function selectLevel(id) {
   selectedLevelId = id;
-  renderLevelList();
   noteTrainer.setLevel(id);
+  noteTrainer.sessionLimit = SESSION_LIMIT;
   const level = NOTE_LEVELS.find((l) => l.id === id);
-  els.lessonTitle.textContent = 'Тренажёр нот';
-  els.lessonMeta.textContent = level?.desc ?? '';
-  staffView.clear();
-  updateNoteUI(noteTrainer.state);
-  showFeedback('Нажмите «Начать» для тренировки', 'info');
-}
-
-function updateMelodyUI(state) {
-  if (isPreviewing) return;
-
-  els.statProgress.textContent = `${state.index} / ${state.total}`;
-  els.statCorrect.textContent = String(state.correct);
-  els.statWrong.textContent = String(state.wrong);
-
-  const attempts = state.correct + state.wrong;
-  els.statAccuracy.textContent = attempts > 0
-    ? `${Math.round((state.correct / attempts) * 100)}%`
-    : '—';
-
-  if (state.currentEvent && state.running && !state.paused) {
-    els.nextNotePanel.querySelector('.next-note-panel__label').textContent = state.twoHands ? 'Следующий шаг' : 'Следующая нота';
-    els.nextNoteName.textContent = eventLabel(state.currentEvent);
-    els.nextNoteHint.textContent = state.twoHands
-      ? 'Нажмите все подсвеченные ноты (левая — синяя, правая — золотая)'
-      : 'Нажмите эту ноту на пианино';
-  } else if (state.running && state.paused) {
-    els.nextNoteHint.textContent = 'Пауза';
-  } else if (state.index >= state.total && state.total > 0) {
-    els.nextNoteName.textContent = '✓';
-    els.nextNoteHint.textContent = 'Урок завершён';
-  } else {
-    els.nextNoteName.textContent = '—';
-    els.nextNoteHint.textContent = 'Нажмите «Начать» для тренировки';
-  }
-
-  staffView.update(state);
-  els.btnPause.disabled = !state.running;
-  els.btnPause.textContent = state.paused ? 'Продолжить' : 'Пауза';
-}
-
-function updateNoteUI(state) {
-  els.statProgress.textContent = String(state.streak);
-  els.statCorrect.textContent = String(state.correct);
-  els.statWrong.textContent = String(state.wrong);
-  els.statBest.textContent = String(state.bestStreak);
-
-  const attempts = state.correct + state.wrong;
-  els.statAccuracy.textContent = attempts > 0
-    ? `${Math.round((state.correct / attempts) * 100)}%`
-    : '—';
-
-  if (state.running && state.currentMidi !== null) {
-    els.nextNotePanel.querySelector('.next-note-panel__label').textContent = 'Найдите ноту';
-    els.nextNoteName.textContent = '?';
-    els.nextNoteHint.textContent = 'Определите ноту на стане и нажмите на пианино';
-  } else {
-    els.nextNotePanel.querySelector('.next-note-panel__label').textContent = 'Тренажёр нот';
-    els.nextNoteName.textContent = '♪';
-    els.nextNoteHint.textContent = 'Нажмите «Начать» — появится случайная нота';
-  }
-
-  els.btnStart.textContent = state.running ? 'Стоп' : 'Начать';
+  enterPractice('notes', level?.title ?? 'Тренажёр нот');
 }
 
 function onNoteOn(midiNote) {
-  if (isPreviewing) return;
   piano.pressKey(midiNote);
   if (appMode === 'melody') {
     melodyTrainer.handleNoteOn(midiNote);
@@ -609,7 +497,6 @@ function onNoteOn(midiNote) {
 }
 
 function onNoteOff(midiNote) {
-  if (isPreviewing) return;
   if (appMode === 'melody') {
     melodyTrainer.handleNoteOff(midiNote);
   } else {
@@ -626,6 +513,10 @@ micPitch.onNoteOff = onNoteOff;
 
 function showInputActivity({ note, type, source, rawNote }) {
   if (type !== 'on') return;
+  if (currentScreen === 'practice') {
+    els.midiLiveNote.textContent = '';
+    return;
+  }
   const name = midiToName(note);
   if (source === 'mic') {
     els.midiLiveNote.textContent = `🎤 ${name}`;
@@ -655,12 +546,10 @@ micPitch.onStatusChange = (state) => {
 async function startMicListening() {
   try {
     await micPitch.start();
-    showFeedback('Микрофон включён. Играйте на пианино — нота распознается автоматически. Лучше в наушниках.', 'info');
   } catch (error) {
     if (els.toggleMic) els.toggleMic.checked = false;
     setMicStatus(false);
     setMidiStatus('error', error?.message ?? 'Не удалось включить микрофон');
-    showFeedback(error?.message ?? 'Не удалось включить микрофон', 'wrong');
   }
 }
 
@@ -694,20 +583,33 @@ function renderMidiDevices(inputs) {
 midi.onInputsChanged = renderMidiDevices;
 
 melodyTrainer.onUpdate = (state) => {
-  if (appMode === 'melody') updateMelodyUI(state);
+  if (appMode === 'melody' && currentScreen === 'practice') updateMelodyUI(state);
 };
 melodyTrainer.onFeedback = showFeedback;
+melodyTrainer.onComplete = onSessionComplete;
 
 noteTrainer.onUpdate = (state) => {
-  if (appMode === 'notes') updateNoteUI(state);
+  if (appMode === 'notes' && currentScreen === 'practice') updateNoteUI(state);
 };
 noteTrainer.onFeedback = showFeedback;
+noteTrainer.onComplete = onSessionComplete;
 noteTrainer.onNoteChange = (midiNote, { spelling } = {}) => {
   staffView.showDrillNote(midiNote, spelling);
 };
 
-els.modeTabs.forEach((tab) => {
-  tab.addEventListener('click', () => setMode(tab.dataset.mode));
+els.btnTogglePiano?.addEventListener('click', () => {
+  setPianoVisible(els.pianoWrap.hidden);
+});
+
+els.btnGoMelodies.addEventListener('click', () => showScreen('melody-pick'));
+els.btnGoNotes.addEventListener('click', () => showScreen('notes-pick'));
+
+els.btnBackMelody.addEventListener('click', () => showScreen('home'));
+els.btnBackNotes.addEventListener('click', () => showScreen('home'));
+
+els.btnBackPractice.addEventListener('click', () => {
+  exitPractice();
+  showScreen(appMode === 'melody' ? 'melody-pick' : 'notes-pick');
 });
 
 els.melodySearch.addEventListener('input', () => {
@@ -741,41 +643,31 @@ els.btnMidiUpload?.addEventListener('click', () => {
   els.midiUpload?.click();
 });
 
-els.btnStart.addEventListener('click', () => {
-  if (appMode === 'melody') {
-    stopPreview();
-    melodyTrainer.start();
-  } else if (noteTrainer.running) {
-    noteTrainer.stop();
-    staffView.clear();
-    showFeedback('Тренировка остановлена', 'info');
-    updateNoteUI(noteTrainer.state);
-  } else {
-    noteTrainer.start();
-  }
-});
-
-els.btnPreview.addEventListener('click', () => {
-  if (isPreviewing || melodyPlayer.isPlaying) {
-    stopPreview();
-    showFeedback('Прослушивание остановлено', 'info');
-  } else {
-    startPreview();
-  }
-});
-
-els.btnPause.addEventListener('click', () => melodyTrainer.pause());
-
-els.btnReset.addEventListener('click', () => {
-  if (appMode === 'melody') {
-    stopPreview();
+els.btnModalRetry.addEventListener('click', () => {
+  hideSessionModal();
+  if (appMode === 'melody' && melodyTrainer.lesson) {
     melodyTrainer.reset();
-    showFeedback('', 'info');
-  } else {
+    melodyTrainer.start();
+    showFeedback('Поехали!', 'info');
+  } else if (appMode === 'notes') {
     noteTrainer.reset();
-    staffView.clear();
-    showFeedback('Статистика сброшена', 'info');
+    noteTrainer.start();
+    showFeedback('Поехали!', 'info');
   }
+});
+
+els.btnModalPick.addEventListener('click', () => {
+  exitPractice();
+  showScreen(appMode === 'melody' ? 'melody-pick' : 'notes-pick');
+});
+
+els.btnModalHome.addEventListener('click', () => {
+  exitPractice();
+  showScreen('home');
+});
+
+els.sessionModal.querySelector('.modal__backdrop').addEventListener('click', () => {
+  hideSessionModal();
 });
 
 els.btnConnectMidi.addEventListener('click', async () => {
@@ -785,7 +677,6 @@ els.btnConnectMidi.addEventListener('click', async () => {
     els.btnConnectMidi.textContent = 'Переподключить';
     els.midiTransposeWrap.hidden = false;
     renderMidiDevices(midi.listInputs());
-    showFeedback('Нажмите любую клавишу на пианино — надпись выше покажет распознанную ноту.', 'info');
   } catch (e) {
     setMidiStatus('error', e.message);
   }
@@ -795,7 +686,6 @@ els.btnConnectMic.addEventListener('click', async () => {
   if (micPitch.isActive) {
     stopMicListening();
     if (els.toggleMic) els.toggleMic.checked = false;
-    showFeedback('Микрофон выключен', 'info');
     return;
   }
   await startMicListening();
@@ -806,7 +696,6 @@ els.toggleMic?.addEventListener('change', async () => {
     await startMicListening();
   } else {
     stopMicListening();
-    showFeedback('Микрофон выключен', 'info');
   }
 });
 
@@ -818,10 +707,6 @@ els.midiDeviceSelect.addEventListener('change', () => {
 
 els.midiTranspose.addEventListener('change', () => {
   midi.setTranspose(parseInt(els.midiTranspose.value, 10));
-});
-
-els.togglePianoVisible.addEventListener('change', () => {
-  els.pianoWrap.hidden = !els.togglePianoVisible.checked;
 });
 
 const pressedKeys = new Set();
@@ -854,8 +739,14 @@ document.addEventListener('keyup', (e) => {
 
 loadLessons();
 renderLevelList();
+noteTrainer.sessionLimit = SESSION_LIMIT;
+setPianoVisible(false);
 
 window.addEventListener('resize', () => {
+  if (currentScreen === 'practice') {
+    piano.relayout();
+  }
+  if (currentScreen !== 'practice') return;
   if (appMode === 'melody' && melodyTrainer.lesson) {
     staffView.loadLesson(melodyTrainer.lesson);
     staffView.update(melodyTrainer.state);

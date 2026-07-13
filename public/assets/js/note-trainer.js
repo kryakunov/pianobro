@@ -1,4 +1,4 @@
-import { midiToName, isBlackKey } from './notes.js';
+import { isBlackKey } from './notes.js';
 
 export const NOTE_LEVELS = [
   {
@@ -89,9 +89,11 @@ export class NoteTrainer {
     this.bestStreak = 0;
     this.total = 0;
     this.running = false;
+    this.sessionLimit = 10;
     this.onUpdate = null;
     this.onFeedback = null;
     this.onNoteChange = null;
+    this.onComplete = null;
   }
 
   setLevel(levelId) {
@@ -104,6 +106,10 @@ export class NoteTrainer {
   }
 
   start() {
+    this.correct = 0;
+    this.wrong = 0;
+    this.streak = 0;
+    this.total = 0;
     this.running = true;
     this._nextNote();
     this.onFeedback?.('Найдите и нажмите ноту на пианино', 'info');
@@ -139,9 +145,15 @@ export class NoteTrainer {
       this.bestStreak = Math.max(this.bestStreak, this.streak);
       this.total++;
       this.piano.flashCorrect(midi);
-      this.onFeedback?.(`Верно! ${midiToName(midi, this.spelling)}`, 'correct');
-      this._nextNote();
+      this.onFeedback?.('Верно!', 'correct');
       this._emitUpdate();
+
+      if (this.correct >= this.sessionLimit) {
+        this._finish();
+        return true;
+      }
+
+      this._nextNote();
       return true;
     }
 
@@ -149,10 +161,7 @@ export class NoteTrainer {
     this.streak = 0;
     this.total++;
     this.piano.flashWrong(midi);
-    this.onFeedback?.(
-      `Неверно: ${midiToName(midi, this.spelling)}. Нужно ${midiToName(this.currentMidi, this.spelling)}`,
-      'wrong',
-    );
+    this.onFeedback?.('Неверно', 'wrong');
     this._emitUpdate();
     return false;
   }
@@ -169,6 +178,22 @@ export class NoteTrainer {
     this.onNoteChange?.(this.currentMidi, { spelling: this.spelling });
   }
 
+  _finish() {
+    this.running = false;
+    this.piano.setTarget(null);
+    this.piano.clearStates();
+    const attempts = this.correct + this.wrong;
+    const accuracy = attempts > 0 ? Math.round((this.correct / attempts) * 100) : 0;
+    this.onFeedback?.(`Тренировка завершена! Точность: ${accuracy}%`, 'complete');
+    this.onComplete?.({
+      correct: this.correct,
+      wrong: this.wrong,
+      accuracy,
+      total: this.sessionLimit,
+    });
+    this._emitUpdate();
+  }
+
   _emitUpdate() {
     this.onUpdate?.({
       level: this.level,
@@ -178,6 +203,7 @@ export class NoteTrainer {
       streak: this.streak,
       bestStreak: this.bestStreak,
       total: this.total,
+      sessionLimit: this.sessionLimit,
       running: this.running,
     });
   }
@@ -191,6 +217,7 @@ export class NoteTrainer {
       streak: this.streak,
       bestStreak: this.bestStreak,
       total: this.total,
+      sessionLimit: this.sessionLimit,
       running: this.running,
     };
   }

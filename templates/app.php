@@ -62,13 +62,13 @@
 <!-- /Yandex.Metrika counter -->
 </head>
 <body>
-  <div class="app">
-    <header class="header">
+  <div class="app" id="app">
+    <header class="header" id="main-header">
       <div class="header__brand">
         <span class="header__logo">♪</span>
         <div>
           <h1>Piano Bro</h1>
-          <p class="header__subtitle">Онлайн-обучение игре на цифровом пианино с MIDI</p>
+          <p class="header__subtitle">Онлайн-обучение игре на цифровом пианино</p>
         </div>
       </div>
       <div class="header__midi" id="midi-panel">
@@ -115,91 +115,91 @@
       </div>
     </header>
 
-    <main class="main">
-      <aside class="sidebar">
-        <div class="mode-tabs">
-          <button type="button" class="mode-tab mode-tab--active" data-mode="melody">Мелодии</button>
-          <button type="button" class="mode-tab" data-mode="notes">Тренажёр нот</button>
+    <!-- Главная -->
+    <section class="screen screen--active" id="screen-home">
+      <div class="home-grid">
+        <button type="button" class="home-card" id="btn-go-melodies">
+          <span class="home-card__icon" aria-hidden="true">🎵</span>
+          <span class="home-card__title">Мелодии</span>
+          <span class="home-card__desc">Учите популярные песни и классику по нотному стану</span>
+        </button>
+        <button type="button" class="home-card" id="btn-go-notes">
+          <span class="home-card__icon" aria-hidden="true">𝄞</span>
+          <span class="home-card__title">Тренажёр нот</span>
+          <span class="home-card__desc">Запоминайте ноты на стане и находите их на клавиатуре</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Выбор мелодии -->
+    <section class="screen" id="screen-melody-pick" hidden>
+      <div class="screen-header">
+        <button type="button" class="btn-back" id="btn-back-melody">← Назад</button>
+        <h2 class="screen-header__title">Выберите мелодию</h2>
+      </div>
+      <div class="pick-panel">
+        <div class="melody-search">
+          <input
+            type="search"
+            class="melody-search__input"
+            id="melody-search"
+            placeholder="Название песни…"
+            autocomplete="off"
+            aria-label="Поиск мелодии"
+          >
+          <button type="button" class="btn btn--secondary btn--sm melody-search__upload" id="btn-midi-upload" title="Загрузить MIDI-файл">
+            MIDI
+          </button>
+          <input type="file" id="midi-upload" accept=".mid,.midi" hidden>
         </div>
-
-        <div id="sidebar-melody">
-          <h2>Мелодии</h2>
-          <div class="melody-search">
-            <input
-              type="search"
-              class="melody-search__input"
-              id="melody-search"
-              placeholder="Название песни…"
-              autocomplete="off"
-              aria-label="Поиск мелодии"
-            >
-            <button type="button" class="btn btn--secondary btn--sm melody-search__upload" id="btn-midi-upload" title="Загрузить MIDI-файл">
-              MIDI
-            </button>
-            <input type="file" id="midi-upload" accept=".mid,.midi" hidden>
-          </div>
-          <div class="difficulty-tabs" id="difficulty-tabs">
-            <button type="button" class="difficulty-tab difficulty-tab--active" data-difficulty="all">Все</button>
-            <button type="button" class="difficulty-tab" data-difficulty="beginner">Начальный</button>
-            <button type="button" class="difficulty-tab" data-difficulty="intermediate">Средний</button>
-            <button type="button" class="difficulty-tab" data-difficulty="advanced">Продвинутый</button>
-          </div>
-          <div class="lesson-list" id="lesson-list">
-            <p class="loading">Загрузка уроков…</p>
-          </div>
+        <div class="difficulty-tabs" id="difficulty-tabs">
+          <button type="button" class="difficulty-tab difficulty-tab--active" data-difficulty="all">Все</button>
+          <button type="button" class="difficulty-tab" data-difficulty="beginner">Начальный</button>
+          <button type="button" class="difficulty-tab" data-difficulty="intermediate">Средний</button>
+          <button type="button" class="difficulty-tab" data-difficulty="advanced">Продвинутый</button>
         </div>
-
-        <div id="sidebar-notes" hidden>
-          <h2>Уровень</h2>
-          <div class="level-list" id="level-list"></div>
+        <div class="lesson-list" id="lesson-list">
+          <p class="loading">Загрузка уроков…</p>
         </div>
-      </aside>
+      </div>
+    </section>
 
-      <section class="workspace">
-        <div class="score-panel">
-          <div class="score-panel__info">
-            <h2 id="lesson-title">Выберите урок</h2>
-            <p id="lesson-meta" class="lesson-meta"></p>
-          </div>
-          <div class="score-panel__stats">
-            <div class="stat">
-              <span class="stat__label" id="stat-progress-label">Прогресс</span>
-              <span class="stat__value" id="stat-progress">0 / 0</span>
-            </div>
-            <div class="stat">
-              <span class="stat__label">Верно</span>
-              <span class="stat__value stat__value--success" id="stat-correct">0</span>
-            </div>
-            <div class="stat">
-              <span class="stat__label">Ошибки</span>
-              <span class="stat__value stat__value--error" id="stat-wrong">0</span>
-            </div>
-            <div class="stat" id="stat-best-wrap" hidden>
-              <span class="stat__label">Рекорд</span>
-              <span class="stat__value" id="stat-best">0</span>
-            </div>
-            <div class="stat" id="stat-accuracy-wrap">
-              <span class="stat__label">Точность</span>
-              <span class="stat__value" id="stat-accuracy">—</span>
-            </div>
-          </div>
-        </div>
+    <!-- Выбор уровня нот -->
+    <section class="screen" id="screen-notes-pick" hidden>
+      <div class="screen-header">
+        <button type="button" class="btn-back" id="btn-back-notes">← Назад</button>
+        <h2 class="screen-header__title">Выберите уровень</h2>
+      </div>
+      <div class="pick-panel">
+        <div class="level-list" id="level-list"></div>
+      </div>
+    </section>
 
-        <div class="next-note-panel" id="next-note-panel">
-          <div class="next-note-panel__label">Следующая нота</div>
-          <div class="next-note-panel__note" id="next-note-name">—</div>
-          <div class="next-note-panel__hint" id="next-note-hint">Выберите урок и нажмите «Начать»</div>
-        </div>
+    <!-- Тренировка -->
+    <section class="screen screen--practice" id="screen-practice" hidden>
+      <div class="practice-topbar">
+        <button type="button" class="btn-back" id="btn-back-practice" aria-label="Назад">←</button>
+        <h2 class="practice-topbar__title" id="practice-title">Тренировка</h2>
+        <div class="practice-progress" id="practice-progress">0 / 10</div>
+      </div>
 
-        <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="practice-feedback" id="practice-feedback" aria-live="polite"></div>
 
-        <div class="staff-viewport" id="staff-viewport">
+      <div class="practice-layout practice-layout--keyboard-hidden">
+        <div class="practice-staff staff-viewport" id="staff-viewport">
           <div class="staff-scroll">
             <svg class="staff-svg" id="staff-svg" role="img" aria-label="Нотный стан"></svg>
           </div>
         </div>
 
-        <div class="piano-wrap" id="piano-wrap">
+        <div class="practice-keyboard-spoiler">
+          <button type="button" class="practice-spoiler" id="btn-toggle-piano" aria-expanded="false">
+            <span class="practice-spoiler__icon" aria-hidden="true">▸</span>
+            <span class="practice-spoiler__label">Показать клавиатуру</span>
+          </button>
+        </div>
+
+        <div class="practice-keyboard piano-wrap practice-keyboard--hidden" id="piano-wrap" hidden>
           <div class="piano-case">
             <div class="piano-case__lid"></div>
             <div class="piano-case__keys">
@@ -208,31 +208,52 @@
             <div class="piano-case__board"></div>
           </div>
         </div>
+      </div>
 
-        <div class="controls">
-          <button type="button" class="btn btn--secondary controls-melody-only" id="btn-preview" disabled>Прослушать</button>
-          <button type="button" class="btn btn--primary" id="btn-start" disabled>Начать</button>
-          <button type="button" class="btn btn--secondary" id="btn-pause" disabled>Пауза</button>
-          <button type="button" class="btn btn--secondary" id="btn-reset" disabled>Сброс</button>
-          <label class="toggle controls-melody-only">
-            <input type="checkbox" id="toggle-wait" checked>
-            <span>Ждать нажатия (пошаговый режим)</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-keyboard" checked>
-            <span>Играть с клавиатуры ПК</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-piano-visible" checked>
-            <span>Показывать клавиатуру</span>
-          </label>
-          <label class="toggle" title="Распознаёт сыгранную ноту через микрофон. Лучше использовать наушники.">
-            <input type="checkbox" id="toggle-mic">
-            <span>Распознавание с микрофона</span>
-          </label>
+      <div class="practice-toolbar">
+        <label class="toggle">
+          <input type="checkbox" id="toggle-keyboard" checked>
+          <span>Клавиатура ПК</span>
+        </label>
+        <label class="toggle" title="Распознаёт сыгранную ноту через микрофон. Лучше использовать наушники.">
+          <input type="checkbox" id="toggle-mic">
+          <span>Микрофон</span>
+        </label>
+        <label class="toggle controls-melody-only" hidden>
+          <input type="checkbox" id="toggle-wait" checked>
+          <span>Пошаговый режим</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Итоги тренировки -->
+    <div class="modal" id="session-modal" hidden>
+      <div class="modal__backdrop"></div>
+      <div class="modal__card" role="dialog" aria-labelledby="modal-title">
+        <div class="modal__icon" aria-hidden="true">✓</div>
+        <h2 class="modal__title" id="modal-title">Тренировка завершена!</h2>
+        <p class="modal__subtitle">Вы прошли 10 нот</p>
+        <div class="modal__stats">
+          <div class="modal-stat">
+            <span class="modal-stat__label">Верно</span>
+            <span class="modal-stat__value modal-stat__value--success" id="modal-correct">0</span>
+          </div>
+          <div class="modal-stat">
+            <span class="modal-stat__label">Ошибки</span>
+            <span class="modal-stat__value modal-stat__value--error" id="modal-wrong">0</span>
+          </div>
+          <div class="modal-stat">
+            <span class="modal-stat__label">Точность</span>
+            <span class="modal-stat__value" id="modal-accuracy">—</span>
+          </div>
         </div>
-      </section>
-    </main>
+        <div class="modal__actions">
+          <button type="button" class="btn btn--primary" id="btn-modal-retry">Ещё раз</button>
+          <button type="button" class="btn btn--secondary" id="btn-modal-pick">Другой урок</button>
+          <button type="button" class="btn btn--secondary" id="btn-modal-home">На главную</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="/assets/js/app.js"></script>

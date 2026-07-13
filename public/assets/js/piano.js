@@ -56,10 +56,25 @@ export class PianoKeyboard {
       this._positionBlackKeys();
       this.onLayout?.();
     });
+
+    if (typeof ResizeObserver !== 'undefined') {
+      this._resizeObserver?.disconnect();
+      this._resizeObserver = new ResizeObserver(() => {
+        this._positionBlackKeys();
+      });
+      this._resizeObserver.observe(this.container);
+    }
+  }
+
+  relayout() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => this._positionBlackKeys());
+    });
   }
 
   _positionBlackKeys() {
-    const ratios = { 1: 0.66, 3: 0.66, 6: 0.66, 8: 0.66, 10: 0.66 };
+    const ratios = { 1: 0.65, 3: 0.65, 6: 0.65, 8: 0.65, 10: 0.65 };
+    const layerRect = this._blacksLayer.getBoundingClientRect();
 
     for (let midi = this.startMidi; midi <= this.endMidi; midi++) {
       if (!isBlackKey(midi)) continue;
@@ -68,9 +83,11 @@ export class PianoKeyboard {
       const whiteEl = this.keys.get(midi - 1);
       if (!el || !whiteEl) continue;
 
-      const ratio = ratios[midi % 12] ?? 0.66;
-      const left = whiteEl.offsetLeft + whiteEl.offsetWidth * ratio - BLACK_KEY_WIDTH / 2;
-      el.style.left = `${left}px`;
+      const ratio = ratios[midi % 12] ?? 0.65;
+      const whiteRect = whiteEl.getBoundingClientRect();
+      const left = whiteRect.left - layerRect.left + whiteRect.width * ratio - BLACK_KEY_WIDTH / 2;
+      el.style.left = `${Math.round(left)}px`;
+      el.style.top = '0';
     }
 
     const width = this._whitesLayer.offsetWidth;
