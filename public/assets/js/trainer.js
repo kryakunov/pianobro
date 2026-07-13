@@ -14,6 +14,7 @@ export class MelodyTrainer {
     this.onUpdate = null;
     this.onComplete = null;
     this.onFeedback = null;
+    this.showKeyboardHints = true;
   }
 
   loadLesson(lesson, { sessionLimit = null } = {}) {
@@ -129,7 +130,15 @@ export class MelodyTrainer {
     this._held.clear();
     this.piano.clearStates(['correct', 'wrong', 'pressed']);
     const event = events[this.index];
-    this.piano.setTargets(eventMidis(event), event.notes);
+    if (this.showKeyboardHints) {
+      this.piano.setTargets(eventMidis(event), event.notes);
+    } else {
+      this.piano.clearStates(['target', 'target-left', 'target-right']);
+    }
+  }
+
+  refreshKeyboardHighlight() {
+    if (this.running) this._highlightCurrent();
   }
 
   _finish() {

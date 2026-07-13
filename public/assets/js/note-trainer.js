@@ -94,6 +94,7 @@ export class NoteTrainer {
     this.onFeedback = null;
     this.onNoteChange = null;
     this.onComplete = null;
+    this.showKeyboardHints = true;
   }
 
   setLevel(levelId) {
@@ -173,9 +174,19 @@ export class NoteTrainer {
   _nextNote() {
     const prev = this.currentMidi;
     this.currentMidi = pickRandom(this.pool, prev);
-    this.piano.clearStates(['correct', 'wrong', 'pressed']);
-    this.piano.setTarget(this.currentMidi);
+    this._applyKeyboardHint();
     this.onNoteChange?.(this.currentMidi, { spelling: this.spelling });
+  }
+
+  _applyKeyboardHint() {
+    this.piano.clearStates(['correct', 'wrong', 'pressed', 'target', 'target-left', 'target-right']);
+    if (this.showKeyboardHints && this.currentMidi !== null) {
+      this.piano.setTarget(this.currentMidi);
+    }
+  }
+
+  refreshKeyboardHint() {
+    if (this.running) this._applyKeyboardHint();
   }
 
   _finish() {

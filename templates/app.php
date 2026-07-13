@@ -194,8 +194,12 @@
 
         <div class="practice-keyboard-spoiler">
           <button type="button" class="practice-spoiler" id="btn-toggle-piano" aria-expanded="false">
+            <span class="practice-spoiler__keys" aria-hidden="true">🎹</span>
+            <span class="practice-spoiler__text">
+              <span class="practice-spoiler__label">Показать клавиатуру</span>
+              <span class="practice-spoiler__hint">Нажмите, чтобы открыть клавиши пианино</span>
+            </span>
             <span class="practice-spoiler__icon" aria-hidden="true">▸</span>
-            <span class="practice-spoiler__label">Показать клавиатуру</span>
           </button>
         </div>
 
@@ -211,6 +215,13 @@
       </div>
 
       <div class="practice-toolbar">
+        <div class="keyboard-mode" id="keyboard-hints-panel">
+          <span class="keyboard-mode__label">Клавиатура</span>
+          <div class="keyboard-mode__tabs" role="group" aria-label="Режим подсказок на клавиатуре">
+            <button type="button" class="keyboard-mode__tab keyboard-mode__tab--active" data-hints="on">С подсказками</button>
+            <button type="button" class="keyboard-mode__tab" data-hints="off">Без подсказок</button>
+          </div>
+        </div>
         <label class="toggle">
           <input type="checkbox" id="toggle-keyboard" checked>
           <span>Клавиатура ПК</span>
