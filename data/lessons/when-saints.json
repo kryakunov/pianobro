@@ -1,0 +1,50 @@
+{
+    "id": "when-saints",
+    "title": "When the Saints",
+    "composer": "Traditional",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 105,
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 65,
+            "duration": 800
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 800
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 65,
+            "duration": 800
+        }
+    ]
+}

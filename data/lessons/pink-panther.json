@@ -1,0 +1,46 @@
+{
+    "id": "pink-panther",
+    "title": "Розовая пантера",
+    "composer": "H. Mancini",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 108,
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 200
+        },
+        {
+            "midi": 61,
+            "duration": 200
+        },
+        {
+            "midi": 63,
+            "duration": 200
+        },
+        {
+            "midi": 64,
+            "duration": 200
+        },
+        {
+            "midi": 63,
+            "duration": 200
+        },
+        {
+            "midi": 61,
+            "duration": 200
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 58,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 800
+        }
+    ]
+}

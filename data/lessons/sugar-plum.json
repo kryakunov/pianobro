@@ -1,0 +1,46 @@
+{
+    "id": "sugar-plum",
+    "title": "Фея Драже",
+    "composer": "P. Tchaikovsky",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 94,
+    "notes": [
+        {
+            "midi": 72,
+            "duration": 200
+        },
+        {
+            "midi": 74,
+            "duration": 200
+        },
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 77,
+            "duration": 200
+        },
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 74,
+            "duration": 200
+        },
+        {
+            "midi": 72,
+            "duration": 200
+        },
+        {
+            "midi": 71,
+            "duration": 200
+        },
+        {
+            "midi": 72,
+            "duration": 800
+        }
+    ]
+}

@@ -1,0 +1,50 @@
+{
+    "id": "amazing-grace",
+    "title": "Amazing Grace",
+    "composer": "Traditional",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 90,
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 800
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 65,
+            "duration": 800
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 800
+        },
+        {
+            "midi": 59,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 800
+        }
+    ]
+}

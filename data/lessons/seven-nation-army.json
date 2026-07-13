@@ -1,0 +1,38 @@
+{
+    "id": "seven-nation-army",
+    "title": "Seven Nation Army",
+    "composer": "The White Stripes",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 124,
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 800
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 63,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 58,
+            "duration": 400
+        },
+        {
+            "midi": 55,
+            "duration": 800
+        },
+        {
+            "midi": 60,
+            "duration": 800
+        }
+    ]
+}

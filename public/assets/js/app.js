@@ -1,5 +1,6 @@
 import { PianoKeyboard } from './piano.js';
 import { MidiInput } from './midi.js';
+import { MicPitchInput } from './mic-pitch.js';
 import { MelodyTrainer } from './trainer.js';
 import { NoteTrainer, NOTE_LEVELS } from './note-trainer.js';
 import { StaffView } from './staff.js';
@@ -18,6 +19,7 @@ const els = {
   melodySearch: $('#melody-search'),
   midiUpload: $('#midi-upload'),
   btnMidiUpload: $('#btn-midi-upload'),
+  difficultyTabs: document.querySelectorAll('.difficulty-tab'),
   levelList: $('#level-list'),
   lessonTitle: $('#lesson-title'),
   lessonMeta: $('#lesson-meta'),
@@ -41,6 +43,7 @@ const els = {
   btnPause: $('#btn-pause'),
   btnReset: $('#btn-reset'),
   btnConnectMidi: $('#btn-connect-midi'),
+  btnConnectMic: $('#btn-connect-mic'),
   midiStatusText: $('#midi-status-text'),
   midiLiveNote: $('#midi-live-note'),
   midiDeviceSelect: $('#midi-device-select'),
@@ -50,6 +53,7 @@ const els = {
   toggleWait: $('#toggle-wait'),
   toggleKeyboard: $('#toggle-keyboard'),
   togglePianoVisible: $('#toggle-piano-visible'),
+  toggleMic: $('#toggle-mic'),
   controlsMelodyOnly: document.querySelector('.controls-melody-only'),
 };
 
@@ -63,9 +67,11 @@ let remoteSearchResults = [];
 let remoteSearchDone = false;
 let searchQuery = '';
 let searchRequestId = 0;
+let selectedDifficultyFilter = 'all';
 
 const piano = new PianoKeyboard(els.piano, PIANO_START, PIANO_END);
 const midi = new MidiInput();
+const micPitch = new MicPitchInput();
 const melodyTrainer = new MelodyTrainer(piano);
 const noteTrainer = new NoteTrainer(piano);
 const melodyPlayer = new MelodyPlayer();
@@ -92,6 +98,11 @@ function stopPreview() {
 async function startPreview() {
   const lesson = melodyTrainer.lesson;
   if (!lesson?.events?.length) return;
+
+  if (micPitch.isActive) {
+    stopMicListening();
+    if (els.toggleMic) els.toggleMic.checked = false;
+  }
 
   melodyTrainer.reset();
   stopPreview();
@@ -143,6 +154,19 @@ async function startPreview() {
 function setMidiStatus(state, text) {
   els.midiDot.className = 'midi-dot midi-dot--' + state;
   els.midiStatusText.textContent = text;
+}
+
+function setMicStatus(active, text) {
+  if (active) {
+    els.btnConnectMic.textContent = 'Микрофон вкл';
+    els.btnConnectMic.classList.add('btn--primary');
+    els.btnConnectMic.classList.remove('btn--secondary');
+  } else {
+    els.btnConnectMic.textContent = 'Микрофон';
+    els.btnConnectMic.classList.remove('btn--primary');
+    els.btnConnectMic.classList.add('btn--secondary');
+  }
+  if (text) els.midiStatusText.textContent = text;
 }
 
 function showFeedback(text, type) {
@@ -219,25 +243,61 @@ async function loadLessons() {
 }
 
 const DIFFICULTY_LABELS = {
-  beginner: 'начальный',
-  intermediate: 'средний',
-  advanced: 'продвинутый',
+  beginner: 'Начальный',
+  intermediate: 'Средний',
+  advanced: 'Продвинутый',
 };
+
+const CATEGORY_LABELS = {
+  popular: 'Популярные',
+  international: 'Классика',
+};
+
+const DIFFICULTY_ORDER = ['beginner', 'intermediate', 'advanced'];
+const CATEGORY_ORDER = ['popular', 'international'];
 
 function filterLocalLessons(query) {
   const needle = query.trim().toLowerCase();
-  if (!needle) return lessons;
-  return lessons.filter((lesson) => (
-    lesson.title.toLowerCase().includes(needle)
-    || lesson.composer.toLowerCase().includes(needle)
-  ));
+  return lessons.filter((lesson) => {
+    if (selectedDifficultyFilter !== 'all' && lesson.difficulty !== selectedDifficultyFilter) {
+      return false;
+    }
+    if (!needle) return true;
+    return lesson.title.toLowerCase().includes(needle)
+      || lesson.composer.toLowerCase().includes(needle);
+  });
+}
+
+function groupLessonsByDifficultyAndCategory(items) {
+  const groups = [];
+  for (const difficulty of DIFFICULTY_ORDER) {
+    const byDifficulty = items.filter((lesson) => lesson.difficulty === difficulty);
+    if (!byDifficulty.length) continue;
+
+    const section = { difficulty, categories: [] };
+
+    for (const category of CATEGORY_ORDER) {
+      const byCategory = byDifficulty.filter((lesson) => (lesson.category ?? 'international') === category);
+      if (byCategory.length) {
+        section.categories.push({ category, lessons: byCategory });
+      }
+    }
+
+    const other = byDifficulty.filter((lesson) => !CATEGORY_ORDER.includes(lesson.category ?? 'international'));
+    if (other.length) {
+      section.categories.push({ category: 'other', lessons: other });
+    }
+
+    groups.push(section);
+  }
+  return groups;
 }
 
 function lessonCardHtml(lesson, { activeId, remote = false, imported = false } = {}) {
   const hands = lesson.twoHands ? ' · 2 руки' : '';
   const metaParts = [];
   if (lesson.composer) metaParts.push(lesson.composer);
-  if (lesson.difficulty) metaParts.push(DIFFICULTY_LABELS[lesson.difficulty] ?? lesson.difficulty);
+  if (lesson.difficulty) metaParts.push(DIFFICULTY_LABELS[lesson.difficulty]?.toLowerCase() ?? lesson.difficulty);
   if (hands) metaParts.push('2 руки');
   if (lesson.noteCount) metaParts.push(`${lesson.noteCount} нот`);
   if (remote) metaParts.push('из интернета');
@@ -246,6 +306,7 @@ function lessonCardHtml(lesson, { activeId, remote = false, imported = false } =
   if (lesson.id === activeId) classes.push('lesson-card--active');
   if (remote) classes.push('lesson-card--remote');
   if (imported) classes.push('lesson-card--imported');
+  if (lesson.category === 'popular') classes.push('lesson-card--popular');
 
   return `
     <button type="button" class="${classes.join(' ')}"
@@ -288,7 +349,19 @@ function renderLessonList() {
       parts.push('<p class="lesson-list__empty">В интернете ничего не найдено</p>');
     }
   } else {
-    parts.push(localMatches.map((lesson) => lessonCardHtml(lesson, { activeId })).join(''));
+    const groups = groupLessonsByDifficultyAndCategory(localMatches);
+    for (const section of groups) {
+      parts.push(`<div class="lesson-section-label">${DIFFICULTY_LABELS[section.difficulty]}</div>`);
+      for (const block of section.categories) {
+        if (block.category && CATEGORY_LABELS[block.category]) {
+          parts.push(`<div class="lesson-section-label lesson-section-label--sub">${CATEGORY_LABELS[block.category]}</div>`);
+        }
+        parts.push(block.lessons.map((lesson) => lessonCardHtml(lesson, { activeId })).join(''));
+      }
+    }
+    if (!groups.length) {
+      parts.push('<p class="lesson-list__empty">Нет мелодий для выбранного уровня</p>');
+    }
   }
 
   els.lessonList.innerHTML = parts.join('');
@@ -548,14 +621,59 @@ piano.onNoteOn = onNoteOn;
 piano.onNoteOff = onNoteOff;
 midi.onNoteOn = onNoteOn;
 midi.onNoteOff = onNoteOff;
+micPitch.onNoteOn = onNoteOn;
+micPitch.onNoteOff = onNoteOff;
 
-midi.onActivity = ({ note, rawNote, type }) => {
-  if (type === 'on') {
-    const name = midiToName(note);
-    const extra = rawNote !== note ? ` (MIDI ${rawNote}→${note})` : ` (MIDI ${note})`;
-    els.midiLiveNote.textContent = `▸ ${name}${extra}`;
+function showInputActivity({ note, type, source, rawNote }) {
+  if (type !== 'on') return;
+  const name = midiToName(note);
+  if (source === 'mic') {
+    els.midiLiveNote.textContent = `🎤 ${name}`;
+    return;
+  }
+  const extra = rawNote !== undefined && rawNote !== note ? ` (MIDI ${rawNote}→${note})` : ` (MIDI ${note})`;
+  els.midiLiveNote.textContent = `▸ ${name}${extra}`;
+}
+
+midi.onActivity = showInputActivity;
+micPitch.onActivity = showInputActivity;
+
+micPitch.onStatusChange = (state) => {
+  if (state === 'on') {
+    els.midiDot.className = 'midi-dot midi-dot--on';
+    setMicStatus(true, 'Микрофон: слушаю ноты');
+    if (els.toggleMic) els.toggleMic.checked = true;
+  } else if (!midi.isConnected) {
+    els.midiDot.className = 'midi-dot midi-dot--off';
+    setMicStatus(false, 'MIDI не подключён');
+    if (els.toggleMic) els.toggleMic.checked = false;
+  } else {
+    setMicStatus(false);
   }
 };
+
+async function startMicListening() {
+  try {
+    await micPitch.start();
+    showFeedback('Микрофон включён. Играйте на пианино — нота распознается автоматически. Лучше в наушниках.', 'info');
+  } catch (error) {
+    if (els.toggleMic) els.toggleMic.checked = false;
+    setMicStatus(false);
+    setMidiStatus('error', error?.message ?? 'Не удалось включить микрофон');
+    showFeedback(error?.message ?? 'Не удалось включить микрофон', 'wrong');
+  }
+}
+
+function stopMicListening() {
+  micPitch.stop();
+  setMicStatus(false);
+  if (midi.isConnected) {
+    const input = midi.listInputs().find((i) => i.selected);
+    setMidiStatus('on', `Подключено: ${input?.name ?? midi.deviceName ?? 'MIDI'}`);
+  } else {
+    setMidiStatus('off', 'MIDI не подключён');
+  }
+}
 
 function renderMidiDevices(inputs) {
   if (!inputs.length) {
@@ -602,6 +720,16 @@ els.melodySearch.addEventListener('input', () => {
 els.melodySearch.addEventListener('search', () => {
   clearTimeout(searchDebounceTimer);
   runMelodySearch(els.melodySearch.value);
+});
+
+els.difficultyTabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    selectedDifficultyFilter = tab.dataset.difficulty ?? 'all';
+    els.difficultyTabs.forEach((item) => {
+      item.classList.toggle('difficulty-tab--active', item === tab);
+    });
+    renderLessonList();
+  });
 });
 
 els.midiUpload?.addEventListener('change', () => {
@@ -660,6 +788,25 @@ els.btnConnectMidi.addEventListener('click', async () => {
     showFeedback('Нажмите любую клавишу на пианино — надпись выше покажет распознанную ноту.', 'info');
   } catch (e) {
     setMidiStatus('error', e.message);
+  }
+});
+
+els.btnConnectMic.addEventListener('click', async () => {
+  if (micPitch.isActive) {
+    stopMicListening();
+    if (els.toggleMic) els.toggleMic.checked = false;
+    showFeedback('Микрофон выключен', 'info');
+    return;
+  }
+  await startMicListening();
+});
+
+els.toggleMic?.addEventListener('change', async () => {
+  if (els.toggleMic.checked) {
+    await startMicListening();
+  } else {
+    stopMicListening();
+    showFeedback('Микрофон выключен', 'info');
   }
 });
 

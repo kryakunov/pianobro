@@ -30,6 +30,12 @@ final class LessonRepository
         return $diff;
       }
 
+      $categories = ['popular' => 0, 'international' => 1];
+      $cat = ($categories[$a->category] ?? 9) <=> ($categories[$b->category] ?? 9);
+      if ($cat !== 0) {
+        return $cat;
+      }
+
       return strcmp($a->title, $b->title);
     });
 
@@ -82,6 +88,7 @@ final class LessonRepository
       title: (string) ($data['title'] ?? 'Без названия'),
       composer: (string) ($data['composer'] ?? ''),
       difficulty: (string) ($data['difficulty'] ?? 'beginner'),
+      category: (string) ($data['category'] ?? 'international'),
       tempo: (int) ($data['tempo'] ?? 120),
       notes: $data['notes'] ?? [],
       events: self::buildEvents($data),

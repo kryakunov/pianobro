@@ -111,6 +111,7 @@
           </select>
         </label>
         <button type="button" class="btn btn--secondary btn--sm" id="btn-connect-midi">Подключить пианино</button>
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-connect-mic">Микрофон</button>
       </div>
     </header>
 
@@ -136,6 +137,12 @@
               MIDI
             </button>
             <input type="file" id="midi-upload" accept=".mid,.midi" hidden>
+          </div>
+          <div class="difficulty-tabs" id="difficulty-tabs">
+            <button type="button" class="difficulty-tab difficulty-tab--active" data-difficulty="all">Все</button>
+            <button type="button" class="difficulty-tab" data-difficulty="beginner">Начальный</button>
+            <button type="button" class="difficulty-tab" data-difficulty="intermediate">Средний</button>
+            <button type="button" class="difficulty-tab" data-difficulty="advanced">Продвинутый</button>
           </div>
           <div class="lesson-list" id="lesson-list">
             <p class="loading">Загрузка уроков…</p>
@@ -218,6 +225,10 @@
           <label class="toggle">
             <input type="checkbox" id="toggle-piano-visible" checked>
             <span>Показывать клавиатуру</span>
+          </label>
+          <label class="toggle" title="Распознаёт сыгранную ноту через микрофон. Лучше использовать наушники.">
+            <input type="checkbox" id="toggle-mic">
+            <span>Распознавание с микрофона</span>
           </label>
         </div>
       </section>

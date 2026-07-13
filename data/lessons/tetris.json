@@ -1,0 +1,66 @@
+{
+    "id": "tetris",
+    "title": "Тетрис",
+    "composer": "Traditional",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 112,
+    "notes": [
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 71,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 74,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 200
+        },
+        {
+            "midi": 71,
+            "duration": 200
+        },
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 76,
+            "duration": 400
+        },
+        {
+            "midi": 74,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 200
+        },
+        {
+            "midi": 71,
+            "duration": 200
+        },
+        {
+            "midi": 69,
+            "duration": 800
+        }
+    ]
+}

@@ -1,0 +1,38 @@
+{
+    "id": "swan-lake",
+    "title": "Лебединое озеро",
+    "composer": "P. Tchaikovsky",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 80,
+    "notes": [
+        {
+            "midi": 74,
+            "duration": 800
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 71,
+            "duration": 400
+        },
+        {
+            "midi": 69,
+            "duration": 800
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 66,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 800
+        }
+    ]
+}

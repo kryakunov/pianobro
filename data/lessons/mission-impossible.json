@@ -1,0 +1,46 @@
+{
+    "id": "mission-impossible",
+    "title": "Миссия невыполнима",
+    "composer": "L. Schifrin",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 118,
+    "notes": [
+        {
+            "midi": 63,
+            "duration": 200
+        },
+        {
+            "midi": 65,
+            "duration": 200
+        },
+        {
+            "midi": 66,
+            "duration": 200
+        },
+        {
+            "midi": 63,
+            "duration": 200
+        },
+        {
+            "midi": 65,
+            "duration": 200
+        },
+        {
+            "midi": 66,
+            "duration": 200
+        },
+        {
+            "midi": 63,
+            "duration": 200
+        },
+        {
+            "midi": 62,
+            "duration": 200
+        },
+        {
+            "midi": 60,
+            "duration": 800
+        }
+    ]
+}

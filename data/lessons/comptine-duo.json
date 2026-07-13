@@ -1,18 +1,40 @@
 {
-    "id": "fur-elise-duo",
-    "title": "К Элизе (две руки)",
-    "composer": "Beethoven",
-    "difficulty": "advanced",
-    "tempo": 90,
+    "id": "comptine-duo",
+    "title": "Амели (две руки)",
+    "composer": "Yann Tiersen",
+    "tempo": 100,
     "twoHands": true,
     "events": [
         {
-            "duration": 350,
+            "duration": 300,
+            "notes": [
+                {
+                    "midi": 45,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 300,
             "notes": [
                 {
                     "midi": 52,
                     "hand": "left"
-                },
+                }
+            ]
+        },
+        {
+            "duration": 300,
+            "notes": [
+                {
+                    "midi": 57,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 300,
+            "notes": [
                 {
                     "midi": 76,
                     "hand": "right"
@@ -20,91 +42,16 @@
             ]
         },
         {
-            "duration": 350,
+            "duration": 300,
             "notes": [
                 {
-                    "midi": 75,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 350,
-            "notes": [
-                {
-                    "midi": 52,
+                    "midi": 41,
                     "hand": "left"
-                },
-                {
-                    "midi": 76,
-                    "hand": "right"
                 }
             ]
         },
         {
-            "duration": 350,
-            "notes": [
-                {
-                    "midi": 75,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 350,
-            "notes": [
-                {
-                    "midi": 47,
-                    "hand": "left"
-                },
-                {
-                    "midi": 76,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 350,
-            "notes": [
-                {
-                    "midi": 71,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 350,
-            "notes": [
-                {
-                    "midi": 74,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 350,
-            "notes": [
-                {
-                    "midi": 72,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 500,
-            "notes": [
-                {
-                    "midi": 40,
-                    "hand": "left"
-                },
-                {
-                    "midi": 69,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 350,
+            "duration": 300,
             "notes": [
                 {
                     "midi": 48,
@@ -113,51 +60,47 @@
             ]
         },
         {
-            "duration": 350,
+            "duration": 300,
             "notes": [
                 {
-                    "midi": 60,
+                    "midi": 53,
                     "hand": "left"
-                },
-                {
-                    "midi": 64,
-                    "hand": "right"
                 }
             ]
         },
         {
-            "duration": 350,
+            "duration": 300,
             "notes": [
                 {
-                    "midi": 69,
+                    "midi": 75,
                     "hand": "right"
                 }
             ]
         },
         {
-            "duration": 500,
+            "duration": 300,
+            "notes": [
+                {
+                    "midi": 76,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 300,
             "notes": [
                 {
                     "midi": 45,
                     "hand": "left"
                 },
                 {
-                    "midi": 64,
+                    "midi": 75,
                     "hand": "right"
                 }
             ]
         },
         {
-            "duration": 350,
-            "notes": [
-                {
-                    "midi": 69,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 350,
+            "duration": 300,
             "notes": [
                 {
                     "midi": 52,
@@ -170,8 +113,12 @@
             ]
         },
         {
-            "duration": 350,
+            "duration": 300,
             "notes": [
+                {
+                    "midi": 57,
+                    "hand": "left"
+                },
                 {
                     "midi": 75,
                     "hand": "right"
@@ -179,10 +126,10 @@
             ]
         },
         {
-            "duration": 350,
+            "duration": 300,
             "notes": [
                 {
-                    "midi": 52,
+                    "midi": 43,
                     "hand": "left"
                 },
                 {
@@ -192,30 +139,12 @@
             ]
         },
         {
-            "duration": 350,
+            "duration": 300,
             "notes": [
                 {
-                    "midi": 75,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 350,
-            "notes": [
-                {
-                    "midi": 47,
+                    "midi": 50,
                     "hand": "left"
                 },
-                {
-                    "midi": 76,
-                    "hand": "right"
-                }
-            ]
-        },
-        {
-            "duration": 350,
-            "notes": [
                 {
                     "midi": 71,
                     "hand": "right"
@@ -223,8 +152,12 @@
             ]
         },
         {
-            "duration": 350,
+            "duration": 300,
             "notes": [
+                {
+                    "midi": 55,
+                    "hand": "left"
+                },
                 {
                     "midi": 74,
                     "hand": "right"
@@ -232,19 +165,23 @@
             ]
         },
         {
-            "duration": 350,
+            "duration": 300,
             "notes": [
                 {
-                    "midi": 72,
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 71,
                     "hand": "right"
                 }
             ]
         },
         {
-            "duration": 700,
+            "duration": 600,
             "notes": [
                 {
-                    "midi": 40,
+                    "midi": 45,
                     "hand": "left"
                 },
                 {
@@ -252,7 +189,99 @@
                     "hand": "right"
                 }
             ]
+        },
+        {
+            "duration": 300,
+            "notes": [
+                {
+                    "midi": 48,
+                    "hand": "left"
+                },
+                {
+                    "midi": 71,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 300,
+            "notes": [
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 300,
+            "notes": [
+                {
+                    "midi": 57,
+                    "hand": "left"
+                },
+                {
+                    "midi": 76,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 300,
+            "notes": [
+                {
+                    "midi": 55,
+                    "hand": "left"
+                },
+                {
+                    "midi": 79,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 300,
+            "notes": [
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 76,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 300,
+            "notes": [
+                {
+                    "midi": 48,
+                    "hand": "left"
+                },
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 900,
+            "notes": [
+                {
+                    "midi": 45,
+                    "hand": "left"
+                },
+                {
+                    "midi": 71,
+                    "hand": "right"
+                }
+            ]
         }
     ],
-    "category": "international"
+    "difficulty": "advanced",
+    "category": "popular"
 }

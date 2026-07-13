@@ -1,0 +1,50 @@
+{
+    "id": "fly-me-to-moon",
+    "title": "Fly Me to the Moon",
+    "composer": "B. Howard",
+    "tempo": 96,
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 71,
+            "duration": 800
+        },
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 800
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 800
+        }
+    ],
+    "difficulty": "intermediate",
+    "category": "popular"
+}

@@ -1,0 +1,50 @@
+{
+    "id": "autumn-leaves",
+    "title": "Autumn Leaves",
+    "composer": "J. Kosma",
+    "tempo": 88,
+    "notes": [
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 74,
+            "duration": 400
+        },
+        {
+            "midi": 76,
+            "duration": 800
+        },
+        {
+            "midi": 74,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 69,
+            "duration": 800
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 800
+        }
+    ],
+    "difficulty": "intermediate",
+    "category": "popular"
+}

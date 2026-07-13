@@ -1,0 +1,159 @@
+{
+    "id": "river-flows-duo",
+    "title": "River Flows in You (две руки)",
+    "composer": "Yiruma",
+    "tempo": 72,
+    "twoHands": true,
+    "events": [
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 50,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 57,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 62,
+                    "hand": "left"
+                },
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 54,
+                    "hand": "left"
+                },
+                {
+                    "midi": 78,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 59,
+                    "hand": "left"
+                },
+                {
+                    "midi": 81,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 62,
+                    "hand": "left"
+                },
+                {
+                    "midi": 78,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 57,
+                    "hand": "left"
+                },
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 71,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 48,
+                    "hand": "left"
+                },
+                {
+                    "midi": 69,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 71,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 450,
+            "notes": [
+                {
+                    "midi": 57,
+                    "hand": "left"
+                },
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 900,
+            "notes": [
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 78,
+                    "hand": "right"
+                }
+            ]
+        }
+    ],
+    "difficulty": "advanced",
+    "category": "popular"
+}

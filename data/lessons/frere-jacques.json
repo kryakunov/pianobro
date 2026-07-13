@@ -1,0 +1,54 @@
+{
+    "id": "frere-jacques",
+    "title": "Брат Яков",
+    "composer": "Traditional",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 100,
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 65,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 800
+        }
+    ]
+}

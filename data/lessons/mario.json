@@ -1,0 +1,42 @@
+{
+    "id": "mario",
+    "title": "Super Mario",
+    "composer": "K. Kondo",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 120,
+    "notes": [
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 72,
+            "duration": 200
+        },
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 79,
+            "duration": 200
+        },
+        {
+            "midi": 72,
+            "duration": 200
+        },
+        {
+            "midi": 76,
+            "duration": 800
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+{
+    "id": "james-bond",
+    "title": "Джеймс Бонд",
+    "composer": "M. Arnold",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 100,
+    "notes": [
+        {
+            "midi": 62,
+            "duration": 200
+        },
+        {
+            "midi": 65,
+            "duration": 200
+        },
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 71,
+            "duration": 200
+        },
+        {
+            "midi": 69,
+            "duration": 200
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 65,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 800
+        }
+    ]
+}

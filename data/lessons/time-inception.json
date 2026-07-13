@@ -1,0 +1,54 @@
+{
+    "id": "time-inception",
+    "title": "Time (Inception)",
+    "composer": "H. Zimmer",
+    "tempo": 54,
+    "notes": [
+        {
+            "midi": 48,
+            "duration": 500
+        },
+        {
+            "midi": 55,
+            "duration": 500
+        },
+        {
+            "midi": 60,
+            "duration": 500
+        },
+        {
+            "midi": 64,
+            "duration": 500
+        },
+        {
+            "midi": 67,
+            "duration": 500
+        },
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 500
+        },
+        {
+            "midi": 79,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 300
+        },
+        {
+            "midi": 72,
+            "duration": 300
+        },
+        {
+            "midi": 67,
+            "duration": 800
+        }
+    ],
+    "difficulty": "intermediate",
+    "category": "popular"
+}

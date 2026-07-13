@@ -1,0 +1,46 @@
+{
+    "id": "baby-shark",
+    "title": "Baby Shark",
+    "composer": "Pinkfong",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 115,
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 200
+        },
+        {
+            "midi": 62,
+            "duration": 200
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 800
+        },
+        {
+            "midi": 62,
+            "duration": 200
+        },
+        {
+            "midi": 60,
+            "duration": 200
+        },
+        {
+            "midi": 57,
+            "duration": 800
+        }
+    ]
+}

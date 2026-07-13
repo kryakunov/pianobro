@@ -1,0 +1,46 @@
+{
+    "id": "over-rainbow",
+    "title": "Over the Rainbow",
+    "composer": "H. Arlen",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 92,
+    "notes": [
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 71,
+            "duration": 800
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 71,
+            "duration": 400
+        },
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 800
+        },
+        {
+            "midi": 65,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 800
+        }
+    ]
+}

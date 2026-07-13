@@ -1,0 +1,46 @@
+{
+    "id": "imperial-march",
+    "title": "Имперский марш",
+    "composer": "J. Williams",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 104,
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 63,
+            "duration": 200
+        },
+        {
+            "midi": 65,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 63,
+            "duration": 200
+        },
+        {
+            "midi": 65,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 800
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+{
+    "id": "happy-pharrell",
+    "title": "Happy",
+    "composer": "Pharrell Williams",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 100,
+    "notes": [
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 66,
+            "duration": 400
+        },
+        {
+            "midi": 66,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 800
+        },
+        {
+            "midi": 59,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 800
+        }
+    ]
+}

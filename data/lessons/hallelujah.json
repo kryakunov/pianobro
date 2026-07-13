@@ -1,0 +1,50 @@
+{
+    "id": "hallelujah",
+    "title": "Hallelujah",
+    "composer": "L. Cohen",
+    "tempo": 82,
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 800
+        },
+        {
+            "midi": 71,
+            "duration": 400
+        },
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 800
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 800
+        }
+    ],
+    "difficulty": "intermediate",
+    "category": "popular"
+}

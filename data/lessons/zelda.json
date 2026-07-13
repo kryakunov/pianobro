@@ -1,0 +1,38 @@
+{
+    "id": "zelda",
+    "title": "The Legend of Zelda",
+    "composer": "K. Kondo",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 100,
+    "notes": [
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 71,
+            "duration": 400
+        },
+        {
+            "midi": 76,
+            "duration": 800
+        },
+        {
+            "midi": 74,
+            "duration": 400
+        },
+        {
+            "midi": 71,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 800
+        }
+    ]
+}

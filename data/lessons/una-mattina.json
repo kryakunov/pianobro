@@ -1,0 +1,54 @@
+{
+    "id": "una-mattina",
+    "title": "Una Mattina",
+    "composer": "Ludovico Einaudi",
+    "tempo": 74,
+    "notes": [
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 500
+        },
+        {
+            "midi": 79,
+            "duration": 500
+        },
+        {
+            "midi": 84,
+            "duration": 500
+        },
+        {
+            "midi": 83,
+            "duration": 300
+        },
+        {
+            "midi": 79,
+            "duration": 300
+        },
+        {
+            "midi": 76,
+            "duration": 800
+        },
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 69,
+            "duration": 500
+        },
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 800
+        }
+    ],
+    "difficulty": "intermediate",
+    "category": "popular"
+}

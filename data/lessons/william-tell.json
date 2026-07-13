@@ -1,0 +1,54 @@
+{
+    "id": "william-tell",
+    "title": "Увертюра «Вильгельм Телль»",
+    "composer": "G. Rossini",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 118,
+    "notes": [
+        {
+            "midi": 67,
+            "duration": 200
+        },
+        {
+            "midi": 69,
+            "duration": 200
+        },
+        {
+            "midi": 71,
+            "duration": 200
+        },
+        {
+            "midi": 72,
+            "duration": 200
+        },
+        {
+            "midi": 71,
+            "duration": 200
+        },
+        {
+            "midi": 69,
+            "duration": 200
+        },
+        {
+            "midi": 67,
+            "duration": 200
+        },
+        {
+            "midi": 65,
+            "duration": 200
+        },
+        {
+            "midi": 64,
+            "duration": 200
+        },
+        {
+            "midi": 62,
+            "duration": 200
+        },
+        {
+            "midi": 60,
+            "duration": 800
+        }
+    ]
+}

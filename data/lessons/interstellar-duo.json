@@ -1,0 +1,172 @@
+{
+    "id": "interstellar-duo",
+    "title": "Interstellar (две руки)",
+    "composer": "H. Zimmer",
+    "tempo": 60,
+    "twoHands": true,
+    "events": [
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 48,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 55,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 60,
+                    "hand": "left"
+                },
+                {
+                    "midi": 72,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 76,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 57,
+                    "hand": "left"
+                },
+                {
+                    "midi": 79,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 60,
+                    "hand": "left"
+                },
+                {
+                    "midi": 84,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 55,
+                    "hand": "left"
+                },
+                {
+                    "midi": 83,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 79,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 48,
+                    "hand": "left"
+                },
+                {
+                    "midi": 76,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 45,
+                    "hand": "left"
+                },
+                {
+                    "midi": 72,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 67,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 500,
+            "notes": [
+                {
+                    "midi": 55,
+                    "hand": "left"
+                },
+                {
+                    "midi": 64,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 1000,
+            "notes": [
+                {
+                    "midi": 48,
+                    "hand": "left"
+                },
+                {
+                    "midi": 60,
+                    "hand": "right"
+                }
+            ]
+        }
+    ],
+    "difficulty": "advanced",
+    "category": "popular"
+}

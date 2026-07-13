@@ -1,0 +1,46 @@
+{
+    "id": "let-it-go",
+    "title": "Let It Go",
+    "composer": "R. Lopez",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 96,
+    "notes": [
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 65,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 800
+        },
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 65,
+            "duration": 800
+        },
+        {
+            "midi": 64,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 800
+        }
+    ]
+}

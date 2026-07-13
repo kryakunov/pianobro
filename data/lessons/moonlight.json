@@ -5,26 +5,90 @@
     "difficulty": "intermediate",
     "tempo": 60,
     "notes": [
-        {"midi": 73, "duration": 600},
-        {"midi": 76, "duration": 600},
-        {"midi": 80, "duration": 600},
-        {"midi": 76, "duration": 600},
-        {"midi": 73, "duration": 600},
-        {"midi": 76, "duration": 600},
-        {"midi": 80, "duration": 600},
-        {"midi": 76, "duration": 600},
-        {"midi": 71, "duration": 600},
-        {"midi": 74, "duration": 600},
-        {"midi": 78, "duration": 600},
-        {"midi": 74, "duration": 600},
-        {"midi": 71, "duration": 600},
-        {"midi": 74, "duration": 600},
-        {"midi": 78, "duration": 600},
-        {"midi": 74, "duration": 600},
-        {"midi": 69, "duration": 600},
-        {"midi": 72, "duration": 600},
-        {"midi": 76, "duration": 600},
-        {"midi": 72, "duration": 600},
-        {"midi": 69, "duration": 1200}
-    ]
+        {
+            "midi": 73,
+            "duration": 600
+        },
+        {
+            "midi": 76,
+            "duration": 600
+        },
+        {
+            "midi": 80,
+            "duration": 600
+        },
+        {
+            "midi": 76,
+            "duration": 600
+        },
+        {
+            "midi": 73,
+            "duration": 600
+        },
+        {
+            "midi": 76,
+            "duration": 600
+        },
+        {
+            "midi": 80,
+            "duration": 600
+        },
+        {
+            "midi": 76,
+            "duration": 600
+        },
+        {
+            "midi": 71,
+            "duration": 600
+        },
+        {
+            "midi": 74,
+            "duration": 600
+        },
+        {
+            "midi": 78,
+            "duration": 600
+        },
+        {
+            "midi": 74,
+            "duration": 600
+        },
+        {
+            "midi": 71,
+            "duration": 600
+        },
+        {
+            "midi": 74,
+            "duration": 600
+        },
+        {
+            "midi": 78,
+            "duration": 600
+        },
+        {
+            "midi": 74,
+            "duration": 600
+        },
+        {
+            "midi": 69,
+            "duration": 600
+        },
+        {
+            "midi": 72,
+            "duration": 600
+        },
+        {
+            "midi": 76,
+            "duration": 600
+        },
+        {
+            "midi": 72,
+            "duration": 600
+        },
+        {
+            "midi": 69,
+            "duration": 1200
+        }
+    ],
+    "category": "international"
 }

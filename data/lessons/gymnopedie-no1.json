@@ -1,0 +1,50 @@
+{
+    "id": "gymnopedie-no1",
+    "title": "Gymnopédie No. 1",
+    "composer": "E. Satie",
+    "tempo": 76,
+    "notes": [
+        {
+            "midi": 67,
+            "duration": 500
+        },
+        {
+            "midi": 69,
+            "duration": 500
+        },
+        {
+            "midi": 71,
+            "duration": 500
+        },
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 71,
+            "duration": 300
+        },
+        {
+            "midi": 69,
+            "duration": 300
+        },
+        {
+            "midi": 67,
+            "duration": 800
+        },
+        {
+            "midi": 64,
+            "duration": 500
+        },
+        {
+            "midi": 67,
+            "duration": 500
+        },
+        {
+            "midi": 71,
+            "duration": 800
+        }
+    ],
+    "difficulty": "intermediate",
+    "category": "popular"
+}

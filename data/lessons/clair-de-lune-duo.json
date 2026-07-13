@@ -6,29 +6,318 @@
     "tempo": 60,
     "twoHands": true,
     "events": [
-        {"duration": 550, "notes": [{"midi": 50, "hand": "left"}, {"midi": 57, "hand": "left"}, {"midi": 62, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 74, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 50, "hand": "left"}, {"midi": 57, "hand": "left"}, {"midi": 62, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 73, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 48, "hand": "left"}, {"midi": 55, "hand": "left"}, {"midi": 60, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 72, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 48, "hand": "left"}, {"midi": 55, "hand": "left"}, {"midi": 60, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 71, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 47, "hand": "left"}, {"midi": 54, "hand": "left"}, {"midi": 59, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 69, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 45, "hand": "left"}, {"midi": 52, "hand": "left"}, {"midi": 57, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 67, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 43, "hand": "left"}, {"midi": 50, "hand": "left"}, {"midi": 55, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 66, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 43, "hand": "left"}, {"midi": 50, "hand": "left"}, {"midi": 55, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 67, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 45, "hand": "left"}, {"midi": 52, "hand": "left"}, {"midi": 57, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 69, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 47, "hand": "left"}, {"midi": 54, "hand": "left"}, {"midi": 59, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 71, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 48, "hand": "left"}, {"midi": 55, "hand": "left"}, {"midi": 60, "hand": "left"}]},
-        {"duration": 550, "notes": [{"midi": 72, "hand": "right"}]},
-        {"duration": 550, "notes": [{"midi": 50, "hand": "left"}, {"midi": 57, "hand": "left"}, {"midi": 62, "hand": "left"}]},
-        {"duration": 1100, "notes": [{"midi": 74, "hand": "right"}]}
-    ]
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 57,
+                    "hand": "left"
+                },
+                {
+                    "midi": 62,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 57,
+                    "hand": "left"
+                },
+                {
+                    "midi": 62,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 73,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 48,
+                    "hand": "left"
+                },
+                {
+                    "midi": 55,
+                    "hand": "left"
+                },
+                {
+                    "midi": 60,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 72,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 48,
+                    "hand": "left"
+                },
+                {
+                    "midi": 55,
+                    "hand": "left"
+                },
+                {
+                    "midi": 60,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 71,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 47,
+                    "hand": "left"
+                },
+                {
+                    "midi": 54,
+                    "hand": "left"
+                },
+                {
+                    "midi": 59,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 69,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 45,
+                    "hand": "left"
+                },
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 57,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 67,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 43,
+                    "hand": "left"
+                },
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 55,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 66,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 43,
+                    "hand": "left"
+                },
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 55,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 67,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 45,
+                    "hand": "left"
+                },
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 57,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 69,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 47,
+                    "hand": "left"
+                },
+                {
+                    "midi": 54,
+                    "hand": "left"
+                },
+                {
+                    "midi": 59,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 71,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 48,
+                    "hand": "left"
+                },
+                {
+                    "midi": 55,
+                    "hand": "left"
+                },
+                {
+                    "midi": 60,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 72,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 550,
+            "notes": [
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 57,
+                    "hand": "left"
+                },
+                {
+                    "midi": 62,
+                    "hand": "left"
+                }
+            ]
+        },
+        {
+            "duration": 1100,
+            "notes": [
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        }
+    ],
+    "category": "popular"
 }

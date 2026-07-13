@@ -5,29 +5,102 @@
     "difficulty": "intermediate",
     "tempo": 70,
     "notes": [
-        {"midi": 72, "duration": 500},
-        {"midi": 76, "duration": 500},
-        {"midi": 79, "duration": 500},
-        {"midi": 84, "duration": 500},
-        {"midi": 83, "duration": 500},
-        {"midi": 79, "duration": 500},
-        {"midi": 76, "duration": 500},
-        {"midi": 72, "duration": 500},
-        {"midi": 71, "duration": 500},
-        {"midi": 72, "duration": 500},
-        {"midi": 76, "duration": 500},
-        {"midi": 79, "duration": 500},
-        {"midi": 83, "duration": 500},
-        {"midi": 79, "duration": 500},
-        {"midi": 76, "duration": 500},
-        {"midi": 72, "duration": 1000},
-        {"midi": 69, "duration": 500},
-        {"midi": 72, "duration": 500},
-        {"midi": 76, "duration": 500},
-        {"midi": 79, "duration": 500},
-        {"midi": 76, "duration": 500},
-        {"midi": 74, "duration": 500},
-        {"midi": 72, "duration": 500},
-        {"midi": 69, "duration": 1000}
-    ]
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 500
+        },
+        {
+            "midi": 79,
+            "duration": 500
+        },
+        {
+            "midi": 84,
+            "duration": 500
+        },
+        {
+            "midi": 83,
+            "duration": 500
+        },
+        {
+            "midi": 79,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 500
+        },
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 71,
+            "duration": 500
+        },
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 500
+        },
+        {
+            "midi": 79,
+            "duration": 500
+        },
+        {
+            "midi": 83,
+            "duration": 500
+        },
+        {
+            "midi": 79,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 500
+        },
+        {
+            "midi": 72,
+            "duration": 1000
+        },
+        {
+            "midi": 69,
+            "duration": 500
+        },
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 500
+        },
+        {
+            "midi": 79,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 500
+        },
+        {
+            "midi": 74,
+            "duration": 500
+        },
+        {
+            "midi": 72,
+            "duration": 500
+        },
+        {
+            "midi": 69,
+            "duration": 1000
+        }
+    ],
+    "category": "popular"
 }

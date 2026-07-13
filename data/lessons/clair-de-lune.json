@@ -1,0 +1,54 @@
+{
+    "id": "clair-de-lune",
+    "title": "Clair de Lune",
+    "composer": "C. Debussy",
+    "tempo": 66,
+    "notes": [
+        {
+            "midi": 68,
+            "duration": 500
+        },
+        {
+            "midi": 71,
+            "duration": 500
+        },
+        {
+            "midi": 73,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 500
+        },
+        {
+            "midi": 75,
+            "duration": 300
+        },
+        {
+            "midi": 73,
+            "duration": 300
+        },
+        {
+            "midi": 71,
+            "duration": 800
+        },
+        {
+            "midi": 68,
+            "duration": 500
+        },
+        {
+            "midi": 71,
+            "duration": 500
+        },
+        {
+            "midi": 73,
+            "duration": 500
+        },
+        {
+            "midi": 76,
+            "duration": 800
+        }
+    ],
+    "difficulty": "intermediate",
+    "category": "popular"
+}

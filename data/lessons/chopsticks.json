@@ -1,0 +1,54 @@
+{
+    "id": "chopsticks",
+    "title": "Чопстикс",
+    "composer": "A. Allen",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 116,
+    "notes": [
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 77,
+            "duration": 200
+        },
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 77,
+            "duration": 200
+        },
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 72,
+            "duration": 200
+        },
+        {
+            "midi": 74,
+            "duration": 200
+        },
+        {
+            "midi": 76,
+            "duration": 200
+        },
+        {
+            "midi": 74,
+            "duration": 200
+        },
+        {
+            "midi": 72,
+            "duration": 200
+        },
+        {
+            "midi": 69,
+            "duration": 800
+        }
+    ]
+}

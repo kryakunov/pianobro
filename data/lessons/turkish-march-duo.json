@@ -1,0 +1,167 @@
+{
+    "id": "turkish-march-duo",
+    "title": "Турецкий марш (две руки)",
+    "composer": "W. A. Mozart",
+    "tempo": 120,
+    "twoHands": true,
+    "events": [
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 40,
+                    "hand": "left"
+                },
+                {
+                    "midi": 76,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 40,
+                    "hand": "left"
+                },
+                {
+                    "midi": 72,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 71,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 38,
+                    "hand": "left"
+                },
+                {
+                    "midi": 69,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 71,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 38,
+                    "hand": "left"
+                },
+                {
+                    "midi": 72,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 50,
+                    "hand": "left"
+                },
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 40,
+                    "hand": "left"
+                },
+                {
+                    "midi": 76,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 79,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 200,
+            "notes": [
+                {
+                    "midi": 40,
+                    "hand": "left"
+                },
+                {
+                    "midi": 76,
+                    "hand": "right"
+                }
+            ]
+        },
+        {
+            "duration": 400,
+            "notes": [
+                {
+                    "midi": 52,
+                    "hand": "left"
+                },
+                {
+                    "midi": 74,
+                    "hand": "right"
+                }
+            ]
+        }
+    ],
+    "difficulty": "advanced",
+    "category": "popular"
+}

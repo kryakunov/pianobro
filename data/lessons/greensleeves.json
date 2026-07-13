@@ -1,0 +1,46 @@
+{
+    "id": "greensleeves",
+    "title": "Greensleeves",
+    "composer": "Traditional",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 86,
+    "notes": [
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 65,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 800
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 59,
+            "duration": 800
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 800
+        }
+    ]
+}

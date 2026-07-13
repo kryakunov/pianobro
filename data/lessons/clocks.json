@@ -1,0 +1,58 @@
+{
+    "id": "clocks",
+    "title": "Clocks",
+    "composer": "Coldplay",
+    "tempo": 131,
+    "notes": [
+        {
+            "midi": 72,
+            "duration": 300
+        },
+        {
+            "midi": 76,
+            "duration": 300
+        },
+        {
+            "midi": 79,
+            "duration": 300
+        },
+        {
+            "midi": 84,
+            "duration": 300
+        },
+        {
+            "midi": 79,
+            "duration": 300
+        },
+        {
+            "midi": 76,
+            "duration": 300
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 69,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 800
+        },
+        {
+            "midi": 76,
+            "duration": 300
+        },
+        {
+            "midi": 79,
+            "duration": 300
+        },
+        {
+            "midi": 84,
+            "duration": 800
+        }
+    ],
+    "difficulty": "intermediate",
+    "category": "popular"
+}

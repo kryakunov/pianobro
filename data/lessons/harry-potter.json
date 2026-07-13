@@ -1,0 +1,50 @@
+{
+    "id": "harry-potter",
+    "title": "Гарри Поттер",
+    "composer": "J. Williams",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 88,
+    "notes": [
+        {
+            "midi": 62,
+            "duration": 800
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 800
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 59,
+            "duration": 800
+        },
+        {
+            "midi": 60,
+            "duration": 400
+        },
+        {
+            "midi": 62,
+            "duration": 400
+        },
+        {
+            "midi": 64,
+            "duration": 800
+        }
+    ]
+}

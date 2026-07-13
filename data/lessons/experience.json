@@ -5,42 +5,154 @@
     "difficulty": "intermediate",
     "tempo": 72,
     "notes": [
-        {"midi": 74, "duration": 450},
-        {"midi": 73, "duration": 450},
-        {"midi": 71, "duration": 450},
-        {"midi": 73, "duration": 450},
-        {"midi": 74, "duration": 450},
-        {"midi": 76, "duration": 450},
-        {"midi": 78, "duration": 450},
-        {"midi": 76, "duration": 450},
-        {"midi": 74, "duration": 450},
-        {"midi": 73, "duration": 450},
-        {"midi": 71, "duration": 450},
-        {"midi": 69, "duration": 450},
-        {"midi": 68, "duration": 450},
-        {"midi": 69, "duration": 450},
-        {"midi": 71, "duration": 450},
-        {"midi": 73, "duration": 450},
-        {"midi": 74, "duration": 450},
-        {"midi": 76, "duration": 450},
-        {"midi": 78, "duration": 450},
-        {"midi": 80, "duration": 450},
-        {"midi": 78, "duration": 450},
-        {"midi": 76, "duration": 450},
-        {"midi": 74, "duration": 450},
-        {"midi": 73, "duration": 450},
-        {"midi": 71, "duration": 450},
-        {"midi": 73, "duration": 450},
-        {"midi": 74, "duration": 450},
-        {"midi": 76, "duration": 450},
-        {"midi": 78, "duration": 450},
-        {"midi": 76, "duration": 450},
-        {"midi": 74, "duration": 450},
-        {"midi": 73, "duration": 450},
-        {"midi": 71, "duration": 450},
-        {"midi": 69, "duration": 450},
-        {"midi": 71, "duration": 450},
-        {"midi": 73, "duration": 450},
-        {"midi": 74, "duration": 900}
-    ]
+        {
+            "midi": 74,
+            "duration": 450
+        },
+        {
+            "midi": 73,
+            "duration": 450
+        },
+        {
+            "midi": 71,
+            "duration": 450
+        },
+        {
+            "midi": 73,
+            "duration": 450
+        },
+        {
+            "midi": 74,
+            "duration": 450
+        },
+        {
+            "midi": 76,
+            "duration": 450
+        },
+        {
+            "midi": 78,
+            "duration": 450
+        },
+        {
+            "midi": 76,
+            "duration": 450
+        },
+        {
+            "midi": 74,
+            "duration": 450
+        },
+        {
+            "midi": 73,
+            "duration": 450
+        },
+        {
+            "midi": 71,
+            "duration": 450
+        },
+        {
+            "midi": 69,
+            "duration": 450
+        },
+        {
+            "midi": 68,
+            "duration": 450
+        },
+        {
+            "midi": 69,
+            "duration": 450
+        },
+        {
+            "midi": 71,
+            "duration": 450
+        },
+        {
+            "midi": 73,
+            "duration": 450
+        },
+        {
+            "midi": 74,
+            "duration": 450
+        },
+        {
+            "midi": 76,
+            "duration": 450
+        },
+        {
+            "midi": 78,
+            "duration": 450
+        },
+        {
+            "midi": 80,
+            "duration": 450
+        },
+        {
+            "midi": 78,
+            "duration": 450
+        },
+        {
+            "midi": 76,
+            "duration": 450
+        },
+        {
+            "midi": 74,
+            "duration": 450
+        },
+        {
+            "midi": 73,
+            "duration": 450
+        },
+        {
+            "midi": 71,
+            "duration": 450
+        },
+        {
+            "midi": 73,
+            "duration": 450
+        },
+        {
+            "midi": 74,
+            "duration": 450
+        },
+        {
+            "midi": 76,
+            "duration": 450
+        },
+        {
+            "midi": 78,
+            "duration": 450
+        },
+        {
+            "midi": 76,
+            "duration": 450
+        },
+        {
+            "midi": 74,
+            "duration": 450
+        },
+        {
+            "midi": 73,
+            "duration": 450
+        },
+        {
+            "midi": 71,
+            "duration": 450
+        },
+        {
+            "midi": 69,
+            "duration": 450
+        },
+        {
+            "midi": 71,
+            "duration": 450
+        },
+        {
+            "midi": 73,
+            "duration": 450
+        },
+        {
+            "midi": 74,
+            "duration": 900
+        }
+    ],
+    "category": "popular"
 }

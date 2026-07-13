@@ -26,6 +26,7 @@ final class Router
             'title' => $a['title'],
             'composer' => $a['composer'],
             'difficulty' => $a['difficulty'],
+            'category' => $a['category'],
             'noteCount' => $a['noteCount'],
             'eventCount' => $a['eventCount'],
             'twoHands' => $a['twoHands'],

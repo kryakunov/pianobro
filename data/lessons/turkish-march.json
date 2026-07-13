@@ -1,0 +1,62 @@
+{
+    "id": "turkish-march",
+    "title": "Турецкий марш",
+    "composer": "W. A. Mozart",
+    "tempo": 120,
+    "notes": [
+        {
+            "midi": 76,
+            "duration": 300
+        },
+        {
+            "midi": 74,
+            "duration": 300
+        },
+        {
+            "midi": 72,
+            "duration": 300
+        },
+        {
+            "midi": 71,
+            "duration": 300
+        },
+        {
+            "midi": 69,
+            "duration": 300
+        },
+        {
+            "midi": 71,
+            "duration": 300
+        },
+        {
+            "midi": 72,
+            "duration": 300
+        },
+        {
+            "midi": 74,
+            "duration": 300
+        },
+        {
+            "midi": 76,
+            "duration": 300
+        },
+        {
+            "midi": 79,
+            "duration": 300
+        },
+        {
+            "midi": 76,
+            "duration": 300
+        },
+        {
+            "midi": 74,
+            "duration": 300
+        },
+        {
+            "midi": 72,
+            "duration": 800
+        }
+    ],
+    "difficulty": "intermediate",
+    "category": "popular"
+}
