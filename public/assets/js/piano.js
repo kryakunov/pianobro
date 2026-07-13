@@ -154,29 +154,6 @@ export class PianoKeyboard {
         el.classList.add('piano-key--target');
       }
     });
-
-    const first = this.keys.get(midis[0]);
-    this.scrollKeyIntoView(midis[0]);
-  }
-
-  scrollKeyIntoView(midi) {
-    this._scrollKeyIntoView(this.keys.get(midi));
-  }
-
-  _scrollKeyIntoView(el) {
-    if (!el) return;
-    const scroller = this.container.closest('.piano-wrap');
-    if (!scroller) {
-      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      return;
-    }
-    const scrollerRect = scroller.getBoundingClientRect();
-    const keyRect = el.getBoundingClientRect();
-    const keyCenter = keyRect.left + keyRect.width / 2 - scrollerRect.left + scroller.scrollLeft;
-    scroller.scrollTo({
-      left: Math.max(0, keyCenter - scroller.clientWidth / 2),
-      behavior: 'smooth',
-    });
   }
 
   flashCorrect(midi) {

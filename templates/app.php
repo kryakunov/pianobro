@@ -122,7 +122,21 @@
         </div>
 
         <div id="sidebar-melody">
-          <h2>Уроки</h2>
+          <h2>Мелодии</h2>
+          <div class="melody-search">
+            <input
+              type="search"
+              class="melody-search__input"
+              id="melody-search"
+              placeholder="Название песни…"
+              autocomplete="off"
+              aria-label="Поиск мелодии"
+            >
+            <button type="button" class="btn btn--secondary btn--sm melody-search__upload" id="btn-midi-upload" title="Загрузить MIDI-файл">
+              MIDI
+            </button>
+            <input type="file" id="midi-upload" accept=".mid,.midi" hidden>
+          </div>
           <div class="lesson-list" id="lesson-list">
             <p class="loading">Загрузка уроков…</p>
           </div>

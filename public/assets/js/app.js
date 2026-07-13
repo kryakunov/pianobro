@@ -5,6 +5,7 @@ import { NoteTrainer, NOTE_LEVELS } from './note-trainer.js';
 import { StaffView } from './staff.js';
 import { MelodyPlayer } from './melody-player.js';
 import { normalizeLesson, eventLabel } from './lesson-utils.js';
+import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -14,6 +15,9 @@ const els = {
   sidebarNotes: $('#sidebar-notes'),
   modeTabs: document.querySelectorAll('.mode-tab'),
   lessonList: $('#lesson-list'),
+  melodySearch: $('#melody-search'),
+  midiUpload: $('#midi-upload'),
+  btnMidiUpload: $('#btn-midi-upload'),
   levelList: $('#level-list'),
   lessonTitle: $('#lesson-title'),
   lessonMeta: $('#lesson-meta'),
@@ -52,8 +56,13 @@ const els = {
 let appMode = 'melody';
 let isPreviewing = false;
 let selectedLessonId = null;
+let selectedImportedId = null;
 let selectedLevelId = NOTE_LEVELS[0].id;
 let lessons = [];
+let remoteSearchResults = [];
+let remoteSearchDone = false;
+let searchQuery = '';
+let searchRequestId = 0;
 
 const piano = new PianoKeyboard(els.piano, PIANO_START, PIANO_END);
 const midi = new MidiInput();
@@ -109,7 +118,6 @@ async function startPreview() {
       piano.clearStates(['pressed', 'target', 'target-left', 'target-right']);
       for (const n of event.notes) {
         piano.pressKey(n.midi);
-        piano.scrollKeyIntoView(n.midi);
       }
       staffView.update({ index, running: true, paused: false, preview: true });
     },
@@ -216,21 +224,208 @@ const DIFFICULTY_LABELS = {
   advanced: 'продвинутый',
 };
 
-function renderLessonList() {
-  els.lessonList.innerHTML = lessons.map((l) => {
-    const hands = l.twoHands ? ' · 2 руки' : '';
-    return `
-    <button type="button" class="lesson-card ${l.id === selectedLessonId ? 'lesson-card--active' : ''}"
-            data-id="${l.id}">
-      <div class="lesson-card__title">${escapeHtml(l.title)}</div>
-      <div class="lesson-card__meta">${escapeHtml(l.composer)} · ${DIFFICULTY_LABELS[l.difficulty] ?? l.difficulty}${hands} · ${l.noteCount} нот</div>
+function filterLocalLessons(query) {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return lessons;
+  return lessons.filter((lesson) => (
+    lesson.title.toLowerCase().includes(needle)
+    || lesson.composer.toLowerCase().includes(needle)
+  ));
+}
+
+function lessonCardHtml(lesson, { activeId, remote = false, imported = false } = {}) {
+  const hands = lesson.twoHands ? ' · 2 руки' : '';
+  const metaParts = [];
+  if (lesson.composer) metaParts.push(lesson.composer);
+  if (lesson.difficulty) metaParts.push(DIFFICULTY_LABELS[lesson.difficulty] ?? lesson.difficulty);
+  if (hands) metaParts.push('2 руки');
+  if (lesson.noteCount) metaParts.push(`${lesson.noteCount} нот`);
+  if (remote) metaParts.push('из интернета');
+
+  const classes = ['lesson-card'];
+  if (lesson.id === activeId) classes.push('lesson-card--active');
+  if (remote) classes.push('lesson-card--remote');
+  if (imported) classes.push('lesson-card--imported');
+
+  return `
+    <button type="button" class="${classes.join(' ')}"
+            data-id="${escapeHtml(lesson.id)}"
+            ${remote ? `data-remote-id="${lesson.remoteId}"` : ''}>
+      <div class="lesson-card__title">${escapeHtml(lesson.title)}</div>
+      <div class="lesson-card__meta">${escapeHtml(metaParts.join(' · '))}</div>
     </button>
   `;
-  }).join('');
+}
+
+function renderLessonList() {
+  const query = searchQuery.trim();
+  const localMatches = filterLocalLessons(query);
+  const activeId = selectedLessonId ?? selectedImportedId;
+  const parts = [];
+
+  if (query) {
+    parts.push('<div class="lesson-section-label">В каталоге</div>');
+    if (localMatches.length) {
+      parts.push(localMatches.map((lesson) => lessonCardHtml(lesson, { activeId })).join(''));
+    } else {
+      parts.push('<p class="lesson-list__empty">В каталоге ничего не найдено</p>');
+    }
+
+    parts.push('<div class="lesson-section-label">Из интернета</div>');
+    if (remoteSearchResults.length) {
+      parts.push(remoteSearchResults.map((result) => lessonCardHtml({
+        id: `remote-${result.id}`,
+        remoteId: result.id,
+        title: result.title,
+        composer: '',
+        noteCount: null,
+        twoHands: false,
+        difficulty: '',
+      }, { activeId, remote: true })).join(''));
+    } else if (query.length >= 2 && !remoteSearchDone) {
+      parts.push('<p class="lesson-list__empty">Ищем MIDI-файлы…</p>');
+    } else if (query.length >= 2) {
+      parts.push('<p class="lesson-list__empty">В интернете ничего не найдено</p>');
+    }
+  } else {
+    parts.push(localMatches.map((lesson) => lessonCardHtml(lesson, { activeId })).join(''));
+  }
+
+  els.lessonList.innerHTML = parts.join('');
 
   els.lessonList.querySelectorAll('.lesson-card').forEach((card) => {
-    card.addEventListener('click', () => selectLesson(card.dataset.id));
+    card.addEventListener('click', () => {
+      if (card.dataset.remoteId) {
+        loadRemoteMidi(Number(card.dataset.remoteId), card.querySelector('.lesson-card__title')?.textContent ?? '');
+      } else {
+        selectLesson(card.dataset.id);
+      }
+    });
   });
+}
+
+async function runMelodySearch(query) {
+  const trimmed = query.trim();
+  searchQuery = query;
+  renderLessonList();
+
+  if (trimmed.length < 2) {
+    remoteSearchResults = [];
+    remoteSearchDone = false;
+    renderLessonList();
+    return;
+  }
+
+  remoteSearchDone = false;
+  renderLessonList();
+
+  const requestId = ++searchRequestId;
+  try {
+    const data = await fetchJson(`/api/midi/search?q=${encodeURIComponent(trimmed)}`);
+    if (requestId !== searchRequestId || searchQuery.trim() !== trimmed) return;
+    remoteSearchResults = data.results ?? [];
+  } catch {
+    if (requestId !== searchRequestId) return;
+    remoteSearchResults = [];
+  } finally {
+    if (requestId === searchRequestId && searchQuery.trim() === trimmed) {
+      remoteSearchDone = true;
+      renderLessonList();
+    }
+  }
+}
+
+let searchDebounceTimer = null;
+
+function loadMelodyLesson(lesson, { activeId = null, feedback = 'Мелодия загружена. Нажмите «Прослушать» или «Начать».' } = {}) {
+  stopPreview();
+  const normalized = normalizeLesson(lesson);
+
+  melodyTrainer.loadLesson(normalized);
+  staffView.loadLesson(normalized);
+  els.staffViewport.classList.toggle('staff-viewport--grand', normalized.twoHands);
+  els.lessonTitle.textContent = normalized.title;
+
+  const handsLabel = normalized.twoHands ? ' · две руки' : '';
+  const sourceLabel = normalized.source === 'imported' ? ' · загружено' : '';
+  els.lessonMeta.textContent = `${normalized.composer || 'MIDI'} · ${normalized.eventCount ?? normalized.events.length} шагов · ${normalized.noteCount} нот${handsLabel}${sourceLabel} · темп ${normalized.tempo}`;
+  els.btnStart.disabled = false;
+  els.btnPreview.disabled = false;
+  els.btnReset.disabled = false;
+
+  if (activeId?.startsWith('remote-')) {
+    selectedLessonId = null;
+    selectedImportedId = activeId;
+  } else if (activeId) {
+    selectedLessonId = activeId;
+    selectedImportedId = null;
+  }
+
+  renderLessonList();
+  updateMelodyUI({
+    index: 0,
+    total: normalized.events.length,
+    correct: 0,
+    wrong: 0,
+    running: false,
+    paused: false,
+    currentEvent: normalized.events[0] ?? null,
+    currentNote: normalized.events[0]?.notes[0] ?? null,
+    results: [],
+    events: normalized.events,
+    twoHands: normalized.twoHands,
+  });
+  staffView.update({ index: 0, running: false, paused: false });
+  showFeedback(feedback, 'info');
+}
+
+async function loadRemoteMidi(remoteId, title) {
+  showFeedback('Загрузка MIDI…', 'info');
+  try {
+    const res = await fetch(`/api/midi/${remoteId}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const lesson = await midiToLesson(await res.arrayBuffer(), {
+      id: `remote-${remoteId}`,
+      title: title.trim() || 'MIDI мелодия',
+      composer: 'FreeMidi',
+    });
+    loadMelodyLesson(lesson, {
+      activeId: `remote-${remoteId}`,
+      feedback: `«${lesson.title}» загружена: ${lesson.eventCount} шагов.`,
+    });
+  } catch {
+    showFeedback('Не удалось загрузить MIDI. Попробуйте другой вариант.', 'wrong');
+  }
+}
+
+async function loadUploadedMidi(file) {
+  if (!file) return;
+
+  const name = file.name.toLowerCase();
+  if (!name.endsWith('.mid') && !name.endsWith('.midi')) {
+    showFeedback('Выберите файл с расширением .mid или .midi', 'wrong');
+    els.midiUpload.value = '';
+    return;
+  }
+
+  showFeedback('Читаем MIDI-файл…', 'info');
+  try {
+    const lesson = await midiToLesson(await file.arrayBuffer(), {
+      id: `upload-${Date.now()}`,
+      title: file.name.replace(/\.(mid|midi)$/i, ''),
+      composer: 'Загружено',
+    });
+    selectedLessonId = null;
+    selectedImportedId = lesson.id;
+    loadMelodyLesson(lesson, {
+      activeId: lesson.id,
+      feedback: `Файл «${file.name}» загружен: ${lesson.eventCount} шагов.`,
+    });
+  } catch (error) {
+    showFeedback(error?.message ?? 'Не удалось прочитать MIDI-файл', 'wrong');
+  } finally {
+    els.midiUpload.value = '';
+  }
 }
 
 function renderLevelList() {
@@ -250,34 +445,12 @@ function renderLevelList() {
 async function selectLesson(id) {
   stopPreview();
   selectedLessonId = id;
+  selectedImportedId = null;
   renderLessonList();
 
   try {
     const lesson = normalizeLesson(await fetchJson(`/api/lessons/${id}`));
-    melodyTrainer.loadLesson(lesson);
-    staffView.loadLesson(lesson);
-    els.staffViewport.classList.toggle('staff-viewport--grand', lesson.twoHands);
-    els.lessonTitle.textContent = lesson.title;
-    const handsLabel = lesson.twoHands ? ' · две руки' : '';
-    els.lessonMeta.textContent = `${lesson.composer} · ${lesson.eventCount ?? lesson.events.length} шагов · ${lesson.noteCount} нот${handsLabel} · темп ${lesson.tempo}`;
-    els.btnStart.disabled = false;
-    els.btnPreview.disabled = false;
-    els.btnReset.disabled = false;
-    updateMelodyUI({
-      index: 0,
-      total: lesson.events.length,
-      correct: 0,
-      wrong: 0,
-      running: false,
-      paused: false,
-      currentEvent: lesson.events[0] ?? null,
-      currentNote: lesson.events[0]?.notes[0] ?? null,
-      results: [],
-      events: lesson.events,
-      twoHands: lesson.twoHands,
-    });
-    staffView.update({ index: 0, running: false, paused: false });
-    showFeedback('Урок загружен. Нажмите «Прослушать» или «Начать».', 'info');
+    loadMelodyLesson(lesson, { activeId: id });
   } catch {
     showFeedback('Не удалось загрузить урок', 'wrong');
   }
@@ -411,12 +584,33 @@ noteTrainer.onUpdate = (state) => {
   if (appMode === 'notes') updateNoteUI(state);
 };
 noteTrainer.onFeedback = showFeedback;
-noteTrainer.onNoteChange = (midiNote) => {
-  staffView.showDrillNote(midiNote);
+noteTrainer.onNoteChange = (midiNote, { spelling } = {}) => {
+  staffView.showDrillNote(midiNote, spelling);
 };
 
 els.modeTabs.forEach((tab) => {
   tab.addEventListener('click', () => setMode(tab.dataset.mode));
+});
+
+els.melodySearch.addEventListener('input', () => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    runMelodySearch(els.melodySearch.value);
+  }, 350);
+});
+
+els.melodySearch.addEventListener('search', () => {
+  clearTimeout(searchDebounceTimer);
+  runMelodySearch(els.melodySearch.value);
+});
+
+els.midiUpload?.addEventListener('change', () => {
+  const file = els.midiUpload.files?.[0];
+  if (file) loadUploadedMidi(file);
+});
+
+els.btnMidiUpload?.addEventListener('click', () => {
+  els.midiUpload?.click();
 });
 
 els.btnStart.addEventListener('click', () => {
@@ -485,9 +679,15 @@ els.togglePianoVisible.addEventListener('change', () => {
 
 const pressedKeys = new Set();
 
+function isTypingTarget(target) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
+}
+
 document.addEventListener('keydown', (e) => {
   if (!els.toggleKeyboard.checked) return;
   if (e.repeat) return;
+  if (isTypingTarget(e.target)) return;
   const note = KEYBOARD_MAP[e.key.toLowerCase()];
   if (note === undefined) return;
   e.preventDefault();
@@ -498,6 +698,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('keyup', (e) => {
+  if (isTypingTarget(e.target)) return;
   const note = KEYBOARD_MAP[e.key.toLowerCase()];
   if (note === undefined) return;
   pressedKeys.delete(note);
@@ -512,10 +713,6 @@ window.addEventListener('resize', () => {
     staffView.loadLesson(melodyTrainer.lesson);
     staffView.update(melodyTrainer.state);
   } else if (appMode === 'notes' && noteTrainer.currentMidi !== null) {
-    staffView.showDrillNote(noteTrainer.currentMidi);
+    staffView.showDrillNote(noteTrainer.currentMidi, noteTrainer.spelling);
   }
 });
-
-piano.onLayout = () => {
-  piano.scrollKeyIntoView(60);
-};

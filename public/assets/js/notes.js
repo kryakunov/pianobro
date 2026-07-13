@@ -12,10 +12,10 @@ const FLAT_NAMES = {
   10: 'Си-бемоль',
 };
 
-/** Позиция на стане для бемольного написания (белая нота строки) */
-const FLAT_STAFF_MIDI = {
-  1: 62, 3: 64, 6: 67, 8: 69, 10: 71,
-};
+/** Позиция на стане для бемольного написания: чёрная клавиша → следующая белая */
+function flatStaffMidi(midi) {
+  return midi + 1;
+}
 
 /** Английские названия — только для MIDI/soundfont */
 const NOTE_NAMES_EN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -48,7 +48,7 @@ export function midiToStaffNote(midi, spelling = 'sharp') {
   }
 
   if (spelling === 'flat') {
-    return { staffMidi: FLAT_STAFF_MIDI[pc], accidental: 'flat', name };
+    return { staffMidi: flatStaffMidi(midi), accidental: 'flat', name };
   }
 
   return { staffMidi: midi, accidental: 'sharp', name };

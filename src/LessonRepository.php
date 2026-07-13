@@ -46,6 +46,25 @@ final class LessonRepository
     return $this->loadFromFile($path);
   }
 
+  /** @return list<Lesson> */
+  public function search(string $query): array
+  {
+    $needle = mb_strtolower(trim($query));
+    if ($needle === '') {
+      return [];
+    }
+
+    return array_values(array_filter(
+      $this->all(),
+      static function (Lesson $lesson) use ($needle): bool {
+        $title = mb_strtolower($lesson->title);
+        $composer = mb_strtolower($lesson->composer);
+
+        return str_contains($title, $needle) || str_contains($composer, $needle);
+      },
+    ));
+  }
+
   private function loadFromFile(string $path): ?Lesson
   {
     $raw = file_get_contents($path);

@@ -8,6 +8,7 @@ final class Router
 {
   public function __construct(
     private readonly LessonRepository $lessons,
+    private readonly MidiSearch $midiSearch,
   ) {}
 
   public function dispatch(string $uri, string $method): void
@@ -15,6 +16,8 @@ final class Router
     $path = parse_url($uri, PHP_URL_PATH) ?: '/';
 
     if ($path === '/api/lessons' && $method === 'GET') {
+      $query = trim((string) ($_GET['q'] ?? ''));
+      $items = $query !== '' ? $this->lessons->search($query) : $this->lessons->all();
       $this->json(array_map(
         static function (Lesson $l): array {
           $a = $l->toArray();
@@ -28,8 +31,35 @@ final class Router
             'twoHands' => $a['twoHands'],
           ];
         },
-        $this->lessons->all(),
+        $items,
       ));
+      return;
+    }
+
+    if ($path === '/api/midi/search' && $method === 'GET') {
+      $query = trim((string) ($_GET['q'] ?? ''));
+      if ($query === '') {
+        $this->json(['results' => []]);
+        return;
+      }
+
+      $this->json([
+        'query' => $query,
+        'results' => $this->midiSearch->search($query),
+      ]);
+      return;
+    }
+
+    if (preg_match('#^/api/midi/(\d+)$#', $path, $m) && $method === 'GET') {
+      $midi = $this->midiSearch->fetchMidi((int) $m[1]);
+      if ($midi === null) {
+        $this->json(['error' => 'MIDI не найден'], 404);
+        return;
+      }
+
+      header('Content-Type: audio/midi');
+      header('Content-Length: ' . strlen($midi));
+      echo $midi;
       return;
     }
 

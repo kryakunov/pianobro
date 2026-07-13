@@ -1,4 +1,4 @@
-import { midiToName } from './notes.js';
+import { midiToName, midiToStaffNote } from './notes.js';
 import { normalizeLesson } from './lesson-utils.js';
 
 const LINE_GAP = 11;
@@ -36,6 +36,7 @@ export class StaffView {
     this.eventPositions = [];
     this.spacing = 40;
     this.padding = 60;
+    this.spelling = 'sharp';
   }
 
   loadLesson(lesson) {
@@ -44,8 +45,9 @@ export class StaffView {
     this.render();
   }
 
-  showDrillNote(midi) {
+  showDrillNote(midi, spelling = 'sharp') {
     this.drillMode = true;
+    this.spelling = spelling;
     this.lesson = normalizeLesson({
       events: [{ duration: 400, notes: [{ midi, hand: 'right' }] }],
       twoHands: false,
@@ -130,23 +132,26 @@ export class StaffView {
 
       rightNotes.forEach((note, ni) => {
         const x = nx + ni * 4;
-        const y = midiToTrebleY(note.midi);
+        const staffInfo = midiToStaffNote(note.midi, this.spelling);
+        const y = midiToTrebleY(staffInfo.staffMidi);
         parts.push(this._ledgerLines(x, y, TREBLE_BOTTOM, TREBLE_BOTTOM - 4 * LINE_GAP));
-        parts.push(this._note(x, y, eventIndex, note, 'treble'));
+        parts.push(this._note(x, y, eventIndex, note, 'treble', staffInfo));
       });
 
       leftNotes.forEach((note, ni) => {
         const x = nx + ni * 4;
-        const y = midiToBassY(note.midi);
+        const staffInfo = midiToStaffNote(note.midi, this.spelling);
+        const y = midiToBassY(staffInfo.staffMidi);
         parts.push(this._ledgerLines(x, y, BASS_BOTTOM, BASS_BOTTOM - 4 * LINE_GAP));
-        parts.push(this._note(x, y, eventIndex, note, 'bass'));
+        parts.push(this._note(x, y, eventIndex, note, 'bass', staffInfo));
       });
 
       if (!twoHands && leftNotes.length === 0 && rightNotes.length === 0) {
         event.notes.forEach((note, ni) => {
           const x = nx + ni * 4;
-          const y = midiToTrebleY(note.midi);
-          parts.push(this._note(x, y, eventIndex, note, 'treble'));
+          const staffInfo = midiToStaffNote(note.midi, this.spelling);
+          const y = midiToTrebleY(staffInfo.staffMidi);
+          parts.push(this._note(x, y, eventIndex, note, 'treble', staffInfo));
         });
       }
     });
@@ -189,16 +194,20 @@ export class StaffView {
     return lines.join('');
   }
 
-  _note(x, y, eventIndex, note, clef) {
+  _note(x, y, eventIndex, note, clef, staffInfo) {
     const middleY = clef === 'bass' ? BASS_BOTTOM - 2 * LINE_GAP : TREBLE_BOTTOM - 2 * LINE_GAP;
     const stemUp = y > middleY;
     const stemX = stemUp ? x - NOTE_RX + 0.5 : x + NOTE_RX - 0.5;
     const stemY2 = stemUp ? y - STEM_LEN : y + STEM_LEN;
-    const name = note.name || midiToName(note.midi);
+    const name = note.name || staffInfo.name || midiToName(note.midi, this.spelling);
     const hand = note.hand ?? 'right';
+    const accidental = staffInfo.accidental
+      ? `<text x="${x - 10}" y="${y}" class="staff-accidental" text-anchor="end" dominant-baseline="middle">${staffInfo.accidental === 'flat' ? '♭' : '♯'}</text>`
+      : '';
 
     return `
       <g class="staff-note staff-note--${hand}" data-event-index="${eventIndex}" data-midi="${note.midi}">
+        ${accidental}
         <line x1="${stemX}" y1="${y}" x2="${stemX}" y2="${stemY2}" class="staff-note__stem"/>
         <ellipse cx="${x}" cy="${y}" rx="${NOTE_RX}" ry="${NOTE_RY}" class="staff-note__head"/>
         <title>${name}</title>
