@@ -2,7 +2,7 @@ import { PianoKeyboard } from './piano.js';
 import { MidiInput } from './midi.js';
 import { MicPitchInput } from './mic-pitch.js';
 import { MelodyTrainer } from './trainer.js';
-import { NoteTrainer, DEFAULT_NOTE_SETTINGS, buildPoolFromSettings, describeNoteSettings } from './note-trainer.js';
+import { NoteTrainer, DEFAULT_NOTE_SETTINGS, DEFAULT_NOTE_SESSION_LIMIT, NOTE_SESSION_LIMITS, buildPoolFromSettings, describeNoteSettings, usesBothClefs } from './note-trainer.js';
 import { StaffView } from './staff.js';
 import { normalizeLesson } from './lesson-utils.js';
 import { midiToLesson } from './midi-import.js';
@@ -35,6 +35,10 @@ const els = {
   practiceProgress: $('#practice-progress'),
   practiceSessionProgress: $('#practice-session-progress'),
   practiceSessionProgressFill: $('#practice-session-progress-fill'),
+  practiceInputStatus: $('#practice-input-status'),
+  practiceInputDot: $('#practice-input-dot'),
+  practiceInputStatusText: $('#practice-input-status-text'),
+  btnPracticeConnectMidi: $('#btn-practice-connect-midi'),
   practiceFeedback: $('#practice-feedback'),
   staffViewport: $('#staff-viewport'),
   practiceLayout: document.querySelector('.practice-layout'),
@@ -55,6 +59,7 @@ const els = {
   modalCorrect: $('#modal-correct'),
   modalWrong: $('#modal-wrong'),
   modalAccuracy: $('#modal-accuracy'),
+  modalSubtitle: $('#modal-subtitle'),
   btnModalRetry: $('#btn-modal-retry'),
   btnModalPick: $('#btn-modal-pick'),
   btnModalHome: $('#btn-modal-home'),
@@ -127,9 +132,43 @@ function setMicStatus(active, text) {
 function showFeedback(text, type) {
   els.practiceFeedback.textContent = text;
   els.practiceFeedback.className = 'practice-feedback';
+  els.practiceFeedback.classList.toggle('practice-feedback--empty', !text);
   if (type === 'correct') els.practiceFeedback.classList.add('practice-feedback--correct');
   else if (type === 'wrong') els.practiceFeedback.classList.add('practice-feedback--wrong');
   else if (type === 'complete') els.practiceFeedback.classList.add('practice-feedback--complete');
+  else if (type === 'info') els.practiceFeedback.classList.add('practice-feedback--info');
+}
+
+function updatePracticeInputStatus() {
+  if (!els.practiceInputStatus) return;
+
+  if (midi.isConnected || micPitch.isActive) {
+    els.practiceInputStatus.hidden = true;
+    return;
+  }
+
+  els.practiceInputStatus.hidden = false;
+  els.practiceInputStatus.className = 'practice-input-status practice-input-status--off';
+  els.practiceInputStatusText.textContent = 'Пианино не подключено — нажимайте клавиши на экране, клавиатуре ПК (A–L) или подключите MIDI';
+  if (els.btnPracticeConnectMidi) {
+    els.btnPracticeConnectMidi.hidden = !midi.isSupported;
+  }
+}
+
+async function connectMidiDevice() {
+  try {
+    const name = await midi.connect();
+    setMidiStatus('on', `Подключено: ${name}`);
+    els.btnConnectMidi.textContent = 'Переподключить';
+    els.midiTransposeWrap.hidden = false;
+    renderMidiDevices(midi.listInputs());
+    updatePracticeInputStatus();
+    return name;
+  } catch (e) {
+    setMidiStatus('error', e.message);
+    updatePracticeInputStatus();
+    throw e;
+  }
 }
 
 function escapeHtml(str) {
@@ -167,7 +206,8 @@ function updatePracticeProgress(state) {
 }
 
 function resetPracticeProgress() {
-  updatePracticeProgress({ index: 0, total: SESSION_LIMIT, correct: 0, sessionLimit: SESSION_LIMIT });
+  const limit = appMode === 'notes' ? noteTrainer.sessionLimit : SESSION_LIMIT;
+  updatePracticeProgress({ index: 0, total: limit, correct: 0, sessionLimit: limit });
 }
 
 function updateMelodyUI(state) {
@@ -184,7 +224,25 @@ function showSessionModal(stats) {
   els.modalCorrect.textContent = String(stats.correct);
   els.modalWrong.textContent = String(stats.wrong);
   els.modalAccuracy.textContent = `${stats.accuracy}%`;
+  if (els.modalSubtitle) {
+    const total = stats.total ?? stats.correct;
+    els.modalSubtitle.textContent = `Вы прошли ${total} ${pluralNotes(total)}`;
+  }
   els.sessionModal.hidden = false;
+}
+
+function pluralNotes(count) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'ноту';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'ноты';
+  return 'нот';
+}
+
+function readSessionLimitFromForm() {
+  const select = els.notesSettingsForm?.querySelector('[name="session-limit"]');
+  const value = parseInt(select?.value ?? String(DEFAULT_NOTE_SESSION_LIMIT), 10);
+  return NOTE_SESSION_LIMITS.includes(value) ? value : DEFAULT_NOTE_SESSION_LIMIT;
 }
 
 function hideSessionModal() {
@@ -217,7 +275,7 @@ function setPianoVisible(visible) {
         staffView.loadLesson(melodyTrainer.lesson);
         staffView.update(melodyTrainer.state);
       } else if (appMode === 'notes' && noteTrainer.currentMidi !== null) {
-        staffView.showDrillNote(noteTrainer.currentMidi, {
+        showNoteDrillStaff(noteTrainer.currentMidi, {
           spelling: noteTrainer.spelling,
           clef: noteTrainer.currentClef,
         });
@@ -245,6 +303,12 @@ function refreshKeyboardHints() {
   }
 }
 
+function showNoteDrillStaff(midi, { spelling, clef } = {}) {
+  const dualClef = usesBothClefs(noteTrainer.settings);
+  els.staffViewport.classList.toggle('staff-viewport--grand', dualClef);
+  staffView.showDrillNote(midi, { spelling, clef, dualClef });
+}
+
 function enterPractice(mode, title) {
   appMode = mode;
   currentPracticeTitle = title;
@@ -253,6 +317,7 @@ function enterPractice(mode, title) {
   setKeyboardHints(true);
   resetPracticeProgress();
   showFeedback('', 'info');
+  updatePracticeInputStatus();
   showScreen('practice');
 
   requestAnimationFrame(() => {
@@ -262,6 +327,7 @@ function enterPractice(mode, title) {
       els.staffViewport.classList.toggle('staff-viewport--grand', melodyTrainer.lesson.twoHands);
       melodyTrainer.start();
     } else if (mode === 'notes') {
+      els.staffViewport.classList.toggle('staff-viewport--grand', usesBothClefs(noteTrainer.settings));
       noteTrainer.start();
     }
   });
@@ -271,6 +337,7 @@ function exitPractice() {
   melodyTrainer.reset();
   noteTrainer.stop();
   staffView.clear();
+  els.staffViewport.classList.remove('staff-viewport--grand');
   piano.clearStates();
   hideSessionModal();
   resetPracticeProgress();
@@ -563,6 +630,11 @@ function applyNoteSettingsToForm(settings) {
   set('tonal-flat', settings.tonality.flatKeys);
 }
 
+function applySessionLimitToForm(limit = DEFAULT_NOTE_SESSION_LIMIT) {
+  const select = els.notesSettingsForm?.querySelector('[name="session-limit"]');
+  if (select) select.value = String(limit);
+}
+
 function hasSelectedOctaves(settings) {
   return settings.treble.first || settings.treble.second
     || settings.bass.small || settings.bass.great;
@@ -591,7 +663,7 @@ function startNotesTraining() {
   els.notesSettingsError.hidden = true;
   noteSettings = settings;
   noteTrainer.setConfig(settings);
-  noteTrainer.sessionLimit = SESSION_LIMIT;
+  noteTrainer.sessionLimit = readSessionLimitFromForm();
   enterPractice('notes', describeNoteSettings(settings));
 }
 
@@ -654,16 +726,19 @@ micPitch.onStatusChange = (state) => {
     els.midiDot.className = 'midi-dot midi-dot--off';
     setMicStatus(false, 'MIDI не подключён');
   } else {
-    setMicStatus(false);
+    setMidiStatus(false);
   }
+  if (currentScreen === 'practice') updatePracticeInputStatus();
 };
 
 async function startMicListening() {
   try {
     await micPitch.start();
+    if (currentScreen === 'practice') updatePracticeInputStatus();
   } catch (error) {
     setMicStatus(false);
     setMidiStatus('error', error?.message ?? 'Не удалось включить микрофон');
+    if (currentScreen === 'practice') updatePracticeInputStatus();
   }
 }
 
@@ -676,6 +751,7 @@ function stopMicListening() {
   } else {
     setMidiStatus('off', 'MIDI не подключён');
   }
+  if (currentScreen === 'practice') updatePracticeInputStatus();
 }
 
 function renderMidiDevices(inputs) {
@@ -694,7 +770,10 @@ function renderMidiDevices(inputs) {
   }
 }
 
-midi.onInputsChanged = renderMidiDevices;
+midi.onInputsChanged = (inputs) => {
+  renderMidiDevices(inputs);
+  if (currentScreen === 'practice') updatePracticeInputStatus();
+};
 
 melodyTrainer.onUpdate = (state) => {
   if (appMode === 'melody' && currentScreen === 'practice') updateMelodyUI(state);
@@ -708,7 +787,7 @@ noteTrainer.onUpdate = (state) => {
 noteTrainer.onFeedback = showFeedback;
 noteTrainer.onComplete = onSessionComplete;
 noteTrainer.onNoteChange = (midiNote, { spelling, clef } = {}) => {
-  staffView.showDrillNote(midiNote, { spelling, clef });
+  showNoteDrillStaff(midiNote, { spelling, clef });
 };
 
 els.notesSettingsForm?.addEventListener('submit', (e) => {
@@ -801,13 +880,17 @@ els.sessionModal.querySelector('.modal__backdrop').addEventListener('click', () 
 
 els.btnConnectMidi.addEventListener('click', async () => {
   try {
-    const name = await midi.connect();
-    setMidiStatus('on', `Подключено: ${name}`);
-    els.btnConnectMidi.textContent = 'Переподключить';
-    els.midiTransposeWrap.hidden = false;
-    renderMidiDevices(midi.listInputs());
-  } catch (e) {
-    setMidiStatus('error', e.message);
+    await connectMidiDevice();
+  } catch {
+    // status already updated in connectMidiDevice
+  }
+});
+
+els.btnPracticeConnectMidi?.addEventListener('click', async () => {
+  try {
+    await connectMidiDevice();
+  } catch {
+    // status already updated in connectMidiDevice
   }
 });
 
@@ -858,7 +941,8 @@ document.addEventListener('keyup', (e) => {
 
 loadLessons();
 applyNoteSettingsToForm(DEFAULT_NOTE_SETTINGS);
-noteTrainer.sessionLimit = SESSION_LIMIT;
+applySessionLimitToForm(DEFAULT_NOTE_SESSION_LIMIT);
+noteTrainer.sessionLimit = DEFAULT_NOTE_SESSION_LIMIT;
 setPianoVisible(false);
 melodyTrainer.showKeyboardHints = true;
 noteTrainer.showKeyboardHints = true;
@@ -871,8 +955,8 @@ window.addEventListener('resize', () => {
   if (appMode === 'melody' && melodyTrainer.lesson) {
     staffView.loadLesson(melodyTrainer.lesson);
     staffView.update(melodyTrainer.state);
-  } else if (appMode === 'notes' && noteTrainer.currentMidi !== null) {
-    staffView.showDrillNote(noteTrainer.currentMidi, {
+  } else if (appMode === 'notes' && noteTrainer.currentMidi !== null && !staffView.drillMode) {
+    showNoteDrillStaff(noteTrainer.currentMidi, {
       spelling: noteTrainer.spelling,
       clef: noteTrainer.currentClef,
     });

@@ -14,6 +14,9 @@ export const DEFAULT_NOTE_SETTINGS = {
   tonality: { sharpKeys: false, flatKeys: false },
 };
 
+export const NOTE_SESSION_LIMITS = [10, 20, 30, 50];
+export const DEFAULT_NOTE_SESSION_LIMIT = 10;
+
 const SHARP_TONAL_PCS = new Set([1, 3, 6, 8, 10]);
 const FLAT_TONAL_PCS = new Set([1, 3, 6, 8, 10]);
 
@@ -76,6 +79,10 @@ export function resolveClefForNote(midi, settings) {
   return 'bass';
 }
 
+export function usesBothClefs(settings) {
+  return settings.treble.enabled && settings.bass.enabled;
+}
+
 export function describeNoteSettings(settings) {
   const parts = [];
 
@@ -85,8 +92,8 @@ export function describeNoteSettings(settings) {
 
   const octaves = [];
   if (settings.treble.enabled) {
-    if (settings.treble.second) octaves.push(OCTAVE_RANGES.second.label);
     if (settings.treble.first) octaves.push(OCTAVE_RANGES.first.label);
+    if (settings.treble.second) octaves.push(OCTAVE_RANGES.second.label);
   }
   if (settings.bass.enabled) {
     if (settings.bass.small) octaves.push(OCTAVE_RANGES.small.label);

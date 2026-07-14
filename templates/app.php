@@ -68,7 +68,7 @@
         <span class="header__logo">♪</span>
         <div>
           <h1>Piano Bro</h1>
-          <p class="header__subtitle">Онлайн-обучение игре на цифровом пианино</p>
+          <p class="header__subtitle">Обучение на пианино</p>
         </div>
       </div>
       <div class="header__midi" id="midi-panel">
@@ -176,12 +176,12 @@
             <legend class="settings-group__title">Скрипичный ключ</legend>
             <div class="settings-group__options">
               <label class="settings-check">
-                <input type="checkbox" name="treble-second">
-                <span>Вторая октава</span>
-              </label>
-              <label class="settings-check">
                 <input type="checkbox" name="treble-first" checked>
                 <span>Первая октава</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="treble-second">
+                <span>Вторая октава</span>
               </label>
             </div>
           </fieldset>
@@ -228,7 +228,20 @@
             </div>
           </fieldset>
 
-          <p class="settings-hint">Сессия — 10 нот. Отметьте, что хотите тренировать, и нажмите «Начать».</p>
+          <fieldset class="settings-group">
+            <legend class="settings-group__title">Длина сессии</legend>
+            <label class="settings-select">
+              <span class="settings-select__label">Сколько нот тренировать</span>
+              <select name="session-limit" id="notes-session-limit" class="settings-select__input">
+                <option value="10" selected>10 нот</option>
+                <option value="20">20 нот</option>
+                <option value="30">30 нот</option>
+                <option value="50">50 нот</option>
+              </select>
+            </label>
+          </fieldset>
+
+          <p class="settings-hint">Отметьте, что хотите тренировать, и нажмите «Начать».</p>
           <p class="settings-error" id="notes-settings-error" hidden></p>
           <button type="submit" class="btn btn--primary notes-settings__submit" id="btn-start-notes">Начать тренировку</button>
         </form>
@@ -255,7 +268,15 @@
         <div class="practice-session-progress__fill" id="practice-session-progress-fill"></div>
       </div>
 
-      <div class="practice-feedback" id="practice-feedback" aria-live="polite"></div>
+      <div class="practice-input-status practice-input-status--off" id="practice-input-status">
+        <span class="practice-input-status__dot" id="practice-input-dot" aria-hidden="true"></span>
+        <span class="practice-input-status__text" id="practice-input-status-text">Пианино не подключено</span>
+        <button type="button" class="practice-input-status__btn" id="btn-practice-connect-midi">Подключить MIDI</button>
+      </div>
+
+      <div class="practice-feedback-wrap">
+        <div class="practice-feedback" id="practice-feedback" aria-live="polite"></div>
+      </div>
 
       <div class="practice-layout practice-layout--keyboard-hidden">
         <div class="practice-staff staff-viewport" id="staff-viewport">
@@ -304,7 +325,7 @@
       <div class="modal__card" role="dialog" aria-labelledby="modal-title">
         <div class="modal__icon" aria-hidden="true">✓</div>
         <h2 class="modal__title" id="modal-title">Тренировка завершена!</h2>
-        <p class="modal__subtitle">Вы прошли 10 нот</p>
+        <p class="modal__subtitle" id="modal-subtitle">Тренировка завершена</p>
         <div class="modal__stats">
           <div class="modal-stat">
             <span class="modal-stat__label">Верно</span>

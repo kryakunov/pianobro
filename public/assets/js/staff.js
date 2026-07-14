@@ -54,6 +54,9 @@ export class StaffView {
     this.referenceQuarter = 400;
     this.metrics = null;
     this.drillClef = 'treble';
+    this.drillDualClef = false;
+    this.drillLayoutKey = null;
+    this._drillViewportW = null;
   }
 
   loadLesson(lesson) {
@@ -62,16 +65,27 @@ export class StaffView {
     this.render();
   }
 
-  showDrillNote(midi, { spelling = 'sharp', clef = 'treble' } = {}) {
+  showDrillNote(midi, { spelling = 'sharp', clef = 'treble', dualClef = false } = {}) {
+    const layoutKey = dualClef ? 'grand' : clef;
+    const layoutChanged = !this.drillMode || this.drillLayoutKey !== layoutKey;
+
     this.drillMode = true;
     this.drillClef = clef;
+    this.drillDualClef = dualClef;
+    this.drillLayoutKey = layoutKey;
     this.spelling = spelling;
+
+    if (layoutChanged || !this._drillViewportW) {
+      this._drillViewportW = this.viewport.clientWidth || 800;
+      this.metrics = null;
+    }
+
     this.lesson = normalizeLesson({
       events: [{
         duration: 400,
         notes: [{ midi, hand: clef === 'bass' ? 'left' : 'right' }],
       }],
-      twoHands: false,
+      twoHands: dualClef,
     });
     this.render();
     this._updateNoteStyles({ index: 0, running: true, paused: false });
@@ -82,6 +96,9 @@ export class StaffView {
     this.lesson = null;
     this.drillMode = false;
     this.drillClef = 'treble';
+    this.drillDualClef = false;
+    this.drillLayoutKey = null;
+    this._drillViewportW = null;
     this.svg.innerHTML = '';
     this.eventPositions = [];
     this.metrics = null;
@@ -101,8 +118,8 @@ export class StaffView {
     return twoHands ? 280 : 180;
   }
 
-  _metrics(twoHands, singleClef = 'treble') {
-    const svgHeight = this._svgHeight(twoHands);
+  _metrics(twoHands, singleClef = 'treble', fixedSvgHeight = null) {
+    const svgHeight = fixedSvgHeight ?? this._svgHeight(twoHands);
     const baseHeight = twoHands ? 280 : 180;
     const scale = Math.max(1.2, svgHeight / baseHeight);
     const lineGap = 14 * scale;
@@ -114,7 +131,7 @@ export class StaffView {
     let bassBottom;
 
     if (twoHands) {
-      const gapBetween = 10 * scale;
+      const gapBetween = 28 * scale;
       const block = staffSpan * 2 + gapBetween + clefRoom;
       const startTop = Math.max(topPad, (svgHeight - block) / 2);
       trebleBottom = startTop + staffSpan;
@@ -131,8 +148,9 @@ export class StaffView {
       }
     }
 
-    const lineStart = 12 * scale;
-    const clefX = lineStart + 2 * scale;
+    const lineStart = twoHands ? 36 * scale : 12 * scale;
+    const braceX = twoHands ? 6 * scale : lineStart;
+    const clefX = lineStart + 3 * scale;
     const clefSize = 50 * scale;
     const noteStartX = lineStart + clefSize * 1.15 + lineGap * 0.4;
 
@@ -143,6 +161,7 @@ export class StaffView {
       trebleBottom,
       bassBottom,
       lineStart,
+      braceX,
       clefX,
       clefSize,
       noteStartX,
@@ -180,19 +199,27 @@ export class StaffView {
 
     const viewportW = this.viewport.clientWidth || 800;
     const twoHands = this.lesson.twoHands;
-    const singleClef = this.drillMode ? (this.drillClef ?? 'treble') : 'treble';
+    const dualClef = this.drillMode && this.drillDualClef;
+    const singleClef = this.drillMode && !dualClef ? (this.drillClef ?? 'treble') : 'treble';
     this.referenceQuarter = referenceQuarterDuration(events);
-    this.metrics = this._metrics(twoHands, singleClef);
 
     if (this.drillMode && events.length === 1 && events[0].notes.length === 1) {
-      const totalWidth = viewportW;
-      const lineStart = this.metrics.lineStart;
+      const fixedHeight = dualClef ? 268 : 168;
       const clef = this.drillClef ?? 'treble';
+      const totalWidth = this._drillViewportW || viewportW;
+
+      if (!this.metrics) {
+        this.metrics = this._metrics(dualClef, dualClef ? 'treble' : clef, fixedHeight);
+      }
+
+      const lineStart = this.metrics.lineStart;
       this.eventPositions = [Math.max(this.metrics.noteStartX + this.metrics.lineGap, totalWidth * 0.5)];
-      this._drawEvents(events, totalWidth, lineStart, totalWidth - lineStart, false, clef);
+      this._drawEvents(events, totalWidth, lineStart, totalWidth - lineStart, dualClef, clef);
       this.scrollEl.style.width = `${totalWidth}px`;
       return;
     }
+
+    this.metrics = this._metrics(twoHands || dualClef, singleClef);
 
     const minSpacing = twoHands ? 32 : 36;
     const maxSpacing = twoHands ? 52 : 58;
@@ -229,10 +256,12 @@ export class StaffView {
     const trebleTop = m.trebleBottom - 4 * m.lineGap;
     const bassTop = m.bassBottom - 4 * m.lineGap;
     const parts = [];
-    const drillBass = this.drillMode && drillClef === 'bass';
+    const drillDual = this.drillMode && this.drillDualClef;
+    const drillBass = this.drillMode && !drillDual && drillClef === 'bass';
+    const grandStaff = twoHands || drillDual;
 
-    if (twoHands) {
-      parts.push(this._brace(lineStart, trebleTop, m.bassBottom));
+    if (grandStaff) {
+      parts.push(this._brace(m.braceX, trebleTop, m.bassBottom));
       parts.push(this._clef('treble', m.clefX, m.trebleBottom));
       parts.push(this._clef('bass', m.clefX, m.bassBottom));
       parts.push(this._staffLines(lineStart, lineEnd, m.trebleBottom, 0));
@@ -249,6 +278,23 @@ export class StaffView {
       const nx = this.eventPositions[eventIndex];
       const rightNotes = event.notes.filter((n) => n.hand !== 'left');
       const leftNotes = event.notes.filter((n) => n.hand === 'left');
+
+      if (drillDual) {
+        event.notes.forEach((note, ni) => {
+          const x = nx + ni * m.chordOffset;
+          const staffInfo = midiToStaffNote(note.midi, this.spelling);
+          const onBass = this.drillClef === 'bass';
+          const y = onBass
+            ? this._midiToBassY(staffInfo.staffMidi)
+            : this._midiToTrebleY(staffInfo.staffMidi);
+          const staffBottom = onBass ? m.bassBottom : m.trebleBottom;
+          const staffTop = onBass ? bassTop : trebleTop;
+          const staffKind = onBass ? 'bass' : 'treble';
+          parts.push(this._ledgerLines(x, y, staffBottom, staffTop));
+          parts.push(this._note(x, y, eventIndex, note, staffKind, staffInfo, event.duration));
+        });
+        return;
+      }
 
       if (drillBass) {
         event.notes.forEach((note, ni) => {
@@ -292,8 +338,10 @@ export class StaffView {
 
   _brace(x, topY, bottomY) {
     const m = this.metrics;
-    const mid = (topY + bottomY + m.lineGap * 4) / 2;
-    return `<text x="${x - 10 * m.scale}" y="${mid + 22 * m.scale}" class="staff-brace" font-size="${m.braceSize}" fill="currentColor">{</text>`;
+    const trebleCenter = m.trebleBottom - 2 * m.lineGap;
+    const bassCenter = m.bassBottom - 2 * m.lineGap;
+    const mid = (trebleCenter + bassCenter) / 2;
+    return `<text x="${x}" y="${mid}" class="staff-brace" font-size="${m.braceSize}" fill="currentColor" text-anchor="end" dominant-baseline="middle">{</text>`;
   }
 
   _clef(kind, x, bottomY) {
