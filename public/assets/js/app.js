@@ -149,7 +149,9 @@ function updatePracticeInputStatus() {
 
   els.practiceInputStatus.hidden = false;
   els.practiceInputStatus.className = 'practice-input-status practice-input-status--off';
-  els.practiceInputStatusText.textContent = 'Пианино не подключено — нажимайте клавиши на экране, клавиатуре ПК (A–L) или подключите MIDI';
+  els.practiceInputStatusText.textContent = prefersTouchInput()
+    ? 'Пианино не подключено — нажимайте клавиши на экране'
+    : 'Пианино не подключено — нажимайте клавиши на экране, клавиатуре ПК (A–L) или подключите MIDI';
   if (els.btnPracticeConnectMidi) {
     els.btnPracticeConnectMidi.hidden = !midi.isSupported;
   }
@@ -251,6 +253,13 @@ function hideSessionModal() {
 
 let keyboardHints = true;
 
+function prefersTouchInput() {
+  return (
+    window.matchMedia('(hover: none) and (pointer: coarse)').matches
+    || window.matchMedia('(max-width: 768px)').matches
+  );
+}
+
 function setPianoVisible(visible) {
   els.practiceKeyboardArea.hidden = !visible;
   els.practiceKeyboardArea.classList.toggle('practice-keyboard-area--hidden', !visible);
@@ -267,9 +276,9 @@ function setPianoVisible(visible) {
     }
     els.btnTogglePiano.classList.toggle('practice-spoiler--open', visible);
   }
-  if (visible) {
+  if (visible && currentScreen === 'practice') {
     requestAnimationFrame(() => {
-      piano.relayout();
+      piano.relayout({ scrollToDefault: true });
       refreshKeyboardHints();
       if (appMode === 'melody' && melodyTrainer.lesson) {
         staffView.loadLesson(melodyTrainer.lesson);
@@ -280,7 +289,8 @@ function setPianoVisible(visible) {
           clef: noteTrainer.currentClef,
         });
       }
-      setTimeout(() => piano.relayout(), 120);
+      setTimeout(() => piano.relayout({ scrollToDefault: true }), 120);
+      setTimeout(() => piano.relayout({ scrollToDefault: true }), 320);
     });
   }
 }
@@ -313,23 +323,26 @@ function enterPractice(mode, title) {
   appMode = mode;
   currentPracticeTitle = title;
   els.practiceTitle.textContent = title;
-  setPianoVisible(false);
   setKeyboardHints(true);
   resetPracticeProgress();
   showFeedback('', 'info');
   updatePracticeInputStatus();
   showScreen('practice');
+  setPianoVisible(true);
 
   requestAnimationFrame(() => {
-    piano.relayout();
-    if (mode === 'melody' && melodyTrainer.lesson) {
-      staffView.loadLesson(melodyTrainer.lesson);
-      els.staffViewport.classList.toggle('staff-viewport--grand', melodyTrainer.lesson.twoHands);
-      melodyTrainer.start();
-    } else if (mode === 'notes') {
-      els.staffViewport.classList.toggle('staff-viewport--grand', usesBothClefs(noteTrainer.settings));
-      noteTrainer.start();
-    }
+    requestAnimationFrame(() => {
+      piano.relayout({ scrollToDefault: true });
+      if (mode === 'melody' && melodyTrainer.lesson) {
+        staffView.loadLesson(melodyTrainer.lesson);
+        els.staffViewport.classList.toggle('staff-viewport--grand', melodyTrainer.lesson.twoHands);
+        melodyTrainer.start();
+      } else if (mode === 'notes') {
+        els.staffViewport.classList.toggle('staff-viewport--grand', usesBothClefs(noteTrainer.settings));
+        noteTrainer.start();
+      }
+      setTimeout(() => piano.relayout({ scrollToDefault: true }), 150);
+    });
   });
 }
 
@@ -799,7 +812,8 @@ els.notesSettingsForm?.addEventListener('change', () => {
   if (!els.notesSettingsError.hidden) els.notesSettingsError.hidden = true;
 });
 
-els.btnTogglePiano?.addEventListener('click', () => {
+els.btnTogglePiano?.addEventListener('click', (e) => {
+  e.preventDefault();
   setPianoVisible(els.practiceKeyboardArea.hidden);
 });
 
@@ -960,5 +974,11 @@ window.addEventListener('resize', () => {
       spelling: noteTrainer.spelling,
       clef: noteTrainer.currentClef,
     });
+  }
+});
+
+window.visualViewport?.addEventListener('resize', () => {
+  if (currentScreen === 'practice' && !els.practiceKeyboardArea.hidden) {
+    piano.relayout();
   }
 });

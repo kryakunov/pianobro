@@ -1100,16 +1100,21 @@ body {
 }
 
 .body--practice {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app--practice {
   max-width: none;
+  width: 100%;
   padding: 0;
-  height: 100vh;
-  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
   display: flex;
   flex-direction: column;
+  overflow: visible;
 }
 
 /* Home */
@@ -1338,11 +1343,12 @@ body {
 /* Practice screen */
 
 .screen--practice {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 100dvh;
+  min-width: 0;
+  overflow: visible;
 }
 
 .practice-topbar {
@@ -1508,10 +1514,15 @@ body {
 
 .practice-layout {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
+}
+
+.practice-layout--keyboard-hidden {
+  grid-template-rows: auto auto;
 }
 
 .practice-staff {
@@ -1623,13 +1634,64 @@ body {
   background: rgba(108, 140, 255, 0.28);
 }
 
+.practice-layout:not(.practice-layout--keyboard-hidden) {
+  grid-template-rows: auto auto auto;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
 .practice-keyboard-area {
+  grid-row: 3;
   display: flex;
   flex-direction: column;
-  flex: 1 1 50%;
   min-height: 0;
+  min-width: 0;
+  overflow: visible;
   background: var(--surface);
   border-top: 1px solid var(--border);
+}
+
+.practice-layout:not(.practice-layout--keyboard-hidden) .practice-keyboard-area {
+  min-height: auto;
+}
+
+.practice-layout:not(.practice-layout--keyboard-hidden) .practice-keyboard {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.practice-layout:not(.practice-layout--keyboard-hidden) .practice-keyboard__viewport {
+  flex: 0 0 auto;
+  height: auto;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.practice-layout:not(.practice-layout--keyboard-hidden) .practice-staff {
+  flex: 0 0 140px;
+  height: 140px !important;
+  min-height: 140px;
+  max-height: 140px;
+}
+
+.practice-layout:not(.practice-layout--keyboard-hidden) .practice-staff.staff-viewport--grand {
+  flex: 0 0 200px;
+  height: 200px !important;
+  min-height: 200px;
+  max-height: 200px;
+}
+
+.practice-layout:not(.practice-layout--keyboard-hidden) .practice-keyboard-spoiler {
+  padding: 0.5rem 1rem 0.75rem;
+}
+
+.practice-layout:not(.practice-layout--keyboard-hidden) .practice-spoiler {
+  padding: 0.75rem 1rem;
+  gap: 0.875rem;
+}
+
+.practice-layout:not(.practice-layout--keyboard-hidden) .practice-spoiler__keys {
+  font-size: 2rem;
 }
 
 .practice-keyboard-area[hidden],
@@ -1701,21 +1763,71 @@ body {
 .practice-keyboard {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   border: none;
   border-radius: 0;
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 0.5rem 0.25rem;
-  overflow-x: auto;
-  overflow-y: hidden;
+  flex-direction: column;
+  padding: 0.25rem 0 0.35rem;
+  overflow: hidden;
   background: transparent;
   box-shadow: none;
 }
 
-.practice-keyboard .piano-case {
-  flex-shrink: 0;
+.practice-keyboard__viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scrollbar-width: thin;
+  scrollbar-color: #4a3f35 #1a1410;
+}
+
+.practice-keyboard__viewport::-webkit-scrollbar {
+  height: 10px;
+}
+
+.practice-keyboard__viewport::-webkit-scrollbar-track {
+  background: #1a1410;
+  border-radius: 5px;
+}
+
+.practice-keyboard__viewport::-webkit-scrollbar-thumb {
+  background: #4a3f35;
+  border-radius: 5px;
+}
+
+.practice-keyboard__viewport .piano-case {
+  display: block;
   width: max-content;
+  min-width: max-content;
+  padding: 0;
+  margin: 0;
+}
+
+.practice-keyboard .piano-case__octaves-host {
+  padding: 0 0 8px;
+}
+
+.practice-keyboard .piano-case__lid {
+  margin: 0;
+}
+
+.practice-keyboard .piano-case__keys {
+  padding: 8px 0 6px;
+}
+
+.practice-keyboard .piano-case__board {
+  margin: 0;
+}
+
+.practice-keyboard .piano {
+  margin: 0;
 }
 
 .practice-keyboard .piano-key__name,
@@ -1839,5 +1951,73 @@ body {
 
 .modal__actions .btn {
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .practice-input-status {
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+  }
+
+  .practice-feedback-wrap {
+    min-height: 2.25rem;
+    margin: 0.35rem 0.75rem 0;
+  }
+
+  .practice-feedback {
+    min-height: 2.25rem;
+    font-size: 0.8125rem;
+  }
+
+  .practice-keyboard-spoiler {
+    padding: 0.5rem 0.75rem 0.75rem;
+  }
+
+  .practice-spoiler {
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+  }
+
+  .practice-spoiler__keys {
+    font-size: 2rem;
+  }
+
+  .practice-spoiler__label {
+    font-size: 1.0625rem;
+  }
+
+  .practice-spoiler__hint {
+    font-size: 0.8125rem;
+  }
+
+  .practice-layout:not(.practice-layout--keyboard-hidden) .practice-staff {
+    flex: 0 0 120px;
+    height: 120px !important;
+    min-height: 120px;
+    max-height: 120px;
+  }
+
+  .practice-layout:not(.practice-layout--keyboard-hidden) .practice-staff.staff-viewport--grand {
+    flex: 0 0 188px;
+    height: 188px !important;
+    min-height: 188px;
+    max-height: 188px;
+  }
+
+  .practice-keyboard-area {
+    min-height: 0;
+  }
+
+  .practice-keyboard {
+    padding: 0.35rem 0 0.5rem;
+  }
+
+  .practice-keyboard__viewport .piano-case {
+    margin: 0;
+  }
+
+  .piano-key {
+    touch-action: manipulation;
+  }
 }
 

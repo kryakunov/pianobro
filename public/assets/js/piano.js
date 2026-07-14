@@ -15,6 +15,9 @@ const OCTAVE_LABEL_BY_C = {
   96: 'Четвёртая',
 };
 
+/** Центр «первой октавы» (C4–B4) для начальной прокрутки */
+const DEFAULT_VIEW_OCTAVE = { start: 60, end: 71 };
+
 function buildOctaveSegments(startMidi, endMidi) {
   const segments = [];
   let cursor = startMidi;
@@ -122,14 +125,73 @@ export class PianoKeyboard {
         this._positionOctaveMarkers();
       });
       this._resizeObserver.observe(this.container);
+      const layoutHost = document.getElementById('piano-viewport')
+        || this.container.closest('.practice-keyboard__viewport, .practice-keyboard, .piano-wrap');
+      if (layoutHost) this._resizeObserver.observe(layoutHost);
     }
   }
 
-  relayout() {
+  _getKeysWidth() {
+    const measured = this._whitesLayer?.offsetWidth ?? 0;
+    if (measured > 0) return measured;
+    const whites = this.whiteMidis.length;
+    if (!whites) return 0;
+    return whites * WHITE_KEY_WIDTH - Math.max(0, whites - 1);
+  }
+
+  _applyKeysWidth(width) {
+    if (!width) return;
+    this.container.style.width = `${width}px`;
+    this._blacksLayer.style.width = `${width}px`;
+    this._keysWrap.style.width = `${width}px`;
+    if (this._octavesLayer) {
+      this._octavesLayer.style.width = `${width}px`;
+    }
+  }
+
+  _getScrollHost() {
+    return (
+      document.getElementById('piano-viewport')
+      || this.container.closest('.practice-keyboard__viewport, .practice-keyboard, .piano-wrap')
+      || this.container.parentElement
+    );
+  }
+
+  scrollToDefaultView() {
+    const host = this._getScrollHost();
+    if (!host || host.clientWidth <= 0) return;
+
+    const caseEl = host.querySelector('.piano-case');
+    const startKey = this.keys.get(DEFAULT_VIEW_OCTAVE.start);
+    const endKey = this.keys.get(DEFAULT_VIEW_OCTAVE.end);
+    if (!caseEl || !startKey || !endKey) return;
+
+    caseEl.style.marginLeft = '0';
+
+    const hostRect = host.getBoundingClientRect();
+    const caseRect = caseEl.getBoundingClientRect();
+    const startRect = startKey.getBoundingClientRect();
+    const endRect = endKey.getBoundingClientRect();
+    const octaveCenterOnScreen = (startRect.left + endRect.right) / 2;
+    const octaveCenterInCase = octaveCenterOnScreen - caseRect.left;
+
+    if (caseEl.offsetWidth <= host.clientWidth) {
+      caseEl.style.marginLeft = `${Math.max(0, Math.round(host.clientWidth / 2 - octaveCenterInCase))}px`;
+      host.scrollLeft = 0;
+      return;
+    }
+
+    const octaveCenterInHost = host.scrollLeft + (octaveCenterOnScreen - hostRect.left);
+    const target = octaveCenterInHost - host.clientWidth / 2;
+    host.scrollLeft = Math.max(0, Math.min(target, host.scrollWidth - host.clientWidth));
+  }
+
+  relayout({ scrollToDefault = false } = {}) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         this._positionBlackKeys();
         this._positionOctaveMarkers();
+        if (scrollToDefault) this.scrollToDefaultView();
       });
     });
   }
@@ -140,7 +202,7 @@ export class PianoKeyboard {
     const segments = buildOctaveSegments(this.startMidi, this.endMidi);
     this._octavesLayer.replaceChildren();
 
-    const totalWidth = this._whitesLayer.offsetWidth;
+    const totalWidth = this._getKeysWidth();
     if (!totalWidth) return;
 
     this._octavesLayer.style.width = `${totalWidth}px`;
@@ -181,10 +243,9 @@ export class PianoKeyboard {
       el.style.top = '0';
     }
 
-    const width = this._whitesLayer.offsetWidth;
-    this._blacksLayer.style.width = `${width}px`;
-    this._keysWrap.style.width = `${width}px`;
-    this.container.style.width = `${width}px`;
+    const width = this._getKeysWidth();
+    if (!width) return;
+    this._applyKeysWidth(width);
   }
 
   _createKey(midi, type) {
@@ -216,12 +277,17 @@ export class PianoKeyboard {
       btn.appendChild(hint);
     }
 
-    btn.addEventListener('mousedown', (e) => {
+    const release = () => this._triggerNoteOff(midi);
+    btn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      btn.setPointerCapture?.(e.pointerId);
       this._triggerNoteOn(midi);
     });
-    btn.addEventListener('mouseup', () => this._triggerNoteOff(midi));
-    btn.addEventListener('mouseleave', () => this._triggerNoteOff(midi));
+    btn.addEventListener('pointerup', release);
+    btn.addEventListener('pointercancel', release);
+    btn.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse') release();
+    });
 
     return btn;
   }

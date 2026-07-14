@@ -305,14 +305,16 @@
             </div>
           </div>
 
-          <div class="practice-keyboard piano-wrap" id="piano-wrap">
-            <div class="piano-case">
-              <div class="piano-case__octaves-host" id="piano-octaves-host"></div>
-              <div class="piano-case__lid"></div>
-              <div class="piano-case__keys">
-                <div class="piano" id="piano" role="application" aria-label="Клавиатура пианино 88 клавиш"></div>
+          <div class="practice-keyboard" id="piano-wrap">
+            <div class="practice-keyboard__viewport" id="piano-viewport">
+              <div class="piano-case">
+                <div class="piano-case__octaves-host" id="piano-octaves-host"></div>
+                <div class="piano-case__lid"></div>
+                <div class="piano-case__keys">
+                  <div class="piano" id="piano" role="application" aria-label="Клавиатура пианино 88 клавиш"></div>
+                </div>
+                <div class="piano-case__board"></div>
               </div>
-              <div class="piano-case__board"></div>
             </div>
           </div>
         </div>
