@@ -53,6 +53,7 @@ export class StaffView {
     this.spelling = 'sharp';
     this.referenceQuarter = 400;
     this.metrics = null;
+    this.drillClef = 'treble';
   }
 
   loadLesson(lesson) {
@@ -61,11 +62,15 @@ export class StaffView {
     this.render();
   }
 
-  showDrillNote(midi, spelling = 'sharp') {
+  showDrillNote(midi, { spelling = 'sharp', clef = 'treble' } = {}) {
     this.drillMode = true;
+    this.drillClef = clef;
     this.spelling = spelling;
     this.lesson = normalizeLesson({
-      events: [{ duration: 400, notes: [{ midi, hand: 'right' }] }],
+      events: [{
+        duration: 400,
+        notes: [{ midi, hand: clef === 'bass' ? 'left' : 'right' }],
+      }],
       twoHands: false,
     });
     this.render();
@@ -76,6 +81,7 @@ export class StaffView {
   clear() {
     this.lesson = null;
     this.drillMode = false;
+    this.drillClef = 'treble';
     this.svg.innerHTML = '';
     this.eventPositions = [];
     this.metrics = null;
@@ -95,7 +101,7 @@ export class StaffView {
     return twoHands ? 280 : 180;
   }
 
-  _metrics(twoHands) {
+  _metrics(twoHands, singleClef = 'treble') {
     const svgHeight = this._svgHeight(twoHands);
     const baseHeight = twoHands ? 280 : 180;
     const scale = Math.max(1.2, svgHeight / baseHeight);
@@ -116,8 +122,13 @@ export class StaffView {
     } else {
       const block = staffSpan + clefRoom;
       const startTop = Math.max(topPad, (svgHeight - block) / 2);
-      trebleBottom = startTop + staffSpan;
-      bassBottom = 0;
+      if (singleClef === 'bass') {
+        trebleBottom = 0;
+        bassBottom = startTop + staffSpan;
+      } else {
+        trebleBottom = startTop + staffSpan;
+        bassBottom = 0;
+      }
     }
 
     const lineStart = 12 * scale;
@@ -169,14 +180,16 @@ export class StaffView {
 
     const viewportW = this.viewport.clientWidth || 800;
     const twoHands = this.lesson.twoHands;
+    const singleClef = this.drillMode ? (this.drillClef ?? 'treble') : 'treble';
     this.referenceQuarter = referenceQuarterDuration(events);
-    this.metrics = this._metrics(twoHands);
+    this.metrics = this._metrics(twoHands, singleClef);
 
     if (this.drillMode && events.length === 1 && events[0].notes.length === 1) {
       const totalWidth = viewportW;
       const lineStart = this.metrics.lineStart;
+      const clef = this.drillClef ?? 'treble';
       this.eventPositions = [Math.max(this.metrics.noteStartX + this.metrics.lineGap, totalWidth * 0.5)];
-      this._drawEvents(events, totalWidth, lineStart, totalWidth - lineStart, twoHands);
+      this._drawEvents(events, totalWidth, lineStart, totalWidth - lineStart, false, clef);
       this.scrollEl.style.width = `${totalWidth}px`;
       return;
     }
@@ -205,7 +218,7 @@ export class StaffView {
     this._scrollToIndex(0, false);
   }
 
-  _drawEvents(events, totalWidth, lineStart, lineEnd, twoHands) {
+  _drawEvents(events, totalWidth, lineStart, lineEnd, twoHands, drillClef = 'treble') {
     const m = this.metrics;
     const svgHeight = m.svgHeight;
     this.svg.setAttribute('width', String(totalWidth));
@@ -216,12 +229,16 @@ export class StaffView {
     const trebleTop = m.trebleBottom - 4 * m.lineGap;
     const bassTop = m.bassBottom - 4 * m.lineGap;
     const parts = [];
+    const drillBass = this.drillMode && drillClef === 'bass';
 
     if (twoHands) {
       parts.push(this._brace(lineStart, trebleTop, m.bassBottom));
       parts.push(this._clef('treble', m.clefX, m.trebleBottom));
       parts.push(this._clef('bass', m.clefX, m.bassBottom));
       parts.push(this._staffLines(lineStart, lineEnd, m.trebleBottom, 0));
+      parts.push(this._staffLines(lineStart, lineEnd, m.bassBottom, 0));
+    } else if (drillBass) {
+      parts.push(this._clef('bass', m.clefX, m.bassBottom));
       parts.push(this._staffLines(lineStart, lineEnd, m.bassBottom, 0));
     } else {
       parts.push(this._clef('treble', m.clefX, m.trebleBottom));
@@ -232,6 +249,17 @@ export class StaffView {
       const nx = this.eventPositions[eventIndex];
       const rightNotes = event.notes.filter((n) => n.hand !== 'left');
       const leftNotes = event.notes.filter((n) => n.hand === 'left');
+
+      if (drillBass) {
+        event.notes.forEach((note, ni) => {
+          const x = nx + ni * m.chordOffset;
+          const staffInfo = midiToStaffNote(note.midi, this.spelling);
+          const y = this._midiToBassY(staffInfo.staffMidi);
+          parts.push(this._ledgerLines(x, y, m.bassBottom, bassTop));
+          parts.push(this._note(x, y, eventIndex, note, 'bass', staffInfo, event.duration));
+        });
+        return;
+      }
 
       rightNotes.forEach((note, ni) => {
         const x = nx + ni * m.chordOffset;

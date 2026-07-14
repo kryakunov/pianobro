@@ -3,10 +3,51 @@ import { isBlackKey, midiToName, REVERSE_KEYBOARD_MAP } from './notes.js';
 const WHITE_KEY_WIDTH = 24;
 const BLACK_KEY_WIDTH = 14;
 const KEY_HEIGHT = 170;
+const OCTAVE_RAIL_HEIGHT = 34;
+
+const OCTAVE_LABEL_BY_C = {
+  24: 'Контроктра',
+  36: 'Большая',
+  48: 'Малая',
+  60: 'Первая',
+  72: 'Вторая',
+  84: 'Третья',
+  96: 'Четвёртая',
+};
+
+function buildOctaveSegments(startMidi, endMidi) {
+  const segments = [];
+  let cursor = startMidi;
+
+  let firstC = cursor;
+  while (firstC <= endMidi && firstC % 12 !== 0) firstC++;
+
+  if (firstC > cursor) {
+    segments.push({
+      startMidi: cursor,
+      endMidi: firstC - 1,
+      label: 'Субконтра',
+    });
+    cursor = firstC;
+  }
+
+  while (cursor <= endMidi) {
+    const nextC = cursor + 12;
+    segments.push({
+      startMidi: cursor,
+      endMidi: Math.min(nextC - 1, endMidi),
+      label: OCTAVE_LABEL_BY_C[cursor] ?? `Октава ${Math.floor(cursor / 12) - 1}`,
+    });
+    cursor = nextC;
+  }
+
+  return segments;
+}
 
 export class PianoKeyboard {
   constructor(container, startMidi = 21, endMidi = 108) {
     this.container = container;
+    this.octavesHost = document.getElementById('piano-octaves-host');
     this.startMidi = startMidi;
     this.endMidi = endMidi;
     this.keys = new Map();
@@ -18,6 +59,7 @@ export class PianoKeyboard {
 
   _build() {
     this.container.innerHTML = '';
+    if (this.octavesHost) this.octavesHost.innerHTML = '';
     this.whiteMidis = [];
 
     for (let midi = this.startMidi; midi <= this.endMidi; midi++) {
@@ -25,6 +67,12 @@ export class PianoKeyboard {
         this.whiteMidis.push(midi);
       }
     }
+
+    const octavesLayer = document.createElement('div');
+    octavesLayer.className = 'piano__octaves';
+
+    const keysWrap = document.createElement('div');
+    keysWrap.className = 'piano__keys';
 
     const whitesLayer = document.createElement('div');
     whitesLayer.className = 'piano__whites';
@@ -46,14 +94,24 @@ export class PianoKeyboard {
       this.keys.set(midi, el);
     }
 
-    this.container.appendChild(whitesLayer);
-    this.container.appendChild(blacksLayer);
+    keysWrap.appendChild(whitesLayer);
+    keysWrap.appendChild(blacksLayer);
+
+    if (this.octavesHost) {
+      this.octavesHost.appendChild(octavesLayer);
+    } else {
+      this.container.appendChild(octavesLayer);
+    }
+    this.container.appendChild(keysWrap);
     this.container.style.height = `${KEY_HEIGHT}px`;
+    this._octavesLayer = octavesLayer;
+    this._keysWrap = keysWrap;
     this._whitesLayer = whitesLayer;
     this._blacksLayer = blacksLayer;
 
     requestAnimationFrame(() => {
       this._positionBlackKeys();
+      this._positionOctaveMarkers();
       this.onLayout?.();
     });
 
@@ -61,6 +119,7 @@ export class PianoKeyboard {
       this._resizeObserver?.disconnect();
       this._resizeObserver = new ResizeObserver(() => {
         this._positionBlackKeys();
+        this._positionOctaveMarkers();
       });
       this._resizeObserver.observe(this.container);
     }
@@ -68,30 +127,63 @@ export class PianoKeyboard {
 
   relayout() {
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => this._positionBlackKeys());
+      requestAnimationFrame(() => {
+        this._positionBlackKeys();
+        this._positionOctaveMarkers();
+      });
+    });
+  }
+
+  _positionOctaveMarkers() {
+    if (!this._octavesLayer) return;
+
+    const segments = buildOctaveSegments(this.startMidi, this.endMidi);
+    this._octavesLayer.replaceChildren();
+
+    const totalWidth = this._whitesLayer.offsetWidth;
+    if (!totalWidth) return;
+
+    this._octavesLayer.style.width = `${totalWidth}px`;
+
+    segments.forEach((seg, index) => {
+      const count = this.whiteMidis.filter((m) => m >= seg.startMidi && m <= seg.endMidi).length;
+      if (!count) return;
+
+      const div = document.createElement('div');
+      div.className = `piano-octave${index > 0 ? ' piano-octave--bordered' : ''}`;
+      div.style.flex = `${count} 1 0`;
+
+      const label = document.createElement('span');
+      label.className = 'piano-octave__label';
+      label.textContent = seg.label;
+      div.appendChild(label);
+
+      this._octavesLayer.appendChild(div);
     });
   }
 
   _positionBlackKeys() {
-    const ratios = { 1: 0.65, 3: 0.65, 6: 0.65, 8: 0.65, 10: 0.65 };
     const layerRect = this._blacksLayer.getBoundingClientRect();
 
     for (let midi = this.startMidi; midi <= this.endMidi; midi++) {
       if (!isBlackKey(midi)) continue;
 
       const el = this.keys.get(midi);
-      const whiteEl = this.keys.get(midi - 1);
-      if (!el || !whiteEl) continue;
+      const leftWhite = this.keys.get(midi - 1);
+      const rightWhite = this.keys.get(midi + 1);
+      if (!el || !leftWhite || !rightWhite) continue;
 
-      const ratio = ratios[midi % 12] ?? 0.65;
-      const whiteRect = whiteEl.getBoundingClientRect();
-      const left = whiteRect.left - layerRect.left + whiteRect.width * ratio - BLACK_KEY_WIDTH / 2;
-      el.style.left = `${Math.round(left)}px`;
+      const leftRect = leftWhite.getBoundingClientRect();
+      const rightRect = rightWhite.getBoundingClientRect();
+      const center = (leftRect.right + rightRect.left) / 2;
+      const left = center - layerRect.left - BLACK_KEY_WIDTH / 2;
+      el.style.left = `${left}px`;
       el.style.top = '0';
     }
 
     const width = this._whitesLayer.offsetWidth;
     this._blacksLayer.style.width = `${width}px`;
+    this._keysWrap.style.width = `${width}px`;
     this.container.style.width = `${width}px`;
   }
 

@@ -2,7 +2,7 @@ import { PianoKeyboard } from './piano.js';
 import { MidiInput } from './midi.js';
 import { MicPitchInput } from './mic-pitch.js';
 import { MelodyTrainer } from './trainer.js';
-import { NoteTrainer, NOTE_LEVELS } from './note-trainer.js';
+import { NoteTrainer, DEFAULT_NOTE_SETTINGS, buildPoolFromSettings, describeNoteSettings } from './note-trainer.js';
 import { StaffView } from './staff.js';
 import { normalizeLesson } from './lesson-utils.js';
 import { midiToLesson } from './midi-import.js';
@@ -29,12 +29,16 @@ const els = {
   midiUpload: $('#midi-upload'),
   btnMidiUpload: $('#btn-midi-upload'),
   difficultyTabs: document.querySelectorAll('.difficulty-tab'),
-  levelList: $('#level-list'),
+  notesSettingsForm: $('#notes-settings-form'),
+  notesSettingsError: $('#notes-settings-error'),
   practiceTitle: $('#practice-title'),
   practiceProgress: $('#practice-progress'),
+  practiceSessionProgress: $('#practice-session-progress'),
+  practiceSessionProgressFill: $('#practice-session-progress-fill'),
   practiceFeedback: $('#practice-feedback'),
   staffViewport: $('#staff-viewport'),
   practiceLayout: document.querySelector('.practice-layout'),
+  practiceKeyboardArea: $('#practice-keyboard-area'),
   pianoWrap: $('#piano-wrap'),
   btnTogglePiano: $('#btn-toggle-piano'),
   keyboardHintTabs: document.querySelectorAll('.keyboard-mode__tab'),
@@ -47,10 +51,6 @@ const els = {
   midiTranspose: $('#midi-transpose'),
   midiTransposeWrap: $('#midi-transpose-wrap'),
   midiDot: document.querySelector('.midi-dot'),
-  toggleWait: $('#toggle-wait'),
-  toggleKeyboard: $('#toggle-keyboard'),
-  toggleMic: $('#toggle-mic'),
-  controlsMelodyOnly: document.querySelector('.controls-melody-only'),
   sessionModal: $('#session-modal'),
   modalCorrect: $('#modal-correct'),
   modalWrong: $('#modal-wrong'),
@@ -64,7 +64,7 @@ let currentScreen = 'home';
 let appMode = 'melody';
 let selectedLessonId = null;
 let selectedImportedId = null;
-let selectedLevelId = NOTE_LEVELS[0].id;
+let noteSettings = structuredClone(DEFAULT_NOTE_SETTINGS);
 let currentPracticeTitle = '';
 let lessons = [];
 let remoteSearchResults = [];
@@ -143,11 +143,31 @@ async function fetchJson(url) {
 }
 
 function updatePracticeProgress(state) {
+  let current;
+  let total;
+
   if (appMode === 'melody') {
-    els.practiceProgress.textContent = `${Math.min(state.index, state.total)} / ${state.total}`;
+    current = Math.min(state.index, state.total);
+    total = state.total;
+    els.practiceProgress.textContent = `${current} / ${total}`;
   } else {
-    els.practiceProgress.textContent = `${state.correct} / ${state.sessionLimit}`;
+    current = state.correct;
+    total = state.sessionLimit;
+    els.practiceProgress.textContent = `${current} / ${total}`;
   }
+
+  const pct = total > 0 ? Math.min(100, (current / total) * 100) : 0;
+  if (els.practiceSessionProgressFill) {
+    els.practiceSessionProgressFill.style.width = `${pct}%`;
+  }
+  if (els.practiceSessionProgress) {
+    els.practiceSessionProgress.setAttribute('aria-valuenow', String(current));
+    els.practiceSessionProgress.setAttribute('aria-valuemax', String(total));
+  }
+}
+
+function resetPracticeProgress() {
+  updatePracticeProgress({ index: 0, total: SESSION_LIMIT, correct: 0, sessionLimit: SESSION_LIMIT });
 }
 
 function updateMelodyUI(state) {
@@ -174,8 +194,8 @@ function hideSessionModal() {
 let keyboardHints = true;
 
 function setPianoVisible(visible) {
-  els.pianoWrap.hidden = !visible;
-  els.pianoWrap.classList.toggle('practice-keyboard--hidden', !visible);
+  els.practiceKeyboardArea.hidden = !visible;
+  els.practiceKeyboardArea.classList.toggle('practice-keyboard-area--hidden', !visible);
   els.practiceLayout?.classList.toggle('practice-layout--keyboard-hidden', !visible);
   if (els.btnTogglePiano) {
     els.btnTogglePiano.setAttribute('aria-expanded', String(visible));
@@ -197,8 +217,12 @@ function setPianoVisible(visible) {
         staffView.loadLesson(melodyTrainer.lesson);
         staffView.update(melodyTrainer.state);
       } else if (appMode === 'notes' && noteTrainer.currentMidi !== null) {
-        staffView.showDrillNote(noteTrainer.currentMidi, noteTrainer.spelling);
+        staffView.showDrillNote(noteTrainer.currentMidi, {
+          spelling: noteTrainer.spelling,
+          clef: noteTrainer.currentClef,
+        });
       }
+      setTimeout(() => piano.relayout(), 120);
     });
   }
 }
@@ -225,9 +249,9 @@ function enterPractice(mode, title) {
   appMode = mode;
   currentPracticeTitle = title;
   els.practiceTitle.textContent = title;
-  els.controlsMelodyOnly.hidden = mode !== 'melody';
   setPianoVisible(false);
   setKeyboardHints(true);
+  resetPracticeProgress();
   showFeedback('', 'info');
   showScreen('practice');
 
@@ -249,6 +273,7 @@ function exitPractice() {
   staffView.clear();
   piano.clearStates();
   hideSessionModal();
+  resetPracticeProgress();
   showFeedback('', 'info');
 }
 
@@ -487,17 +512,87 @@ async function loadUploadedMidi(file) {
   }
 }
 
-function renderLevelList() {
-  els.levelList.innerHTML = NOTE_LEVELS.map((l) => `
-    <button type="button" class="lesson-card" data-id="${l.id}">
-      <div class="lesson-card__title">${escapeHtml(l.title)}</div>
-      <div class="lesson-card__meta">${escapeHtml(l.desc)} · ${SESSION_LIMIT} нот</div>
-    </button>
-  `).join('');
+function readNoteSettingsFromForm() {
+  const form = els.notesSettingsForm;
+  if (!form) return structuredClone(DEFAULT_NOTE_SETTINGS);
 
-  els.levelList.querySelectorAll('.lesson-card').forEach((card) => {
-    card.addEventListener('click', () => selectLevel(card.dataset.id));
-  });
+  const checked = (name) => form.querySelector(`[name="${name}"]`)?.checked ?? false;
+  const trebleFirst = checked('treble-first');
+  const trebleSecond = checked('treble-second');
+  const bassSmall = checked('bass-small');
+  const bassGreat = checked('bass-great');
+
+  return {
+    treble: {
+      enabled: trebleFirst || trebleSecond,
+      first: trebleFirst,
+      second: trebleSecond,
+    },
+    bass: {
+      enabled: bassSmall || bassGreat,
+      small: bassSmall,
+      great: bassGreat,
+    },
+    alteration: {
+      sharp: checked('alt-sharp'),
+      flat: checked('alt-flat'),
+    },
+    tonality: {
+      sharpKeys: checked('tonal-sharp'),
+      flatKeys: checked('tonal-flat'),
+    },
+  };
+}
+
+function applyNoteSettingsToForm(settings) {
+  const form = els.notesSettingsForm;
+  if (!form) return;
+
+  const set = (name, value) => {
+    const input = form.querySelector(`[name="${name}"]`);
+    if (input) input.checked = value;
+  };
+
+  set('treble-first', settings.treble.first);
+  set('treble-second', settings.treble.second);
+  set('bass-small', settings.bass.small);
+  set('bass-great', settings.bass.great);
+  set('alt-sharp', settings.alteration.sharp);
+  set('alt-flat', settings.alteration.flat);
+  set('tonal-sharp', settings.tonality.sharpKeys);
+  set('tonal-flat', settings.tonality.flatKeys);
+}
+
+function hasSelectedOctaves(settings) {
+  return settings.treble.first || settings.treble.second
+    || settings.bass.small || settings.bass.great;
+}
+
+function validateNoteSettings(settings) {
+  if (!hasSelectedOctaves(settings)) {
+    return 'Выберите хотя бы одну октаву';
+  }
+  if (!buildPoolFromSettings(settings).length) {
+    return 'Нет нот для выбранных настроек — включите диезы/бемоли или измените октавы';
+  }
+  return null;
+}
+
+function startNotesTraining() {
+  const settings = readNoteSettingsFromForm();
+  const error = validateNoteSettings(settings);
+
+  if (error) {
+    els.notesSettingsError.textContent = error;
+    els.notesSettingsError.hidden = false;
+    return;
+  }
+
+  els.notesSettingsError.hidden = true;
+  noteSettings = settings;
+  noteTrainer.setConfig(settings);
+  noteTrainer.sessionLimit = SESSION_LIMIT;
+  enterPractice('notes', describeNoteSettings(settings));
 }
 
 async function selectLesson(id) {
@@ -507,14 +602,6 @@ async function selectLesson(id) {
   } catch {
     alert('Не удалось загрузить урок');
   }
-}
-
-function selectLevel(id) {
-  selectedLevelId = id;
-  noteTrainer.setLevel(id);
-  noteTrainer.sessionLimit = SESSION_LIMIT;
-  const level = NOTE_LEVELS.find((l) => l.id === id);
-  enterPractice('notes', level?.title ?? 'Тренажёр нот');
 }
 
 function onNoteOn(midiNote) {
@@ -563,11 +650,9 @@ micPitch.onStatusChange = (state) => {
   if (state === 'on') {
     els.midiDot.className = 'midi-dot midi-dot--on';
     setMicStatus(true, 'Микрофон: слушаю ноты');
-    if (els.toggleMic) els.toggleMic.checked = true;
   } else if (!midi.isConnected) {
     els.midiDot.className = 'midi-dot midi-dot--off';
     setMicStatus(false, 'MIDI не подключён');
-    if (els.toggleMic) els.toggleMic.checked = false;
   } else {
     setMicStatus(false);
   }
@@ -577,7 +662,6 @@ async function startMicListening() {
   try {
     await micPitch.start();
   } catch (error) {
-    if (els.toggleMic) els.toggleMic.checked = false;
     setMicStatus(false);
     setMidiStatus('error', error?.message ?? 'Не удалось включить микрофон');
   }
@@ -623,12 +707,21 @@ noteTrainer.onUpdate = (state) => {
 };
 noteTrainer.onFeedback = showFeedback;
 noteTrainer.onComplete = onSessionComplete;
-noteTrainer.onNoteChange = (midiNote, { spelling } = {}) => {
-  staffView.showDrillNote(midiNote, spelling);
+noteTrainer.onNoteChange = (midiNote, { spelling, clef } = {}) => {
+  staffView.showDrillNote(midiNote, { spelling, clef });
 };
 
+els.notesSettingsForm?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  startNotesTraining();
+});
+
+els.notesSettingsForm?.addEventListener('change', () => {
+  if (!els.notesSettingsError.hidden) els.notesSettingsError.hidden = true;
+});
+
 els.btnTogglePiano?.addEventListener('click', () => {
-  setPianoVisible(els.pianoWrap.hidden);
+  setPianoVisible(els.practiceKeyboardArea.hidden);
 });
 
 els.keyboardHintTabs.forEach((tab) => {
@@ -721,18 +814,9 @@ els.btnConnectMidi.addEventListener('click', async () => {
 els.btnConnectMic.addEventListener('click', async () => {
   if (micPitch.isActive) {
     stopMicListening();
-    if (els.toggleMic) els.toggleMic.checked = false;
     return;
   }
   await startMicListening();
-});
-
-els.toggleMic?.addEventListener('change', async () => {
-  if (els.toggleMic.checked) {
-    await startMicListening();
-  } else {
-    stopMicListening();
-  }
 });
 
 els.midiDeviceSelect.addEventListener('change', () => {
@@ -753,7 +837,6 @@ function isTypingTarget(target) {
 }
 
 document.addEventListener('keydown', (e) => {
-  if (!els.toggleKeyboard.checked) return;
   if (e.repeat) return;
   if (isTypingTarget(e.target)) return;
   const note = KEYBOARD_MAP[e.key.toLowerCase()];
@@ -774,7 +857,7 @@ document.addEventListener('keyup', (e) => {
 });
 
 loadLessons();
-renderLevelList();
+applyNoteSettingsToForm(DEFAULT_NOTE_SETTINGS);
 noteTrainer.sessionLimit = SESSION_LIMIT;
 setPianoVisible(false);
 melodyTrainer.showKeyboardHints = true;
@@ -789,6 +872,9 @@ window.addEventListener('resize', () => {
     staffView.loadLesson(melodyTrainer.lesson);
     staffView.update(melodyTrainer.state);
   } else if (appMode === 'notes' && noteTrainer.currentMidi !== null) {
-    staffView.showDrillNote(noteTrainer.currentMidi, noteTrainer.spelling);
+    staffView.showDrillNote(noteTrainer.currentMidi, {
+      spelling: noteTrainer.spelling,
+      clef: noteTrainer.currentClef,
+    });
   }
 });

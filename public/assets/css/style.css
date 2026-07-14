@@ -350,8 +350,7 @@ body {
   opacity: 0.55;
 }
 
-.lesson-list,
-.level-list {
+.lesson-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -686,6 +685,15 @@ body {
   padding: 0 0.5rem;
 }
 
+.piano-case__octaves-host {
+  padding: 0 12px 8px;
+  min-height: 34px;
+}
+
+.piano-case__octaves-host:empty {
+  display: none;
+}
+
 .piano-case__lid {
   height: 10px;
   margin: 0 8px;
@@ -697,10 +705,11 @@ body {
 
 .piano-case__keys {
   background: linear-gradient(180deg, #1e1814 0%, #12100e 100%);
-  padding: 10px 12px 6px;
+  padding: 8px 12px 6px;
   border-left: 2px solid #0a0806;
   border-right: 2px solid #0a0806;
   box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.5);
+  overflow: visible;
 }
 
 .piano-case__board {
@@ -716,6 +725,59 @@ body {
   position: relative;
   margin: 0 auto;
   user-select: none;
+}
+
+.piano__octaves {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  position: relative;
+  height: 34px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #3d4a62 0%, #2a3348 100%);
+  border: 1px solid rgba(108, 140, 255, 0.35);
+  border-bottom: 2px solid rgba(108, 140, 255, 0.55);
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
+  z-index: 4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.piano-octave {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.piano-octave:nth-child(even) {
+  background: rgba(108, 140, 255, 0.1);
+}
+
+.piano-octave--bordered {
+  border-left: 2px solid rgba(108, 140, 255, 0.45);
+}
+
+.piano-octave__label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #e8eeff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 0.35rem;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.piano__keys {
+  position: relative;
+  height: 170px;
+  flex-shrink: 0;
 }
 
 .piano__whites {
@@ -1120,9 +1182,91 @@ body {
   padding: 1.25rem;
 }
 
-.pick-panel .lesson-list,
-.pick-panel .level-list {
+.pick-panel .lesson-list {
   max-height: min(65vh, 560px);
+}
+
+/* Note trainer settings */
+
+.notes-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.settings-group {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-group__title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.625rem;
+}
+
+.settings-group__options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-check {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.settings-check:hover {
+  border-color: var(--border);
+  background: #2a3040;
+}
+
+.settings-check input {
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.settings-check span {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.settings-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.settings-error {
+  margin: 0;
+  padding: 0.625rem 0.875rem;
+  border-radius: 8px;
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff8a8a;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.notes-settings__submit {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  font-size: 1rem;
 }
 
 /* Practice screen */
@@ -1163,6 +1307,21 @@ body {
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
   flex-shrink: 0;
+}
+
+.practice-session-progress {
+  flex-shrink: 0;
+  height: 4px;
+  background: rgba(108, 140, 255, 0.15);
+  overflow: hidden;
+}
+
+.practice-session-progress__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary) 0%, #8aa4ff 100%);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.35s ease;
 }
 
 .practice-feedback {
@@ -1231,7 +1390,7 @@ body {
 
 .practice-keyboard-spoiler {
   flex-shrink: 0;
-  padding: 0.75rem 1rem 1rem;
+  padding: 1rem 1.25rem 1.25rem;
   background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
   border-top: 1px solid var(--border);
 }
@@ -1239,9 +1398,9 @@ body {
 .practice-spoiler {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
   width: 100%;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem 1.5rem;
   border: 2px solid rgba(108, 140, 255, 0.35);
   border-radius: var(--radius);
   background: linear-gradient(135deg, rgba(108, 140, 255, 0.14) 0%, rgba(108, 140, 255, 0.06) 100%);
@@ -1266,7 +1425,7 @@ body {
 }
 
 .practice-spoiler__keys {
-  font-size: 2rem;
+  font-size: 2.75rem;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -1280,13 +1439,13 @@ body {
 }
 
 .practice-spoiler__label {
-  font-size: 1.0625rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--text);
 }
 
 .practice-spoiler__hint {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   color: var(--text-muted);
 }
@@ -1295,12 +1454,12 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 999px;
   background: rgba(108, 140, 255, 0.18);
   color: var(--primary);
-  font-size: 0.875rem;
+  font-size: 1rem;
   flex-shrink: 0;
   transition: transform 0.2s ease, background 0.2s;
 }
@@ -1310,14 +1469,35 @@ body {
   background: rgba(108, 140, 255, 0.28);
 }
 
+.practice-keyboard-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 50%;
+  min-height: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.practice-keyboard-area[hidden],
+.practice-keyboard-area--hidden {
+  display: none !important;
+}
+
+.practice-keyboard-area .keyboard-mode {
+  flex-shrink: 0;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  border-right: none;
+  margin-right: 0;
+  background: var(--surface-2);
+}
+
 .keyboard-mode {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
-  padding-right: 0.5rem;
-  border-right: 1px solid var(--border);
-  margin-right: 0.25rem;
 }
 
 .keyboard-mode__label {
@@ -1365,7 +1545,7 @@ body {
 }
 
 .practice-keyboard {
-  flex: 1 1 50%;
+  flex: 1 1 auto;
   min-height: 0;
   border: none;
   border-radius: 0;
@@ -1375,6 +1555,8 @@ body {
   padding: 0.5rem 0.25rem;
   overflow-x: auto;
   overflow-y: hidden;
+  background: transparent;
+  box-shadow: none;
 }
 
 .practice-keyboard .piano-case {
@@ -1385,22 +1567,6 @@ body {
 .practice-keyboard .piano-key__name,
 .practice-keyboard .piano-key__pc-hint {
   display: none;
-}
-
-.practice-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
-  padding: 0.625rem 1rem;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.practice-toolbar .toggle {
-  min-width: auto;
-  flex: 0 1 auto;
-  font-size: 0.8125rem;
 }
 
 /* Session modal */

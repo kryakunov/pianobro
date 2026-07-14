@@ -164,14 +164,74 @@
       </div>
     </section>
 
-    <!-- Выбор уровня нот -->
+    <!-- Настройки тренажёра нот -->
     <section class="screen" id="screen-notes-pick" hidden>
       <div class="screen-header">
         <button type="button" class="btn-back" id="btn-back-notes">← Назад</button>
-        <h2 class="screen-header__title">Выберите уровень</h2>
+        <h2 class="screen-header__title">Настройки тренажёра</h2>
       </div>
       <div class="pick-panel">
-        <div class="level-list" id="level-list"></div>
+        <form class="notes-settings" id="notes-settings-form">
+          <fieldset class="settings-group">
+            <legend class="settings-group__title">Скрипичный ключ</legend>
+            <div class="settings-group__options">
+              <label class="settings-check">
+                <input type="checkbox" name="treble-second">
+                <span>Вторая октава</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="treble-first" checked>
+                <span>Первая октава</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend class="settings-group__title">Басовый ключ</legend>
+            <div class="settings-group__options">
+              <label class="settings-check">
+                <input type="checkbox" name="bass-small">
+                <span>Малая октава</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="bass-great">
+                <span>Большая октава</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend class="settings-group__title">Знаки альтерации</legend>
+            <div class="settings-group__options">
+              <label class="settings-check">
+                <input type="checkbox" name="alt-sharp">
+                <span>Диез</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="alt-flat">
+                <span>Бемоль</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend class="settings-group__title">Тональности</legend>
+            <div class="settings-group__options">
+              <label class="settings-check">
+                <input type="checkbox" name="tonal-sharp">
+                <span>Диезные</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="tonal-flat">
+                <span>Бемольные</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <p class="settings-hint">Сессия — 10 нот. Отметьте, что хотите тренировать, и нажмите «Начать».</p>
+          <p class="settings-error" id="notes-settings-error" hidden></p>
+          <button type="submit" class="btn btn--primary notes-settings__submit" id="btn-start-notes">Начать тренировку</button>
+        </form>
       </div>
     </section>
 
@@ -181,6 +241,18 @@
         <button type="button" class="btn-back" id="btn-back-practice" aria-label="Назад">←</button>
         <h2 class="practice-topbar__title" id="practice-title">Тренировка</h2>
         <div class="practice-progress" id="practice-progress">0 / 10</div>
+      </div>
+
+      <div
+        class="practice-session-progress"
+        id="practice-session-progress"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="10"
+        aria-valuenow="0"
+        aria-label="Прогресс тренировки"
+      >
+        <div class="practice-session-progress__fill" id="practice-session-progress-fill"></div>
       </div>
 
       <div class="practice-feedback" id="practice-feedback" aria-live="polite"></div>
@@ -203,37 +275,26 @@
           </button>
         </div>
 
-        <div class="practice-keyboard piano-wrap practice-keyboard--hidden" id="piano-wrap" hidden>
-          <div class="piano-case">
-            <div class="piano-case__lid"></div>
-            <div class="piano-case__keys">
-              <div class="piano" id="piano" role="application" aria-label="Клавиатура пианино 88 клавиш"></div>
+        <div class="practice-keyboard-area practice-keyboard-area--hidden" id="practice-keyboard-area" hidden>
+          <div class="keyboard-mode" id="keyboard-hints-panel">
+            <span class="keyboard-mode__label">Подсказки</span>
+            <div class="keyboard-mode__tabs" role="group" aria-label="Режим подсказок на клавиатуре">
+              <button type="button" class="keyboard-mode__tab keyboard-mode__tab--active" data-hints="on">С подсказками</button>
+              <button type="button" class="keyboard-mode__tab" data-hints="off">Без подсказок</button>
             </div>
-            <div class="piano-case__board"></div>
           </div>
-        </div>
-      </div>
 
-      <div class="practice-toolbar">
-        <div class="keyboard-mode" id="keyboard-hints-panel">
-          <span class="keyboard-mode__label">Клавиатура</span>
-          <div class="keyboard-mode__tabs" role="group" aria-label="Режим подсказок на клавиатуре">
-            <button type="button" class="keyboard-mode__tab keyboard-mode__tab--active" data-hints="on">С подсказками</button>
-            <button type="button" class="keyboard-mode__tab" data-hints="off">Без подсказок</button>
+          <div class="practice-keyboard piano-wrap" id="piano-wrap">
+            <div class="piano-case">
+              <div class="piano-case__octaves-host" id="piano-octaves-host"></div>
+              <div class="piano-case__lid"></div>
+              <div class="piano-case__keys">
+                <div class="piano" id="piano" role="application" aria-label="Клавиатура пианино 88 клавиш"></div>
+              </div>
+              <div class="piano-case__board"></div>
+            </div>
           </div>
         </div>
-        <label class="toggle">
-          <input type="checkbox" id="toggle-keyboard" checked>
-          <span>Клавиатура ПК</span>
-        </label>
-        <label class="toggle" title="Распознаёт сыгранную ноту через микрофон. Лучше использовать наушники.">
-          <input type="checkbox" id="toggle-mic">
-          <span>Микрофон</span>
-        </label>
-        <label class="toggle controls-melody-only" hidden>
-          <input type="checkbox" id="toggle-wait" checked>
-          <span>Пошаговый режим</span>
-        </label>
       </div>
     </section>
 
