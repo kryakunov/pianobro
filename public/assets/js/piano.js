@@ -6,7 +6,7 @@ const KEY_HEIGHT = 170;
 const OCTAVE_RAIL_HEIGHT = 34;
 
 const OCTAVE_LABEL_BY_C = {
-  24: 'Контроктра',
+  24: 'Контроктава',
   36: 'Большая',
   48: 'Малая',
   60: 'Первая',
@@ -39,7 +39,7 @@ function buildOctaveSegments(startMidi, endMidi) {
     segments.push({
       startMidi: cursor,
       endMidi: Math.min(nextC - 1, endMidi),
-      label: OCTAVE_LABEL_BY_C[cursor] ?? `Октава ${Math.floor(cursor / 12) - 1}`,
+      label: OCTAVE_LABEL_BY_C[cursor] ?? `5`,
     });
     cursor = nextC;
   }

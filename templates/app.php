@@ -285,26 +285,7 @@
           </div>
         </div>
 
-        <div class="practice-keyboard-spoiler">
-          <button type="button" class="practice-spoiler" id="btn-toggle-piano" aria-expanded="false">
-            <span class="practice-spoiler__keys" aria-hidden="true">🎹</span>
-            <span class="practice-spoiler__text">
-              <span class="practice-spoiler__label">Показать клавиатуру</span>
-              <span class="practice-spoiler__hint">Нажмите, чтобы открыть клавиши пианино</span>
-            </span>
-            <span class="practice-spoiler__icon" aria-hidden="true">▸</span>
-          </button>
-        </div>
-
         <div class="practice-keyboard-area practice-keyboard-area--hidden" id="practice-keyboard-area" hidden>
-          <div class="keyboard-mode" id="keyboard-hints-panel">
-            <span class="keyboard-mode__label">Подсказки</span>
-            <div class="keyboard-mode__tabs" role="group" aria-label="Режим подсказок на клавиатуре">
-              <button type="button" class="keyboard-mode__tab keyboard-mode__tab--active" data-hints="on">С подсказками</button>
-              <button type="button" class="keyboard-mode__tab" data-hints="off">Без подсказок</button>
-            </div>
-          </div>
-
           <div class="practice-keyboard" id="piano-wrap">
             <div class="practice-keyboard__viewport" id="piano-viewport">
               <div class="piano-case">
@@ -316,6 +297,27 @@
                 <div class="piano-case__board"></div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="practice-keyboard-footer">
+          <div class="keyboard-mode" id="keyboard-hints-panel" hidden>
+            <span class="keyboard-mode__label">Подсказки</span>
+            <div class="keyboard-mode__tabs" role="group" aria-label="Режим подсказок на клавиатуре">
+              <button type="button" class="keyboard-mode__tab keyboard-mode__tab--active" data-hints="on">С подсказками</button>
+              <button type="button" class="keyboard-mode__tab" data-hints="off">Без подсказок</button>
+            </div>
+          </div>
+
+          <div class="practice-keyboard-spoiler">
+            <button type="button" class="practice-spoiler" id="btn-toggle-piano" aria-expanded="false">
+              <span class="practice-spoiler__keys" aria-hidden="true">🎹</span>
+              <span class="practice-spoiler__text">
+                <span class="practice-spoiler__label">Показать клавиатуру</span>
+                <span class="practice-spoiler__hint">Нажмите, чтобы открыть клавиши пианино</span>
+              </span>
+              <span class="practice-spoiler__icon" aria-hidden="true">▸</span>
+            </button>
           </div>
         </div>
       </div>

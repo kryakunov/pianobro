@@ -43,6 +43,7 @@ const els = {
   staffViewport: $('#staff-viewport'),
   practiceLayout: document.querySelector('.practice-layout'),
   practiceKeyboardArea: $('#practice-keyboard-area'),
+  keyboardHintsPanel: $('#keyboard-hints-panel'),
   pianoWrap: $('#piano-wrap'),
   btnTogglePiano: $('#btn-toggle-piano'),
   keyboardHintTabs: document.querySelectorAll('.keyboard-mode__tab'),
@@ -264,6 +265,9 @@ function setPianoVisible(visible) {
   els.practiceKeyboardArea.hidden = !visible;
   els.practiceKeyboardArea.classList.toggle('practice-keyboard-area--hidden', !visible);
   els.practiceLayout?.classList.toggle('practice-layout--keyboard-hidden', !visible);
+  if (els.keyboardHintsPanel) {
+    els.keyboardHintsPanel.hidden = !visible;
+  }
   if (els.btnTogglePiano) {
     els.btnTogglePiano.setAttribute('aria-expanded', String(visible));
     const label = els.btnTogglePiano.querySelector('.practice-spoiler__label');

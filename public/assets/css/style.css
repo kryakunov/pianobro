@@ -1515,7 +1515,7 @@ body {
 .practice-layout {
   flex: 1;
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto auto;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
@@ -1526,6 +1526,7 @@ body {
 }
 
 .practice-staff {
+  grid-row: 1;
   flex: 0 0 168px;
   height: 168px !important;
   min-height: 168px;
@@ -1555,9 +1556,32 @@ body {
 
 .practice-keyboard-spoiler {
   flex-shrink: 0;
-  padding: 1rem 1.25rem 1.25rem;
+  padding: 0.75rem 1rem 1rem;
+}
+
+.practice-keyboard-footer {
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
   background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
   border-top: 1px solid var(--border);
+}
+
+.practice-layout--keyboard-hidden .practice-keyboard-footer {
+  grid-row: 2;
+}
+
+.practice-keyboard-footer .keyboard-mode {
+  flex-shrink: 0;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.practice-keyboard-footer .keyboard-mode[hidden] {
+  display: none !important;
 }
 
 .practice-spoiler {
@@ -1641,7 +1665,7 @@ body {
 }
 
 .practice-keyboard-area {
-  grid-row: 3;
+  grid-row: 2;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1697,16 +1721,6 @@ body {
 .practice-keyboard-area[hidden],
 .practice-keyboard-area--hidden {
   display: none !important;
-}
-
-.practice-keyboard-area .keyboard-mode {
-  flex-shrink: 0;
-  justify-content: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
-  border-right: none;
-  margin-right: 0;
-  background: var(--surface-2);
 }
 
 .keyboard-mode {
