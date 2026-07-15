@@ -1,5 +1,6 @@
 import { midiToStaffNote } from './notes.js';
 import { normalizeLesson } from './lesson-utils.js';
+import { clefWidth, renderClefSymbol } from './clef-glyphs.js';
 
 const TREBLE_REF = 64;
 const BASS_REF = 43;
@@ -150,9 +151,9 @@ export class StaffView {
 
     const lineStart = twoHands ? 36 * scale : 12 * scale;
     const braceX = twoHands ? 6 * scale : lineStart;
-    const clefX = lineStart + 3 * scale;
-    const clefSize = 50 * scale;
-    const noteStartX = lineStart + clefSize * 1.15 + lineGap * 0.4;
+    const clefX = lineStart + 2 * scale;
+    const clefWidthPx = clefWidth('treble', lineGap);
+    const noteStartX = clefX + clefWidthPx + lineGap * 0.35;
 
     return {
       scale,
@@ -163,7 +164,7 @@ export class StaffView {
       lineStart,
       braceX,
       clefX,
-      clefSize,
+      clefWidth: clefWidthPx,
       noteStartX,
       noteRx: lineGap * 0.5,
       noteRy: lineGap * 0.36,
@@ -345,12 +346,7 @@ export class StaffView {
   }
 
   _clef(kind, x, bottomY) {
-    const m = this.metrics;
-    const sym = kind === 'bass' ? '𝄢' : '𝄞';
-    const anchorY = kind === 'bass'
-      ? bottomY - 3 * m.lineGap
-      : bottomY - m.lineGap;
-    return `<text x="${x}" y="${anchorY}" class="staff-clef staff-clef--${kind}" font-size="${m.clefSize}" fill="currentColor" dominant-baseline="central" text-anchor="start">${sym}</text>`;
+    return renderClefSymbol(kind, x, bottomY, this.metrics.lineGap);
   }
 
   _staffLines(lineStart, lineEnd, bottomY, offsetY) {

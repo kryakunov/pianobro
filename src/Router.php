@@ -187,7 +187,7 @@ final class Router
     }
 
     if ($path === '/favicon.ico' && $method === 'GET') {
-      $this->serveStatic('/assets/favicon.svg');
+      $this->serveStatic('/assets/favicon.svg', 'image/svg+xml');
       return;
     }
 
@@ -221,7 +221,7 @@ final class Router
     return $data;
   }
 
-  private function serveStatic(string $path): void
+  private function serveStatic(string $path, ?string $contentType = null): void
   {
     $file = dirname(__DIR__) . '/public' . $path;
     if (!is_file($file)) {
@@ -236,9 +236,10 @@ final class Router
       'js' => 'application/javascript; charset=utf-8',
       'svg' => 'image/svg+xml',
       'png' => 'image/png',
+      'ico' => 'image/x-icon',
     ];
 
-    header('Content-Type: ' . ($types[$ext] ?? 'application/octet-stream'));
+    header('Content-Type: ' . ($contentType ?? $types[$ext] ?? 'application/octet-stream'));
     if ($ext === 'js' || $ext === 'css') {
       header('Cache-Control: no-cache, must-revalidate');
     }

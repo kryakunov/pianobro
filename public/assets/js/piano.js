@@ -4,6 +4,7 @@ const WHITE_KEY_WIDTH = 24;
 const BLACK_KEY_WIDTH = 14;
 const KEY_HEIGHT = 170;
 const OCTAVE_RAIL_HEIGHT = 34;
+const MOBILE_MAX_WIDTH = '(max-width: 768px)';
 
 const OCTAVE_LABEL_BY_C = {
   24: 'Контроктава',
@@ -131,7 +132,30 @@ export class PianoKeyboard {
     }
   }
 
+  _isFullWidthLayout() {
+    if (!this.container.closest('.practice-keyboard')) return false;
+    return !window.matchMedia(MOBILE_MAX_WIDTH).matches;
+  }
+
+  _getBlackKeyWidth() {
+    if (!this._isFullWidthLayout()) return BLACK_KEY_WIDTH;
+
+    const whites = this.whiteMidis.length;
+    if (!whites) return BLACK_KEY_WIDTH;
+
+    const totalWidth = this._getKeysWidth();
+    if (!totalWidth) return BLACK_KEY_WIDTH;
+
+    const whiteWidth = totalWidth / whites;
+    return Math.max(8, Math.round(whiteWidth * (BLACK_KEY_WIDTH / WHITE_KEY_WIDTH)));
+  }
+
   _getKeysWidth() {
+    if (this._isFullWidthLayout()) {
+      const host = this._getScrollHost();
+      if (host?.clientWidth > 0) return host.clientWidth;
+    }
+
     const measured = this._whitesLayer?.offsetWidth ?? 0;
     if (measured > 0) return measured;
     const whites = this.whiteMidis.length;
@@ -141,9 +165,20 @@ export class PianoKeyboard {
 
   _applyKeysWidth(width) {
     if (!width) return;
+
+    if (this._isFullWidthLayout()) {
+      this.container.style.width = '100%';
+      this._keysWrap.style.width = '100%';
+      this._whitesLayer.style.width = '100%';
+      this._blacksLayer.style.width = '100%';
+      if (this._octavesLayer) this._octavesLayer.style.width = '100%';
+      return;
+    }
+
     this.container.style.width = `${width}px`;
     this._blacksLayer.style.width = `${width}px`;
     this._keysWrap.style.width = `${width}px`;
+    this._whitesLayer.style.width = '';
     if (this._octavesLayer) {
       this._octavesLayer.style.width = `${width}px`;
     }
@@ -162,9 +197,17 @@ export class PianoKeyboard {
     if (!host || host.clientWidth <= 0) return;
 
     const caseEl = host.querySelector('.piano-case');
+    if (!caseEl) return;
+
+    if (this._isFullWidthLayout()) {
+      caseEl.style.marginLeft = '0';
+      host.scrollLeft = 0;
+      return;
+    }
+
     const startKey = this.keys.get(DEFAULT_VIEW_OCTAVE.start);
     const endKey = this.keys.get(DEFAULT_VIEW_OCTAVE.end);
-    if (!caseEl || !startKey || !endKey) return;
+    if (!startKey || !endKey) return;
 
     caseEl.style.marginLeft = '0';
 
@@ -226,6 +269,7 @@ export class PianoKeyboard {
 
   _positionBlackKeys() {
     const layerRect = this._blacksLayer.getBoundingClientRect();
+    const blackWidth = this._getBlackKeyWidth();
 
     for (let midi = this.startMidi; midi <= this.endMidi; midi++) {
       if (!isBlackKey(midi)) continue;
@@ -238,7 +282,8 @@ export class PianoKeyboard {
       const leftRect = leftWhite.getBoundingClientRect();
       const rightRect = rightWhite.getBoundingClientRect();
       const center = (leftRect.right + rightRect.left) / 2;
-      const left = center - layerRect.left - BLACK_KEY_WIDTH / 2;
+      const left = center - layerRect.left - blackWidth / 2;
+      el.style.width = `${blackWidth}px`;
       el.style.left = `${left}px`;
       el.style.top = '0';
     }

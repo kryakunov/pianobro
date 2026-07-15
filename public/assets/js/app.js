@@ -31,7 +31,16 @@ const els = {
   screenMelodyPick: $('#screen-melody-pick'),
   screenNotesPick: $('#screen-notes-pick'),
   screenStats: $('#screen-stats'),
+  screenProfile: $('#screen-profile'),
   screenPractice: $('#screen-practice'),
+  btnGoProfile: $('#btn-go-profile'),
+  btnBackProfile: $('#btn-back-profile'),
+  btnProfileLogin: $('#btn-profile-login'),
+  profileGuest: $('#profile-guest'),
+  profileUserInfo: $('#profile-user-info'),
+  profileUserName: $('#profile-user-name'),
+  profileUserEmail: $('#profile-user-email'),
+  profileSettingsForm: $('#profile-settings-form'),
   btnGoMelodies: $('#btn-go-melodies'),
   btnGoNotes: $('#btn-go-notes'),
   btnGoStatsHome: $('#btn-go-stats-home'),
@@ -65,7 +74,6 @@ const els = {
   dailyGoalPercent: $('#daily-goal-percent'),
   dailyGoalRing: $('#daily-goal-ring'),
   practiceTitle: $('#practice-title'),
-  practiceModeBadge: $('#practice-mode-badge'),
   practiceDailyGoal: $('#practice-daily-goal'),
   practiceDailyGoalText: $('#practice-daily-goal-text'),
   practiceProgress: $('#practice-progress'),
@@ -93,8 +101,6 @@ const els = {
   midiStatusText: $('#midi-status-text'),
   midiLiveNote: $('#midi-live-note'),
   midiDeviceSelect: $('#midi-device-select'),
-  midiTranspose: $('#midi-transpose'),
-  midiTransposeWrap: $('#midi-transpose-wrap'),
   midiDot: document.querySelector('.midi-dot'),
   sessionModal: $('#session-modal'),
   modalCorrect: $('#modal-correct'),
@@ -140,6 +146,7 @@ function showScreen(name) {
     'melody-pick': els.screenMelodyPick,
     'notes-pick': els.screenNotesPick,
     stats: els.screenStats,
+    profile: els.screenProfile,
     practice: els.screenPractice,
   };
 
@@ -151,7 +158,9 @@ function showScreen(name) {
   }
 
   const isPractice = name === 'practice';
+  const isHome = name === 'home';
   els.app.classList.toggle('app--practice', isPractice);
+  els.app.classList.toggle('app--home', isHome);
   els.mainHeader.hidden = isPractice;
   document.body.classList.toggle('body--practice', isPractice);
 
@@ -160,6 +169,11 @@ function showScreen(name) {
 
   if (name === 'notes-pick') {
     refreshWeakNotesOffer();
+  }
+
+  if (name === 'profile') {
+    updateProfileUI();
+    void refreshDailyGoalPanel();
   }
 }
 
@@ -214,7 +228,6 @@ async function connectMidiDevice() {
     const name = await midi.connect();
     setMidiStatus('on', `Подключено: ${name}`);
     els.btnConnectMidi.textContent = 'Переподключить';
-    els.midiTransposeWrap.hidden = false;
     renderMidiDevices(midi.listInputs());
     updatePracticeInputStatus();
     return name;
@@ -247,13 +260,9 @@ function updatePracticeProgress(state) {
     total = state.total;
     els.practiceProgress.textContent = `${current} / ${total}`;
   } else {
-    current = noteTrainer.examMode
-      ? (state.answeredCount ?? state.correct + state.wrong)
-      : state.correct;
+    current = state.correct;
     total = state.sessionLimit;
-    els.practiceProgress.textContent = noteTrainer.examMode
-      ? `Вопрос ${Math.min(current, total)} / ${total}`
-      : `${current} / ${total}`;
+    els.practiceProgress.textContent = `${current} / ${total}`;
   }
 
   const pct = total > 0 ? Math.min(100, (current / total) * 100) : 0;
@@ -287,9 +296,7 @@ function showSessionModal(stats) {
   els.modalAccuracy.textContent = `${stats.accuracy}%`;
   if (els.modalSubtitle) {
     const total = stats.total ?? stats.correct;
-    els.modalSubtitle.textContent = stats.examMode
-      ? `Экзамен: ${stats.correct} верных из ${total}`
-      : `Вы прошли ${total} ${pluralNotes(total)}`;
+    els.modalSubtitle.textContent = `Вы прошли ${total} ${pluralNotes(total)}`;
   }
   els.sessionModal.hidden = false;
 }
@@ -308,16 +315,23 @@ function readSessionLimitFromForm() {
   return NOTE_SESSION_LIMITS.includes(value) ? value : DEFAULT_NOTE_SESSION_LIMIT;
 }
 
-function readTrainerOptionsFromForm() {
-  const form = els.notesSettingsForm;
-  if (!form) return { ...DEFAULT_TRAINER_OPTIONS, dailyTarget: DEFAULT_DAILY_GOAL_TARGET };
+function readTrainerOptionsFromPrefs() {
+  const prefs = loadTrainerPrefs();
+  return {
+    soundEnabled: prefs?.soundEnabled ?? DEFAULT_TRAINER_OPTIONS.soundEnabled,
+    dailyTarget: prefs?.dailyTarget ?? getDailyGoalTarget(),
+  };
+}
 
-  const checked = (name) => form.querySelector(`[name="${name}"]`)?.checked ?? false;
+function readProfileSettingsFromForm() {
+  const form = els.profileSettingsForm;
+  if (!form) return readTrainerOptionsFromPrefs();
+
   const dailyTarget = parseInt(form.querySelector('[name="daily-goal"]')?.value ?? String(DEFAULT_DAILY_GOAL_TARGET), 10);
+  const prefs = loadTrainerPrefs();
 
   return {
-    soundEnabled: checked('sound-enabled'),
-    examMode: checked('exam-mode'),
+    soundEnabled: prefs?.soundEnabled ?? DEFAULT_TRAINER_OPTIONS.soundEnabled,
     dailyTarget: DAILY_GOAL_TARGETS.includes(dailyTarget) ? dailyTarget : DEFAULT_DAILY_GOAL_TARGET,
   };
 }
@@ -329,7 +343,6 @@ function loadTrainerPrefs() {
     const data = JSON.parse(raw);
     return {
       soundEnabled: data.soundEnabled ?? DEFAULT_TRAINER_OPTIONS.soundEnabled,
-      examMode: Boolean(data.examMode),
       dailyTarget: DAILY_GOAL_TARGETS.includes(Number(data.dailyTarget))
         ? Number(data.dailyTarget)
         : getDailyGoalTarget(),
@@ -342,28 +355,44 @@ function loadTrainerPrefs() {
 function saveTrainerPrefs(options) {
   localStorage.setItem(TRAINER_PREFS_KEY, JSON.stringify({
     soundEnabled: options.soundEnabled,
-    examMode: options.examMode,
     dailyTarget: options.dailyTarget,
   }));
   setDailyGoalTarget(options.dailyTarget);
 }
 
-function applyTrainerPrefsToForm() {
+function applyProfilePrefsToForm() {
   const prefs = loadTrainerPrefs();
-  const form = els.notesSettingsForm;
+  const form = els.profileSettingsForm;
   if (!form) return;
 
-  const soundInput = form.querySelector('[name="sound-enabled"]');
-  const examInput = form.querySelector('[name="exam-mode"]');
   const dailySelect = form.querySelector('[name="daily-goal"]');
 
   if (prefs) {
-    if (soundInput) soundInput.checked = prefs.soundEnabled;
-    if (examInput) examInput.checked = prefs.examMode;
     if (dailySelect) dailySelect.value = String(prefs.dailyTarget);
   } else if (dailySelect) {
     dailySelect.value = String(getDailyGoalTarget());
   }
+}
+
+function saveProfileSettingsFromForm() {
+  const options = readProfileSettingsFromForm();
+  const prefs = loadTrainerPrefs() ?? {
+    ...DEFAULT_TRAINER_OPTIONS,
+    dailyTarget: getDailyGoalTarget(),
+  };
+
+  saveTrainerPrefs({
+    ...prefs,
+    dailyTarget: options.dailyTarget,
+  });
+
+  noteTrainer.setOptions({
+    soundEnabled: options.soundEnabled,
+  });
+
+  dailyGoalState.target = options.dailyTarget;
+  renderDailyGoalPanel();
+  updatePracticeDailyGoalDisplay();
 }
 
 function renderDailyGoalPanel() {
@@ -372,7 +401,8 @@ function renderDailyGoalPanel() {
   const { completed, target } = dailyGoalState;
   const pct = target > 0 ? Math.min(100, Math.round((completed / target) * 100)) : 0;
 
-  els.dailyGoalPanel.hidden = false;
+  els.dailyGoalPanel.hidden = currentScreen !== 'profile';
+  if (currentScreen !== 'profile') return;
   if (els.dailyGoalText) {
     els.dailyGoalText.textContent = completed >= target
       ? `Цель на сегодня выполнена: ${completed} / ${target}`
@@ -442,10 +472,9 @@ function syncPracticeControls() {
   syncPracticeSoundPanel();
   syncKeyboardToggleUI();
 
-  if (!els.keyboardHintsPanel) return;
-
-  const hideHints = appMode === 'notes' && noteTrainer.examMode;
-  els.keyboardHintsPanel.hidden = hideHints;
+  if (els.keyboardHintsPanel) {
+    els.keyboardHintsPanel.hidden = false;
+  }
 }
 
 function setTrainerSoundEnabled(enabled) {
@@ -463,11 +492,7 @@ function setTrainerSoundEnabled(enabled) {
   saveTrainerPrefs({
     ...prefs,
     soundEnabled: noteTrainer.soundEnabled,
-    examMode: noteTrainer.examMode,
   });
-
-  const soundInput = els.notesSettingsForm?.querySelector('[name="sound-enabled"]');
-  if (soundInput) soundInput.checked = noteTrainer.soundEnabled;
 }
 
 function hideSessionModal() {
@@ -498,7 +523,7 @@ function setPianoVisible(visible) {
         staffView.update(melodyTrainer.state);
       } else if (appMode === 'notes' && noteTrainer.currentMidi !== null) {
         showNoteDrillStaff(noteTrainer.currentMidi, {
-          spelling: noteTrainer.spelling,
+          spelling: noteTrainer.currentSpelling,
           clef: noteTrainer.currentClef,
         });
       }
@@ -509,9 +534,6 @@ function setPianoVisible(visible) {
 }
 
 function setKeyboardHints(enabled) {
-  if (appMode === 'notes' && noteTrainer.examMode) {
-    enabled = false;
-  }
   keyboardHints = enabled;
   melodyTrainer.showKeyboardHints = enabled;
   noteTrainer.showKeyboardHints = enabled;
@@ -540,16 +562,14 @@ function enterPractice(mode, title) {
   currentPracticeTitle = title;
   els.practiceTitle.textContent = title;
   if (mode === 'notes') {
-    els.practiceModeBadge.hidden = !noteTrainer.examMode;
     els.practiceDailyGoal.hidden = false;
     updatePracticeDailyGoalDisplay();
-    setKeyboardHints(!noteTrainer.examMode);
+    setKeyboardHints(keyboardHints);
     syncPracticeControls();
     if (noteTrainer.soundEnabled) {
       void warmupTrainerSound();
     }
   } else {
-    els.practiceModeBadge.hidden = true;
     els.practiceDailyGoal.hidden = true;
     setKeyboardHints(true);
     syncPracticeControls();
@@ -588,7 +608,6 @@ function exitPractice() {
   hideSessionModal();
   resetPracticeProgress();
   showFeedback('', 'info');
-  els.practiceModeBadge.hidden = true;
   els.practiceDailyGoal.hidden = true;
   syncPracticeControls();
 }
@@ -641,14 +660,36 @@ function onSessionComplete(stats) {
   });
 }
 
+function updateProfileUI() {
+  const user = getUser();
+  const loggedIn = Boolean(user);
+
+  if (els.profileGuest) els.profileGuest.hidden = loggedIn;
+  if (els.profileUserInfo) els.profileUserInfo.hidden = !loggedIn;
+  if (loggedIn) {
+    if (els.profileUserName) els.profileUserName.textContent = user.name;
+    if (els.profileUserEmail) els.profileUserEmail.textContent = user.email;
+  } else {
+    if (els.profileUserName) els.profileUserName.textContent = '';
+    if (els.profileUserEmail) els.profileUserEmail.textContent = '';
+  }
+
+  applyProfilePrefsToForm();
+}
+
 function updateAuthUI() {
   const user = getUser();
   const loggedIn = Boolean(user);
 
   if (els.btnOpenAuth) els.btnOpenAuth.hidden = loggedIn;
+  if (els.btnGoProfile) els.btnGoProfile.hidden = !loggedIn;
   if (els.authUser) els.authUser.hidden = !loggedIn;
   if (els.btnLogout) els.btnLogout.hidden = !loggedIn;
   if (els.authUserName) els.authUserName.textContent = user?.name ?? '';
+
+  if (currentScreen === 'profile') {
+    updateProfileUI();
+  }
 }
 
 function openAuthModal(tab = 'login') {
@@ -1239,7 +1280,7 @@ function validateNoteSettings(settings) {
 
 function startNotesTraining() {
   const settings = readNoteSettingsFromForm();
-  const options = readTrainerOptionsFromForm();
+  const options = readTrainerOptionsFromPrefs();
   const error = validateNoteSettings(settings);
 
   if (error) {
@@ -1297,7 +1338,7 @@ midi.onNoteOff = onNoteOff;
 micPitch.onNoteOn = onNoteOn;
 micPitch.onNoteOff = onNoteOff;
 
-function showInputActivity({ note, type, source, rawNote }) {
+function showInputActivity({ note, type, source }) {
   if (type !== 'on') return;
   if (currentScreen === 'practice') {
     els.midiLiveNote.textContent = '';
@@ -1308,8 +1349,7 @@ function showInputActivity({ note, type, source, rawNote }) {
     els.midiLiveNote.textContent = `🎤 ${name}`;
     return;
   }
-  const extra = rawNote !== undefined && rawNote !== note ? ` (MIDI ${rawNote}→${note})` : ` (MIDI ${note})`;
-  els.midiLiveNote.textContent = `▸ ${name}${extra}`;
+  els.midiLiveNote.textContent = `▸ ${name} (MIDI ${note})`;
 }
 
 midi.onActivity = showInputActivity;
@@ -1394,14 +1434,19 @@ els.notesSettingsForm?.addEventListener('submit', (e) => {
 
 els.notesSettingsForm?.addEventListener('change', () => {
   if (!els.notesSettingsError.hidden) els.notesSettingsError.hidden = true;
-  const options = readTrainerOptionsFromForm();
-  if (options.dailyTarget) {
-    setDailyGoalTarget(options.dailyTarget);
-    dailyGoalState.target = options.dailyTarget;
-    renderDailyGoalPanel();
-    updatePracticeDailyGoalDisplay();
-  }
 });
+
+els.profileSettingsForm?.addEventListener('change', () => {
+  saveProfileSettingsFromForm();
+});
+
+function openProfileScreen() {
+  showScreen('profile');
+}
+
+function openNotesPickScreen() {
+  showScreen('notes-pick');
+}
 
 els.keyboardToggleTabs?.forEach((tab) => {
   tab.addEventListener('click', () => {
@@ -1411,7 +1456,6 @@ els.keyboardToggleTabs?.forEach((tab) => {
 
 els.keyboardHintTabs?.forEach((tab) => {
   tab.addEventListener('click', () => {
-    if (appMode === 'notes' && noteTrainer.examMode) return;
     setKeyboardHints(tab.dataset.hints === 'on');
   });
 });
@@ -1428,13 +1472,11 @@ els.screenPractice?.addEventListener('touchstart', () => {
   }
 }, { passive: true });
 
-els.btnGoMelodies?.addEventListener('click', () => showScreen('melody-pick'));
+els.btnGoProfile?.addEventListener('click', openProfileScreen);
+els.btnProfileLogin?.addEventListener('click', () => openAuthModal('login'));
+els.btnBackProfile?.addEventListener('click', () => showScreen('home'));
 
-function openNotesPickScreen() {
-  applyTrainerPrefsToForm();
-  refreshDailyGoalPanel();
-  showScreen('notes-pick');
-}
+els.btnGoMelodies?.addEventListener('click', () => showScreen('melody-pick'));
 
 els.btnGoNotes?.addEventListener('click', openNotesPickScreen);
 
@@ -1455,6 +1497,7 @@ els.btnLogout?.addEventListener('click', async () => {
   cachedNoteStats = null;
   updateAuthUI();
   renderWeakNotesOffer([]);
+  if (currentScreen === 'profile') showScreen('home');
 });
 
 els.authTabs.forEach((tab) => {
@@ -1608,10 +1651,6 @@ els.midiDeviceSelect.addEventListener('change', () => {
   if (input) setMidiStatus('on', `Подключено: ${input.name}`);
 });
 
-els.midiTranspose.addEventListener('change', () => {
-  midi.setTranspose(parseInt(els.midiTranspose.value, 10));
-});
-
 const pressedKeys = new Set();
 
 function isTypingTarget(target) {
@@ -1646,12 +1685,14 @@ initAuth().then(() => {
 });
 applyNoteSettingsToForm(DEFAULT_NOTE_SETTINGS);
 applySessionLimitToForm(DEFAULT_NOTE_SESSION_LIMIT);
-applyTrainerPrefsToForm();
+applyProfilePrefsToForm();
 noteTrainer.sessionLimit = DEFAULT_NOTE_SESSION_LIMIT;
 noteTrainer.setOptions(loadTrainerPrefs() ?? DEFAULT_TRAINER_OPTIONS);
 setPianoVisible(false);
 melodyTrainer.showKeyboardHints = true;
 noteTrainer.showKeyboardHints = true;
+
+showScreen('home');
 
 window.addEventListener('resize', () => {
   if (currentScreen === 'practice') {
@@ -1663,7 +1704,7 @@ window.addEventListener('resize', () => {
     staffView.update(melodyTrainer.state);
   } else if (appMode === 'notes' && noteTrainer.currentMidi !== null && !staffView.drillMode) {
     showNoteDrillStaff(noteTrainer.currentMidi, {
-      spelling: noteTrainer.spelling,
+      spelling: noteTrainer.currentSpelling,
       clef: noteTrainer.currentClef,
     });
   }

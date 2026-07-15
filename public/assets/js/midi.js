@@ -12,7 +12,6 @@ export class MidiInput {
     this.access = null;
     this.boundInputs = new Map();
     this.selectedInputId = null;
-    this.transpose = 0;
     this.onNoteOn = null;
     this.onNoteOff = null;
     this.onActivity = null;
@@ -58,10 +57,6 @@ export class MidiInput {
 
     this._refreshInputs();
     return this.boundInputs.get(this.selectedInputId)?.name ?? inputs[0].name;
-  }
-
-  setTranspose(semitones) {
-    this.transpose = semitones;
   }
 
   selectInput(id) {
@@ -181,15 +176,12 @@ export class MidiInput {
     const isNoteOn = command === NOTE_ON && velocity > 0;
     const isNoteOff = command === NOTE_OFF || (command === NOTE_ON && velocity === 0);
 
-    const normalized = note - this.transpose;
-    if (normalized < 0 || normalized > 127) return;
-
     if (isNoteOn) {
-      this.onActivity?.({ note: normalized, rawNote: note, velocity, type: 'on' });
-      this.onNoteOn?.(normalized, velocity);
+      this.onActivity?.({ note, velocity, type: 'on' });
+      this.onNoteOn?.(note, velocity);
     } else if (isNoteOff) {
-      this.onActivity?.({ note: normalized, rawNote: note, velocity: 0, type: 'off' });
-      this.onNoteOff?.(normalized);
+      this.onActivity?.({ note, velocity: 0, type: 'off' });
+      this.onNoteOff?.(note);
     }
   }
 }

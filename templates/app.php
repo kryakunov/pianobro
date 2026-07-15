@@ -15,13 +15,16 @@
     $publicDir = dirname(__DIR__) . '/public';
     $assetVersion = max(
       filemtime($publicDir . '/assets/js/app.js'),
+      filemtime($publicDir . '/assets/js/staff.js'),
+      filemtime($publicDir . '/assets/js/clef-glyphs.js'),
       filemtime($publicDir . '/assets/css/style.css'),
+      filemtime($publicDir . '/assets/favicon.svg'),
     );
   ?>
   <link rel="canonical" href="<?= htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') ?>/">
-  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="apple-touch-icon" href="/assets/favicon.svg">
+  <link rel="icon" href="/assets/favicon.svg?v=<?= (int) $assetVersion ?>" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico?v=<?= (int) $assetVersion ?>" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/favicon.svg?v=<?= (int) $assetVersion ?>">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ru_RU">
   <meta property="og:title" content="ПианоТренажёр — обучение игре на пианино онлайн">
@@ -79,6 +82,7 @@
         </div>
       </div>
       <div class="header__auth" id="auth-panel">
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-go-profile" hidden>Профиль</button>
         <button type="button" class="btn btn--secondary btn--sm" id="btn-open-auth">Войти</button>
         <div class="auth-user" id="auth-user" hidden>
           <span class="auth-user__name" id="auth-user-name"></span>
@@ -86,7 +90,7 @@
           <button type="button" class="btn btn--secondary btn--sm" id="btn-logout" hidden>Выйти</button>
         </div>
       </div>
-      <div class="header__midi" id="midi-panel">
+      <div class="header__midi" id="midi-panel" hidden>
         <span class="midi-dot midi-dot--off"></span>
         <div class="midi-panel__info">
           <span id="midi-status-text">MIDI не подключён</span>
@@ -95,36 +99,6 @@
         <select class="midi-select" id="midi-device-select" disabled hidden>
           <option value="">Выбор устройства…</option>
         </select>
-        <label class="midi-transpose" id="midi-transpose-wrap" hidden title="Если на пианино включена транспозиция, укажите её здесь">
-          <span>Трансп.</span>
-          <select id="midi-transpose">
-            <option value="0">0</option>
-            <option value="-12">-12</option>
-            <option value="-11">-11</option>
-            <option value="-10">-10</option>
-            <option value="-9">-9</option>
-            <option value="-8">-8</option>
-            <option value="-7">-7</option>
-            <option value="-6">-6</option>
-            <option value="-5">-5</option>
-            <option value="-4">-4</option>
-            <option value="-3">-3</option>
-            <option value="-2">-2</option>
-            <option value="-1">-1</option>
-            <option value="1">+1</option>
-            <option value="2">+2</option>
-            <option value="3">+3</option>
-            <option value="4">+4</option>
-            <option value="5">+5</option>
-            <option value="6">+6</option>
-            <option value="7">+7</option>
-            <option value="8">+8</option>
-            <option value="9">+9</option>
-            <option value="10">+10</option>
-            <option value="11">+11</option>
-            <option value="12">+12</option>
-          </select>
-        </label>
         <button type="button" class="btn btn--secondary btn--sm" id="btn-connect-midi">
           <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-midi"/></svg>
           Подключить пианино
@@ -228,7 +202,7 @@
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
               </span>
               <h4 class="landing-feature__title">Ежедневная цель</h4>
-              <p class="landing-feature__text">Ставьте цель на день и следите за прогрессом. Статистика покажет, какие ноты уже освоены, а какие стоит повторить.</p>
+              <p class="landing-feature__text">Ставьте цель на день в профиле и следите за прогрессом. Статистика покажет, какие ноты уже освоены, а какие стоит повторить.</p>
             </article>
             <article class="landing-feature">
               <span class="landing-feature__icon icon-badge icon-badge--brand" aria-hidden="true">
@@ -326,6 +300,72 @@
       </div>
     </section>
 
+    <!-- Профиль -->
+    <section class="screen" id="screen-profile" hidden>
+      <div class="screen-header">
+        <button type="button" class="btn-back" id="btn-back-profile">← Назад</button>
+        <h2 class="screen-header__title">
+          <span class="screen-header__icon icon-badge icon-badge--brand" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-user"/></svg>
+          </span>
+          Профиль
+        </h2>
+      </div>
+      <div class="pick-panel profile-panel">
+        <div class="profile-user" id="profile-user-card">
+          <div class="profile-user__guest" id="profile-guest" hidden>
+            <p class="profile-user__text">Войдите, чтобы сохранять прогресс и статистику на всех устройствах.</p>
+            <button type="button" class="btn btn--primary btn--sm" id="btn-profile-login">Войти</button>
+          </div>
+          <div class="profile-user__info" id="profile-user-info" hidden>
+            <span class="profile-user__avatar icon-badge icon-badge--brand" aria-hidden="true">
+              <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-user"/></svg>
+            </span>
+            <div>
+              <strong class="profile-user__name" id="profile-user-name"></strong>
+              <p class="profile-user__email" id="profile-user-email"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-settings">
+          <h3 class="profile-settings__title">Настройки</h3>
+
+          <div class="daily-goal" id="daily-goal-panel" hidden>
+            <div class="daily-goal__ring" aria-hidden="true">
+              <svg class="daily-goal__svg" viewBox="0 0 40 40">
+                <circle class="daily-goal__track" cx="20" cy="20" r="16"></circle>
+                <circle class="daily-goal__fill" id="daily-goal-ring" cx="20" cy="20" r="16"></circle>
+              </svg>
+              <span class="daily-goal__percent" id="daily-goal-percent">0%</span>
+            </div>
+            <div class="daily-goal__content">
+              <strong class="daily-goal__title">Ежедневная цель</strong>
+              <p class="daily-goal__text" id="daily-goal-text">Сегодня: 0 / 20 верных нот</p>
+            </div>
+          </div>
+
+          <form class="profile-settings__form" id="profile-settings-form">
+            <fieldset class="settings-group settings-group--daily">
+              <legend class="settings-group__head">
+                <span class="settings-group__icon icon-badge icon-badge--success"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-mastered"/></svg></span>
+                <span class="settings-group__title">Ежедневная цель</span>
+              </legend>
+              <label class="settings-select">
+                <span class="settings-select__label">Сколько верных нот в день</span>
+                <select name="daily-goal" id="profile-daily-goal" class="settings-select__input">
+                  <option value="10">10 нот</option>
+                  <option value="20" selected>20 нот</option>
+                  <option value="30">30 нот</option>
+                  <option value="50">50 нот</option>
+                </select>
+              </label>
+            </fieldset>
+          </form>
+        </div>
+      </div>
+    </section>
+
     <!-- Выбор мелодии -->
     <section class="screen" id="screen-melody-pick" hidden>
       <div class="screen-header">
@@ -381,19 +421,6 @@
       </div>
       <div class="pick-panel">
         <div class="weak-notes-offer" id="weak-notes-offer" hidden></div>
-        <div class="daily-goal" id="daily-goal-panel" hidden>
-          <div class="daily-goal__ring" aria-hidden="true">
-            <svg class="daily-goal__svg" viewBox="0 0 40 40">
-              <circle class="daily-goal__track" cx="20" cy="20" r="16"></circle>
-              <circle class="daily-goal__fill" id="daily-goal-ring" cx="20" cy="20" r="16"></circle>
-            </svg>
-            <span class="daily-goal__percent" id="daily-goal-percent">0%</span>
-          </div>
-          <div class="daily-goal__content">
-            <strong class="daily-goal__title">Ежедневная цель</strong>
-            <p class="daily-goal__text" id="daily-goal-text">Сегодня: 0 / 20 верных нот</p>
-          </div>
-        </div>
         <form class="notes-settings" id="notes-settings-form">
           <div class="notes-settings__grid">
           <fieldset class="settings-group settings-group--treble">
@@ -449,40 +476,6 @@
             </div>
           </fieldset>
 
-          <fieldset class="settings-group settings-group--options">
-            <legend class="settings-group__head">
-              <span class="settings-group__icon icon-badge icon-badge--session"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg></span>
-              <span class="settings-group__title">Режим тренировки</span>
-            </legend>
-            <div class="settings-group__options settings-group__options--stack">
-              <label class="settings-check settings-check--wide">
-                <input type="checkbox" name="sound-enabled" checked>
-                <span>Звук нот</span>
-              </label>
-              <label class="settings-check settings-check--wide">
-                <input type="checkbox" name="exam-mode">
-                <span>Режим экзамена</span>
-              </label>
-            </div>
-            <p class="settings-group__hint">Экзамен: без подсказок на клавиатуре, одна попытка на ноту.</p>
-          </fieldset>
-
-          <fieldset class="settings-group settings-group--daily">
-            <legend class="settings-group__head">
-              <span class="settings-group__icon icon-badge icon-badge--success"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-mastered"/></svg></span>
-              <span class="settings-group__title">Ежедневная цель</span>
-            </legend>
-            <label class="settings-select">
-              <span class="settings-select__label">Сколько верных нот в день</span>
-              <select name="daily-goal" id="notes-daily-goal" class="settings-select__input">
-                <option value="10">10 нот</option>
-                <option value="20" selected>20 нот</option>
-                <option value="30">30 нот</option>
-                <option value="50">50 нот</option>
-              </select>
-            </label>
-          </fieldset>
-
           <fieldset class="settings-group settings-group--session">
             <legend class="settings-group__head">
               <span class="settings-group__icon icon-badge icon-badge--session"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-session"/></svg></span>
@@ -517,7 +510,6 @@
       <div class="practice-topbar">
         <button type="button" class="btn-back" id="btn-back-practice" aria-label="Назад">←</button>
         <h2 class="practice-topbar__title" id="practice-title">Тренировка</h2>
-        <span class="practice-mode-badge" id="practice-mode-badge" hidden>Экзамен</span>
         <div class="practice-daily-goal" id="practice-daily-goal" hidden>
           <span class="practice-daily-goal__label">Цель</span>
           <span class="practice-daily-goal__value" id="practice-daily-goal-text">0 / 20</span>
@@ -690,11 +682,11 @@
     </symbol>
     <symbol id="ico-treble" viewBox="0 0 24 24">
       <path d="M2 7.5h20M2 10h20M2 12.5h20M2 15h20M2 17.5h20" stroke="currentColor" stroke-width="0.65" opacity="0.3"/>
-      <text x="12" y="16.8" text-anchor="middle" font-size="18" font-family="Georgia, 'Times New Roman', 'Noto Music', serif" fill="currentColor">𝄞</text>
+      <path d="M 5.30 10.80 C 5.28 10.68 5.30 10.68 5.36 10.61 C 6.46 9.59 7.28 8.31 7.28 6.76 C 7.28 5.88 7.04 5.01 6.62 4.41 C 6.47 4.18 6.21 3.90 6.10 3.90 C 5.96 3.90 5.64 4.16 5.45 4.39 C 4.69 5.21 4.45 6.48 4.45 7.53 C 4.45 8.11 4.53 8.77 4.60 9.19 C 4.62 9.31 4.62 9.33 4.50 9.43 C 3.04 10.63 1.50 12.08 1.50 14.12 C 1.50 15.88 2.70 17.55 5.18 17.55 C 5.41 17.55 5.68 17.53 5.88 17.49 C 5.99 17.46 6.01 17.46 6.03 17.58 C 6.15 18.26 6.30 19.13 6.30 19.61 C 6.30 21.11 5.29 21.29 4.69 21.29 C 4.15 21.29 3.89 21.13 3.89 21.00 C 3.89 20.92 3.98 20.90 4.21 20.82 C 4.53 20.73 4.88 20.46 4.88 19.87 C 4.88 19.32 4.53 18.84 3.91 18.84 C 3.24 18.84 2.83 19.38 2.83 20.01 C 2.83 20.66 3.23 21.65 4.76 21.65 C 5.43 21.65 6.74 21.35 6.74 19.63 C 6.74 19.05 6.56 18.10 6.46 17.46 C 6.44 17.34 6.44 17.36 6.58 17.30 C 7.61 16.89 8.28 16.03 8.28 14.89 C 8.28 13.60 7.33 12.45 5.85 12.45 C 5.59 12.45 5.59 12.45 5.55 12.27 M 6.25 5.47 C 6.58 5.47 6.86 5.74 6.86 6.30 C 6.86 7.42 5.89 8.33 5.10 9.03 C 5.03 9.09 4.99 9.08 4.97 8.94 C 4.93 8.68 4.90 8.34 4.90 8.02 C 4.90 6.44 5.63 5.47 6.25 5.47 M 5.15 12.35 C 5.18 12.54 5.18 12.54 5.00 12.59 C 4.11 12.89 3.53 13.69 3.53 14.56 C 3.53 15.46 4.01 16.11 4.69 16.35 C 4.78 16.38 4.90 16.40 4.97 16.40 C 5.05 16.40 5.09 16.35 5.09 16.29 C 5.09 16.22 5.01 16.19 4.94 16.17 C 4.51 15.98 4.21 15.55 4.21 15.08 C 4.21 14.50 4.60 14.07 5.22 13.90 C 5.38 13.86 5.40 13.87 5.42 13.98 L 5.93 16.99 C 5.95 17.11 5.94 17.11 5.79 17.13 C 5.63 17.16 5.42 17.18 5.22 17.18 C 3.45 17.18 2.31 16.20 2.31 14.80 C 2.31 14.20 2.41 13.40 3.25 12.45 C 3.86 11.78 4.32 11.40 4.79 11.02 C 4.90 10.94 4.92 10.95 4.94 11.05 M 5.85 13.96 C 5.82 13.83 5.84 13.81 5.96 13.82 C 6.78 13.89 7.45 14.58 7.45 15.46 C 7.45 16.10 7.07 16.61 6.51 16.90 C 6.39 16.96 6.36 16.96 6.34 16.84" fill="currentColor"/>
     </symbol>
     <symbol id="ico-bass" viewBox="0 0 24 24">
       <path d="M2 7.5h20M2 10h20M2 12.5h20M2 15h20M2 17.5h20" stroke="currentColor" stroke-width="0.65" opacity="0.3"/>
-      <text x="12" y="16.2" text-anchor="middle" font-size="17" font-family="Georgia, 'Times New Roman', 'Noto Music', serif" fill="currentColor">𝄢</text>
+      <path d="M 4.05 7.35 C 2.29 7.35 1.50 8.64 1.50 9.61 C 1.50 10.41 1.92 11.11 2.74 11.11 C 3.38 11.11 3.82 10.67 3.82 10.04 C 3.82 9.40 3.34 8.99 2.85 8.99 C 2.57 8.99 2.47 9.06 2.34 9.06 C 2.21 9.06 2.17 8.98 2.17 8.88 C 2.17 8.48 2.78 7.73 3.82 7.73 C 4.88 7.73 5.35 8.79 5.35 10.37 C 5.35 13.19 3.96 14.77 1.60 16.11 C 1.51 16.16 1.45 16.22 1.45 16.30 C 1.45 16.36 1.49 16.42 1.58 16.42 C 1.63 16.42 1.69 16.40 1.75 16.37 C 4.24 15.15 6.87 13.36 6.87 10.28 C 6.87 8.53 5.80 7.35 4.05 7.35 M 7.86 8.18 C 7.54 8.18 7.31 8.42 7.31 8.74 C 7.31 9.05 7.54 9.29 7.86 9.29 C 8.17 9.29 8.41 9.05 8.41 8.74 C 8.41 8.42 8.17 8.18 7.86 8.18 M 7.87 10.72 C 7.56 10.72 7.32 10.95 7.32 11.26 C 7.32 11.58 7.56 11.81 7.87 11.81 C 8.18 11.81 8.41 11.58 8.41 11.26 C 8.41 10.95 8.18 10.72 7.87 10.72" fill="currentColor"/>
     </symbol>
     <symbol id="ico-notes" viewBox="0 0 24 24">
       <path d="M2 8h10M2 10.5h10M2 13h10M2 15.5h10M2 18h10" stroke="currentColor" stroke-width="0.6" opacity="0.28"/>

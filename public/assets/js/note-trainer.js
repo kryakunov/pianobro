@@ -18,7 +18,6 @@ export const DEFAULT_NOTE_SESSION_LIMIT = 10;
 
 export const DEFAULT_TRAINER_OPTIONS = {
   soundEnabled: true,
-  examMode: false,
 };
 
 function selectedRanges(settings) {
@@ -57,7 +56,18 @@ export function buildPoolFromSettings(settings) {
 }
 
 export function resolveSpelling(settings) {
-  if (settings.alteration.flat && !settings.alteration.sharp) return 'flat';
+  const { sharp, flat } = settings.alteration;
+  if (sharp && flat) return 'both';
+  if (flat) return 'flat';
+  return 'sharp';
+}
+
+export function resolveNoteSpelling(settings, midi) {
+  const mode = resolveSpelling(settings);
+  if (mode === 'both' && isBlackKey(midi)) {
+    return Math.random() < 0.5 ? 'sharp' : 'flat';
+  }
+  if (mode === 'flat') return 'flat';
   return 'sharp';
 }
 
@@ -110,7 +120,7 @@ export function deriveSettingsFromMidis(midis) {
   return settings;
 }
 
-export function describeNoteSettings(settings, options = {}) {
+export function describeNoteSettings(settings) {
   const parts = [];
 
   if (settings.treble.enabled && settings.bass.enabled) parts.push('Оба ключа');
@@ -130,7 +140,6 @@ export function describeNoteSettings(settings, options = {}) {
 
   if (settings.alteration.sharp) parts.push('диезы');
   if (settings.alteration.flat) parts.push('бемоли');
-  if (options.examMode) parts.push('экзамен');
 
   return parts.join(' · ') || 'Тренажёр нот';
 }
@@ -165,9 +174,8 @@ export class NoteTrainer {
     this.running = false;
     this.sessionLimit = 10;
     this.sessionAttempts = [];
-    this.answeredCount = 0;
     this.soundEnabled = DEFAULT_TRAINER_OPTIONS.soundEnabled;
-    this.examMode = DEFAULT_TRAINER_OPTIONS.examMode;
+    this.currentSpelling = 'sharp';
     this.onUpdate = null;
     this.onFeedback = null;
     this.onNoteChange = null;
@@ -179,10 +187,6 @@ export class NoteTrainer {
   setOptions(options = {}) {
     if (options.soundEnabled !== undefined) {
       this.soundEnabled = Boolean(options.soundEnabled);
-    }
-    this.examMode = Boolean(options.examMode);
-    if (this.examMode) {
-      this.showKeyboardHints = false;
     }
     if (this.running) this._applyKeyboardHint();
     this._emitUpdate();
@@ -219,16 +223,10 @@ export class NoteTrainer {
     this.wrong = 0;
     this.streak = 0;
     this.total = 0;
-    this.answeredCount = 0;
     this.sessionAttempts = [];
     this.running = true;
     this._nextNote();
-    this.onFeedback?.(
-      this.examMode
-        ? 'Экзамен: найдите и нажмите ноту'
-        : 'Найдите и нажмите ноту на пианино',
-      'info',
-    );
+    this.onFeedback?.('Найдите и нажмите ноту на пианино', 'info');
     this._emitUpdate();
     return true;
   }
@@ -246,7 +244,6 @@ export class NoteTrainer {
     this.streak = 0;
     this.bestStreak = 0;
     this.total = 0;
-    this.answeredCount = 0;
     this.sessionAttempts = [];
     this.currentMidi = null;
     this.running = false;
@@ -272,16 +269,6 @@ export class NoteTrainer {
       this.onFeedback?.('Верно!', 'correct');
       this._emitUpdate();
 
-      if (this.examMode) {
-        this.answeredCount++;
-        if (this.answeredCount >= this.sessionLimit) {
-          this._finish();
-        } else {
-          this._nextNote();
-        }
-        return true;
-      }
-
       if (this.correct >= this.sessionLimit) {
         this._finish();
         return true;
@@ -303,15 +290,6 @@ export class NoteTrainer {
     this.onFeedback?.('Неверно', 'wrong');
     this._emitUpdate();
 
-    if (this.examMode) {
-      this.answeredCount++;
-      if (this.answeredCount >= this.sessionLimit) {
-        this._finish();
-      } else {
-        this._nextNote();
-      }
-    }
-
     return false;
   }
 
@@ -323,16 +301,17 @@ export class NoteTrainer {
     const prev = this.currentMidi;
     this.currentMidi = pickRandom(this.pool, prev);
     this.currentClef = resolveClefForNote(this.currentMidi, this.settings);
+    this.currentSpelling = resolveNoteSpelling(this.settings, this.currentMidi);
     this._applyKeyboardHint();
     this.onNoteChange?.(this.currentMidi, {
-      spelling: this.spelling,
+      spelling: this.currentSpelling,
       clef: this.currentClef,
     });
   }
 
   _applyKeyboardHint() {
     this.piano.clearStates(['correct', 'wrong', 'pressed', 'target', 'target-left', 'target-right']);
-    if (!this.examMode && this.showKeyboardHints && this.currentMidi !== null) {
+    if (this.showKeyboardHints && this.currentMidi !== null) {
       this.piano.setTarget(this.currentMidi);
     }
   }
@@ -347,20 +326,16 @@ export class NoteTrainer {
     this.piano.clearStates();
     const attempts = this.correct + this.wrong;
     const accuracy = attempts > 0 ? Math.round((this.correct / attempts) * 100) : 0;
-    const totalQuestions = this.examMode ? this.sessionLimit : this.sessionLimit;
     this.onFeedback?.(
-      this.examMode
-        ? `Экзамен завершён! Точность: ${accuracy}%`
-        : `Тренировка завершена! Точность: ${accuracy}%`,
+      `Тренировка завершена! Точность: ${accuracy}%`,
       'complete',
     );
     this.onComplete?.({
       correct: this.correct,
       wrong: this.wrong,
       accuracy,
-      total: totalQuestions,
+      total: this.sessionLimit,
       mode: 'notes',
-      examMode: this.examMode,
       settings: this.settings,
       attempts: [...this.sessionAttempts],
     });
@@ -377,11 +352,9 @@ export class NoteTrainer {
       streak: this.streak,
       bestStreak: this.bestStreak,
       total: this.total,
-      answeredCount: this.answeredCount,
       sessionLimit: this.sessionLimit,
       poolSize: this.pool.length,
       running: this.running,
-      examMode: this.examMode,
       soundEnabled: this.soundEnabled,
     });
   }
@@ -396,11 +369,9 @@ export class NoteTrainer {
       streak: this.streak,
       bestStreak: this.bestStreak,
       total: this.total,
-      answeredCount: this.answeredCount,
       sessionLimit: this.sessionLimit,
       poolSize: this.pool.length,
       running: this.running,
-      examMode: this.examMode,
       soundEnabled: this.soundEnabled,
     };
   }

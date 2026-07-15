@@ -250,8 +250,7 @@ body {
   display: none;
 }
 
-.midi-select,
-.midi-transpose select {
+.midi-select {
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border);
@@ -260,14 +259,6 @@ body {
   font: inherit;
   font-size: 0.8125rem;
   max-width: 200px;
-}
-
-.midi-transpose {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
 }
 
 .midi-dot {
@@ -769,8 +760,7 @@ body {
 }
 
 .staff-clef {
-  font-family: serif;
-  dominant-baseline: central;
+  pointer-events: none;
 }
 
 .staff-brace {
@@ -2003,6 +1993,65 @@ body {
   flex-shrink: 0;
 }
 
+.profile-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.profile-user {
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.profile-user__info {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.profile-user__avatar {
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+}
+
+.profile-user__name {
+  display: block;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.profile-user__email {
+  margin-top: 0.2rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.profile-user__text {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-bottom: 0.875rem;
+}
+
+.profile-settings__title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.875rem;
+}
+
+.profile-settings__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .daily-goal {
   display: flex;
   align-items: center;
@@ -2222,19 +2271,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.practice-mode-badge {
-  flex-shrink: 0;
-  padding: 0.28rem 0.55rem;
-  border-radius: 999px;
-  background: rgba(255, 200, 87, 0.16);
-  border: 1px solid rgba(255, 200, 87, 0.35);
-  color: #ffd27a;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .practice-daily-goal {
@@ -2481,6 +2517,7 @@ body {
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+  width: 100%;
   overflow: visible;
   background: var(--surface);
   border-top: 1px solid var(--border);
@@ -2618,6 +2655,8 @@ body {
 
 .practice-keyboard .piano-case__keys {
   padding: 8px 0 6px;
+  border-left: none;
+  border-right: none;
 }
 
 .practice-keyboard .piano-case__board {
@@ -2754,10 +2793,81 @@ body {
   width: 100%;
 }
 
+@media (min-width: 769px) {
+  .practice-layout:not(.practice-layout--keyboard-hidden) .practice-keyboard__viewport {
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .practice-keyboard__viewport {
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+
+  .practice-keyboard__viewport .piano-case {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  .practice-keyboard .piano,
+  .practice-keyboard .piano__keys,
+  .practice-keyboard .piano__whites,
+  .practice-keyboard .piano__octaves,
+  .practice-keyboard .piano__blacks {
+    width: 100%;
+  }
+
+  .practice-keyboard .piano-key--white {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+  }
+}
+
 @media (max-width: 768px) {
-  .practice-input-status {
-    flex-wrap: wrap;
+  .practice-controls__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .practice-controls .keyboard-mode {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .practice-controls .keyboard-mode__tabs {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  .practice-controls .keyboard-mode__tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.4rem 0.45rem;
     font-size: 0.75rem;
+  }
+
+  .practice-input-status {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin: 0.5rem 0.75rem 0;
+    padding: 0.55rem 0.65rem;
+    font-size: 0.75rem;
+  }
+
+  .practice-input-status__text {
+    text-align: center;
+  }
+
+  .practice-input-status__btn {
+    width: 100%;
+    text-align: center;
   }
 
   .practice-feedback-wrap {
@@ -2795,6 +2905,10 @@ body {
   gap: 0.5rem;
   flex-shrink: 0;
   margin-left: auto;
+}
+
+.app--home .header__midi {
+  display: none !important;
 }
 
 .header__auth [hidden] {

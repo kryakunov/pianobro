@@ -1,17 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="80=>"@5=06Q@">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Piano Bro">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#6c8cff"/>
       <stop offset="100%" stop-color="#a78bfa"/>
     </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
-  <rect x="7" y="14" width="3.5" height="10" rx="1" fill="#fff"/>
-  <rect x="11.5" y="14" width="3.5" height="10" rx="1" fill="#fff"/>
-  <rect x="16" y="14" width="3.5" height="10" rx="1" fill="#fff"/>
-  <rect x="20.5" y="14" width="3.5" height="10" rx="1" fill="#fff"/>
-  <rect x="10" y="14" width="2.5" height="6" rx="0.5" fill="#1e2230"/>
-  <rect x="14.5" y="14" width="2.5" height="6" rx="0.5" fill="#1e2230"/>
-  <rect x="19" y="14" width="2.5" height="6" rx="0.5" fill="#1e2230"/>
-  <text x="16" y="11" text-anchor="middle" font-size="9" fill="#fff" font-family="serif">j</text>
+  <rect width="32" height="32" rx="8" fill="url(#bg)"/>
+  <g fill="#fff">
+    <ellipse cx="11.5" cy="22.5" rx="5" ry="3.8" transform="rotate(-18 11.5 22.5)"/>
+    <rect x="15.2" y="7" width="2.8" height="16.8" rx="1.4"/>
+  </g>
 </svg>
