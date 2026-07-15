@@ -9,11 +9,108 @@ final class Router
   public function __construct(
     private readonly LessonRepository $lessons,
     private readonly MidiSearch $midiSearch,
+    private readonly AuthService $auth,
+    private readonly StatsRepository $stats,
   ) {}
 
   public function dispatch(string $uri, string $method): void
   {
     $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+
+    if ($path === '/api/auth/me' && $method === 'GET') {
+      $user = $this->auth->currentUser();
+      $this->json(['user' => $user]);
+      return;
+    }
+
+    if ($path === '/api/auth/register' && $method === 'POST') {
+      try {
+        $body = $this->readJsonBody();
+        $user = $this->auth->register(
+          (string) ($body['name'] ?? ''),
+          (string) ($body['email'] ?? ''),
+          (string) ($body['password'] ?? ''),
+          (string) ($body['passwordConfirm'] ?? ''),
+          (string) ($body['website'] ?? ''),
+        );
+        $this->json(['user' => $user]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
+    if ($path === '/api/auth/login' && $method === 'POST') {
+      try {
+        $body = $this->readJsonBody();
+        $user = $this->auth->login(
+          (string) ($body['email'] ?? ''),
+          (string) ($body['password'] ?? ''),
+        );
+        $this->json(['user' => $user]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 401);
+      }
+      return;
+    }
+
+    if ($path === '/api/auth/logout' && $method === 'POST') {
+      $this->auth->logout();
+      $this->json(['ok' => true]);
+      return;
+    }
+
+    if ($path === '/api/stats/notes' && $method === 'GET') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+      $this->json($this->stats->getNoteStats($user['id']));
+      return;
+    }
+
+    if ($path === '/api/stats/session' && $method === 'POST') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      try {
+        $body = $this->readJsonBody();
+        $mode = (string) ($body['mode'] ?? '');
+        $correct = (int) ($body['correct'] ?? 0);
+        $wrong = (int) ($body['wrong'] ?? 0);
+        $accuracy = (int) ($body['accuracy'] ?? 0);
+        $total = (int) ($body['total'] ?? 0);
+
+        if ($mode === 'notes') {
+          $attempts = is_array($body['attempts'] ?? null) ? $body['attempts'] : [];
+          $settings = is_array($body['settings'] ?? null) ? $body['settings'] : null;
+          $this->stats->saveNoteSession(
+            $user['id'],
+            $correct,
+            $wrong,
+            $accuracy,
+            $total,
+            $settings,
+            $attempts,
+          );
+        } elseif ($mode === 'melody') {
+          $lessonId = isset($body['lessonId']) ? (string) $body['lessonId'] : null;
+          $this->stats->saveMelodySession($user['id'], $correct, $wrong, $accuracy, $total, $lessonId);
+        } else {
+          $this->json(['error' => 'Неизвестный режим'], 400);
+          return;
+        }
+
+        $this->json(['ok' => true]);
+      } catch (\Throwable $e) {
+        $this->json(['error' => 'Не удалось сохранить статистику'], 500);
+      }
+      return;
+    }
 
     if ($path === '/api/lessons' && $method === 'GET') {
       $query = trim((string) ($_GET['q'] ?? ''));
@@ -106,6 +203,22 @@ final class Router
     }
 
     $this->renderApp();
+  }
+
+  /** @return array<string, mixed> */
+  private function readJsonBody(): array
+  {
+    $raw = file_get_contents('php://input');
+    if ($raw === false || trim($raw) === '') {
+      return [];
+    }
+
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+      throw new \InvalidArgumentException('Некорректный JSON');
+    }
+
+    return $data;
   }
 
   private function serveStatic(string $path): void

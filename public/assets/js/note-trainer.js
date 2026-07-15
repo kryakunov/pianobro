@@ -11,14 +11,15 @@ export const DEFAULT_NOTE_SETTINGS = {
   treble: { enabled: true, first: true, second: false },
   bass: { enabled: false, small: false, great: false },
   alteration: { sharp: false, flat: false },
-  tonality: { sharpKeys: false, flatKeys: false },
 };
 
 export const NOTE_SESSION_LIMITS = [10, 20, 30, 50];
 export const DEFAULT_NOTE_SESSION_LIMIT = 10;
 
-const SHARP_TONAL_PCS = new Set([1, 3, 6, 8, 10]);
-const FLAT_TONAL_PCS = new Set([1, 3, 6, 8, 10]);
+export const DEFAULT_TRAINER_OPTIONS = {
+  soundEnabled: true,
+  examMode: false,
+};
 
 function selectedRanges(settings) {
   const ranges = [];
@@ -41,23 +42,13 @@ export function buildPoolFromSettings(settings) {
   const max = Math.max(...ranges.map((r) => r.max));
 
   const includeChromatics = settings.alteration.sharp
-    || settings.alteration.flat
-    || settings.tonality.sharpKeys
-    || settings.tonality.flatKeys;
+    || settings.alteration.flat;
 
   const pool = [];
   for (let midi = min; midi <= max; midi++) {
     if (!ranges.some((r) => midi >= r.min && midi <= r.max)) continue;
 
-    if (isBlackKey(midi)) {
-      if (!includeChromatics) continue;
-
-      const pc = midi % 12;
-      const { sharpKeys, flatKeys } = settings.tonality;
-
-      if (sharpKeys && !flatKeys && !SHARP_TONAL_PCS.has(pc)) continue;
-      if (flatKeys && !sharpKeys && !FLAT_TONAL_PCS.has(pc)) continue;
-    }
+    if (isBlackKey(midi) && !includeChromatics) continue;
 
     pool.push(midi);
   }
@@ -67,7 +58,6 @@ export function buildPoolFromSettings(settings) {
 
 export function resolveSpelling(settings) {
   if (settings.alteration.flat && !settings.alteration.sharp) return 'flat';
-  if (settings.tonality.flatKeys && !settings.tonality.sharpKeys && !settings.alteration.sharp) return 'flat';
   return 'sharp';
 }
 
@@ -83,7 +73,44 @@ export function usesBothClefs(settings) {
   return settings.treble.enabled && settings.bass.enabled;
 }
 
-export function describeNoteSettings(settings) {
+export function deriveSettingsFromMidis(midis) {
+  const settings = structuredClone(DEFAULT_NOTE_SETTINGS);
+  settings.treble = { enabled: false, first: false, second: false };
+  settings.bass = { enabled: false, small: false, great: false };
+  settings.alteration = { sharp: false, flat: false };
+
+  for (const midi of midis) {
+    if (midi >= OCTAVE_RANGES.great.min && midi <= OCTAVE_RANGES.great.max) {
+      settings.bass.enabled = true;
+      settings.bass.great = true;
+    }
+    if (midi >= OCTAVE_RANGES.small.min && midi <= OCTAVE_RANGES.small.max) {
+      settings.bass.enabled = true;
+      settings.bass.small = true;
+    }
+    if (midi >= OCTAVE_RANGES.first.min && midi <= OCTAVE_RANGES.first.max) {
+      settings.treble.enabled = true;
+      settings.treble.first = true;
+    }
+    if (midi >= OCTAVE_RANGES.second.min && midi <= OCTAVE_RANGES.second.max) {
+      settings.treble.enabled = true;
+      settings.treble.second = true;
+    }
+    if (isBlackKey(midi)) {
+      settings.alteration.sharp = true;
+      settings.alteration.flat = true;
+    }
+  }
+
+  if (!settings.treble.enabled && !settings.bass.enabled) {
+    settings.treble.enabled = true;
+    settings.treble.first = true;
+  }
+
+  return settings;
+}
+
+export function describeNoteSettings(settings, options = {}) {
   const parts = [];
 
   if (settings.treble.enabled && settings.bass.enabled) parts.push('Оба ключа');
@@ -103,8 +130,7 @@ export function describeNoteSettings(settings) {
 
   if (settings.alteration.sharp) parts.push('диезы');
   if (settings.alteration.flat) parts.push('бемоли');
-  if (settings.tonality.sharpKeys) parts.push('диезные тональности');
-  if (settings.tonality.flatKeys) parts.push('бемольные тональности');
+  if (options.examMode) parts.push('экзамен');
 
   return parts.join(' · ') || 'Тренажёр нот';
 }
@@ -138,6 +164,10 @@ export class NoteTrainer {
     this.total = 0;
     this.running = false;
     this.sessionLimit = 10;
+    this.sessionAttempts = [];
+    this.answeredCount = 0;
+    this.soundEnabled = DEFAULT_TRAINER_OPTIONS.soundEnabled;
+    this.examMode = DEFAULT_TRAINER_OPTIONS.examMode;
     this.onUpdate = null;
     this.onFeedback = null;
     this.onNoteChange = null;
@@ -146,10 +176,36 @@ export class NoteTrainer {
     this.setConfig(DEFAULT_NOTE_SETTINGS);
   }
 
+  setOptions(options = {}) {
+    if (options.soundEnabled !== undefined) {
+      this.soundEnabled = Boolean(options.soundEnabled);
+    }
+    this.examMode = Boolean(options.examMode);
+    if (this.examMode) {
+      this.showKeyboardHints = false;
+    }
+    if (this.running) this._applyKeyboardHint();
+    this._emitUpdate();
+  }
+
   setConfig(settings) {
     this.settings = structuredClone(settings);
     this.pool = buildPoolFromSettings(this.settings);
     this.spelling = resolveSpelling(this.settings);
+    this.customPool = false;
+    this.reset();
+  }
+
+  setCustomPool(midis) {
+    const unique = [...new Set(midis)]
+      .map((midi) => Number(midi))
+      .filter((midi) => Number.isFinite(midi))
+      .sort((a, b) => a - b);
+
+    this.settings = deriveSettingsFromMidis(unique);
+    this.pool = unique;
+    this.spelling = resolveSpelling(this.settings);
+    this.customPool = true;
     this.reset();
   }
 
@@ -163,9 +219,16 @@ export class NoteTrainer {
     this.wrong = 0;
     this.streak = 0;
     this.total = 0;
+    this.answeredCount = 0;
+    this.sessionAttempts = [];
     this.running = true;
     this._nextNote();
-    this.onFeedback?.('Найдите и нажмите ноту на пианино', 'info');
+    this.onFeedback?.(
+      this.examMode
+        ? 'Экзамен: найдите и нажмите ноту'
+        : 'Найдите и нажмите ноту на пианино',
+      'info',
+    );
     this._emitUpdate();
     return true;
   }
@@ -183,6 +246,8 @@ export class NoteTrainer {
     this.streak = 0;
     this.bestStreak = 0;
     this.total = 0;
+    this.answeredCount = 0;
+    this.sessionAttempts = [];
     this.currentMidi = null;
     this.running = false;
     this.piano.setTarget(null);
@@ -198,9 +263,24 @@ export class NoteTrainer {
       this.streak++;
       this.bestStreak = Math.max(this.bestStreak, this.streak);
       this.total++;
+      this.sessionAttempts.push({
+        expectedMidi: this.currentMidi,
+        playedMidi: midi,
+        correct: true,
+      });
       this.piano.flashCorrect(midi);
       this.onFeedback?.('Верно!', 'correct');
       this._emitUpdate();
+
+      if (this.examMode) {
+        this.answeredCount++;
+        if (this.answeredCount >= this.sessionLimit) {
+          this._finish();
+        } else {
+          this._nextNote();
+        }
+        return true;
+      }
 
       if (this.correct >= this.sessionLimit) {
         this._finish();
@@ -214,9 +294,24 @@ export class NoteTrainer {
     this.wrong++;
     this.streak = 0;
     this.total++;
+    this.sessionAttempts.push({
+      expectedMidi: this.currentMidi,
+      playedMidi: midi,
+      correct: false,
+    });
     this.piano.flashWrong(midi);
     this.onFeedback?.('Неверно', 'wrong');
     this._emitUpdate();
+
+    if (this.examMode) {
+      this.answeredCount++;
+      if (this.answeredCount >= this.sessionLimit) {
+        this._finish();
+      } else {
+        this._nextNote();
+      }
+    }
+
     return false;
   }
 
@@ -237,7 +332,7 @@ export class NoteTrainer {
 
   _applyKeyboardHint() {
     this.piano.clearStates(['correct', 'wrong', 'pressed', 'target', 'target-left', 'target-right']);
-    if (this.showKeyboardHints && this.currentMidi !== null) {
+    if (!this.examMode && this.showKeyboardHints && this.currentMidi !== null) {
       this.piano.setTarget(this.currentMidi);
     }
   }
@@ -252,12 +347,22 @@ export class NoteTrainer {
     this.piano.clearStates();
     const attempts = this.correct + this.wrong;
     const accuracy = attempts > 0 ? Math.round((this.correct / attempts) * 100) : 0;
-    this.onFeedback?.(`Тренировка завершена! Точность: ${accuracy}%`, 'complete');
+    const totalQuestions = this.examMode ? this.sessionLimit : this.sessionLimit;
+    this.onFeedback?.(
+      this.examMode
+        ? `Экзамен завершён! Точность: ${accuracy}%`
+        : `Тренировка завершена! Точность: ${accuracy}%`,
+      'complete',
+    );
     this.onComplete?.({
       correct: this.correct,
       wrong: this.wrong,
       accuracy,
-      total: this.sessionLimit,
+      total: totalQuestions,
+      mode: 'notes',
+      examMode: this.examMode,
+      settings: this.settings,
+      attempts: [...this.sessionAttempts],
     });
     this._emitUpdate();
   }
@@ -272,9 +377,12 @@ export class NoteTrainer {
       streak: this.streak,
       bestStreak: this.bestStreak,
       total: this.total,
+      answeredCount: this.answeredCount,
       sessionLimit: this.sessionLimit,
       poolSize: this.pool.length,
       running: this.running,
+      examMode: this.examMode,
+      soundEnabled: this.soundEnabled,
     });
   }
 
@@ -288,9 +396,12 @@ export class NoteTrainer {
       streak: this.streak,
       bestStreak: this.bestStreak,
       total: this.total,
+      answeredCount: this.answeredCount,
       sessionLimit: this.sessionLimit,
       poolSize: this.pool.length,
       running: this.running,
+      examMode: this.examMode,
+      soundEnabled: this.soundEnabled,
     };
   }
 }

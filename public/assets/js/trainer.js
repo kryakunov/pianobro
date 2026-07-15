@@ -154,6 +154,7 @@ export class MelodyTrainer {
       wrong: this.wrong,
       accuracy,
       total: this.lesson?.events?.length ?? 0,
+      mode: 'melody',
     });
     this._emitUpdate();
   }
