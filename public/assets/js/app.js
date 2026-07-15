@@ -17,7 +17,7 @@ import {
   DAILY_GOAL_TARGETS,
   DEFAULT_DAILY_GOAL_TARGET,
 } from './daily-goal.js';
-import { playTrainerNote, warmupTrainerSound } from './trainer-sounds.js';
+import { playTrainerNote, warmupTrainerSound, unlockTrainerSoundFromGesture } from './trainer-sounds.js';
 
 const SESSION_LIMIT = 10;
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
@@ -452,6 +452,11 @@ function setTrainerSoundEnabled(enabled) {
   noteTrainer.soundEnabled = Boolean(enabled);
   syncSoundToggleUI();
 
+  if (enabled) {
+    unlockTrainerSoundFromGesture();
+    void warmupTrainerSound();
+  }
+
   const prefs = loadTrainerPrefs() ?? {
     ...DEFAULT_TRAINER_OPTIONS,
     dailyTarget: getDailyGoalTarget(),
@@ -541,13 +546,19 @@ function enterPractice(mode, title) {
     updatePracticeDailyGoalDisplay();
     setKeyboardHints(!noteTrainer.examMode);
     syncPracticeControls();
-    if (noteTrainer.soundEnabled) warmupTrainerSound();
+    if (noteTrainer.soundEnabled) {
+      unlockTrainerSoundFromGesture();
+      void warmupTrainerSound();
+    }
   } else {
     els.practiceModeBadge.hidden = true;
     els.practiceDailyGoal.hidden = true;
     setKeyboardHints(true);
     syncPracticeControls();
-    if (noteTrainer.soundEnabled) warmupTrainerSound();
+    if (noteTrainer.soundEnabled) {
+      unlockTrainerSoundFromGesture();
+      void warmupTrainerSound();
+    }
   }
   resetPracticeProgress();
   showFeedback('', 'info');
@@ -1265,7 +1276,8 @@ function onNoteOn(midiNote) {
     ? melodyTrainer.running
     : noteTrainer.running;
   if (noteTrainer.soundEnabled && trainerRunning) {
-    playTrainerNote(midiNote, 0.55);
+    unlockTrainerSoundFromGesture();
+    void playTrainerNote(midiNote, 0.55);
   }
   if (appMode === 'melody') {
     melodyTrainer.handleNoteOn(midiNote);
@@ -1413,6 +1425,12 @@ els.soundToggleTabs?.forEach((tab) => {
     setTrainerSoundEnabled(tab.dataset.sound === 'on');
   });
 });
+
+els.screenPractice?.addEventListener('touchstart', () => {
+  if (currentScreen === 'practice' && noteTrainer.soundEnabled) {
+    unlockTrainerSoundFromGesture();
+  }
+}, { passive: true });
 
 els.btnGoMelodies.addEventListener('click', () => showScreen('melody-pick'));
 

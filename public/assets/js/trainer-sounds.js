@@ -2,17 +2,30 @@ import { PianoSynth } from './piano-synth.js';
 
 const synth = new PianoSynth();
 
+export function unlockTrainerSoundFromGesture() {
+  synth.unlockFromUserGesture();
+}
+
 export async function playTrainerNote(midi, durationSec = 0.42) {
   if (!Number.isFinite(midi)) return;
   try {
+    synth.unlockFromUserGesture();
+
+    if (!synth.isReady) {
+      synth.playFallback(midi, durationSec);
+      void synth.ensureReady();
+      return;
+    }
+
     await synth.play(midi, durationSec);
   } catch {
-    /* ignore audio errors */
+    synth.playFallback(midi, durationSec);
   }
 }
 
 export async function playTrainerWrong() {
   try {
+    synth.unlockFromUserGesture();
     await synth.ensureReady();
     const ctx = synth.ctx;
     if (!ctx) return;
@@ -36,6 +49,7 @@ export async function playTrainerWrong() {
 
 export async function warmupTrainerSound() {
   try {
+    synth.unlockFromUserGesture();
     await synth.ensureReady();
   } catch {
     /* ignore */
