@@ -17,7 +17,7 @@ import {
   DAILY_GOAL_TARGETS,
   DEFAULT_DAILY_GOAL_TARGET,
 } from './daily-goal.js';
-import { playTrainerNote, warmupTrainerSound, unlockTrainerSoundFromGesture } from './trainer-sounds.js';
+import { playTrainerNote, warmupTrainerSound } from './trainer-sounds.js';
 
 const SESSION_LIMIT = 10;
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
@@ -453,7 +453,6 @@ function setTrainerSoundEnabled(enabled) {
   syncSoundToggleUI();
 
   if (enabled) {
-    unlockTrainerSoundFromGesture();
     void warmupTrainerSound();
   }
 
@@ -516,7 +515,7 @@ function setKeyboardHints(enabled) {
   keyboardHints = enabled;
   melodyTrainer.showKeyboardHints = enabled;
   noteTrainer.showKeyboardHints = enabled;
-  els.keyboardHintTabs.forEach((tab) => {
+  els.keyboardHintTabs?.forEach((tab) => {
     tab.classList.toggle('keyboard-mode__tab--active', tab.dataset.hints === (enabled ? 'on' : 'off'));
   });
   refreshKeyboardHints();
@@ -547,7 +546,6 @@ function enterPractice(mode, title) {
     setKeyboardHints(!noteTrainer.examMode);
     syncPracticeControls();
     if (noteTrainer.soundEnabled) {
-      unlockTrainerSoundFromGesture();
       void warmupTrainerSound();
     }
   } else {
@@ -556,7 +554,6 @@ function enterPractice(mode, title) {
     setKeyboardHints(true);
     syncPracticeControls();
     if (noteTrainer.soundEnabled) {
-      unlockTrainerSoundFromGesture();
       void warmupTrainerSound();
     }
   }
@@ -1276,7 +1273,6 @@ function onNoteOn(midiNote) {
     ? melodyTrainer.running
     : noteTrainer.running;
   if (noteTrainer.soundEnabled && trainerRunning) {
-    unlockTrainerSoundFromGesture();
     void playTrainerNote(midiNote, 0.55);
   }
   if (appMode === 'melody') {
@@ -1413,7 +1409,7 @@ els.keyboardToggleTabs?.forEach((tab) => {
   });
 });
 
-els.keyboardHintTabs.forEach((tab) => {
+els.keyboardHintTabs?.forEach((tab) => {
   tab.addEventListener('click', () => {
     if (appMode === 'notes' && noteTrainer.examMode) return;
     setKeyboardHints(tab.dataset.hints === 'on');
@@ -1428,11 +1424,11 @@ els.soundToggleTabs?.forEach((tab) => {
 
 els.screenPractice?.addEventListener('touchstart', () => {
   if (currentScreen === 'practice' && noteTrainer.soundEnabled) {
-    unlockTrainerSoundFromGesture();
+    void warmupTrainerSound();
   }
 }, { passive: true });
 
-els.btnGoMelodies.addEventListener('click', () => showScreen('melody-pick'));
+els.btnGoMelodies?.addEventListener('click', () => showScreen('melody-pick'));
 
 function openNotesPickScreen() {
   applyTrainerPrefsToForm();
@@ -1440,7 +1436,7 @@ function openNotesPickScreen() {
   showScreen('notes-pick');
 }
 
-els.btnGoNotes.addEventListener('click', openNotesPickScreen);
+els.btnGoNotes?.addEventListener('click', openNotesPickScreen);
 
 document.querySelectorAll('[data-landing-go="notes"]').forEach((btn) => {
   btn.addEventListener('click', openNotesPickScreen);
@@ -1516,27 +1512,27 @@ els.authFormRegister?.addEventListener('submit', async (e) => {
   }
 });
 
-els.btnBackMelody.addEventListener('click', () => showScreen('home'));
-els.btnBackNotes.addEventListener('click', () => showScreen('home'));
+els.btnBackMelody?.addEventListener('click', () => showScreen('home'));
+els.btnBackNotes?.addEventListener('click', () => showScreen('home'));
 
-els.btnBackPractice.addEventListener('click', () => {
+els.btnBackPractice?.addEventListener('click', () => {
   exitPractice();
   showScreen(appMode === 'melody' ? 'melody-pick' : 'notes-pick');
 });
 
-els.melodySearch.addEventListener('input', () => {
+els.melodySearch?.addEventListener('input', () => {
   clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
     runMelodySearch(els.melodySearch.value);
   }, 350);
 });
 
-els.melodySearch.addEventListener('search', () => {
+els.melodySearch?.addEventListener('search', () => {
   clearTimeout(searchDebounceTimer);
   runMelodySearch(els.melodySearch.value);
 });
 
-els.difficultyTabs.forEach((tab) => {
+els.difficultyTabs?.forEach((tab) => {
   tab.addEventListener('click', () => {
     selectedDifficultyFilter = tab.dataset.difficulty ?? 'all';
     els.difficultyTabs.forEach((item) => {

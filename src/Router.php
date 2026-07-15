@@ -239,6 +239,9 @@ final class Router
     ];
 
     header('Content-Type: ' . ($types[$ext] ?? 'application/octet-stream'));
+    if ($ext === 'js' || $ext === 'css') {
+      header('Cache-Control: no-cache, must-revalidate');
+    }
     readfile($file);
   }
 

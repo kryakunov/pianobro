@@ -112,7 +112,7 @@ export class PianoSynth {
     }
 
     try {
-      const freq = 440 * (2 ** ((midi - 69) / 12));
+      const freq = 440 * Math.pow(2, (midi - 69) / 12);
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       const now = this.ctx.currentTime;
