@@ -80,5 +80,55 @@ final class Database
       CREATE INDEX IF NOT EXISTS idx_note_attempts_user_date
         ON note_attempts(user_id, created_at);
       SQL);
+
+    self::migrateOAuthAccounts($pdo);
+    self::migrateNullablePasswordHash($pdo);
+  }
+
+  private static function migrateOAuthAccounts(PDO $pdo): void
+  {
+    $pdo->exec(<<<'SQL'
+      CREATE TABLE IF NOT EXISTS oauth_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        provider TEXT NOT NULL,
+        provider_user_id TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(provider, provider_user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+      SQL);
+  }
+
+  private static function migrateNullablePasswordHash(PDO $pdo): void
+  {
+    $columns = $pdo->query('PRAGMA table_info(users)')->fetchAll();
+    $passwordColumn = null;
+    foreach ($columns as $column) {
+      if (($column['name'] ?? '') === 'password_hash') {
+        $passwordColumn = $column;
+        break;
+      }
+    }
+
+    if ($passwordColumn === null || (int) ($passwordColumn['notnull'] ?? 1) === 0) {
+      return;
+    }
+
+    $pdo->exec(<<<'SQL'
+      CREATE TABLE users_oauth_migration (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        password_hash TEXT,
+        name TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      INSERT INTO users_oauth_migration (id, email, password_hash, name, created_at)
+      SELECT id, email, password_hash, name, created_at FROM users;
+
+      DROP TABLE users;
+      ALTER TABLE users_oauth_migration RENAME TO users;
+      SQL);
   }
 }

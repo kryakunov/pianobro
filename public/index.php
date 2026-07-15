@@ -8,6 +8,8 @@ use PianoTrainer\AuthService;
 use PianoTrainer\Database;
 use PianoTrainer\LessonRepository;
 use PianoTrainer\MidiSearch;
+use PianoTrainer\OAuthConfig;
+use PianoTrainer\OAuthService;
 use PianoTrainer\Router;
 use PianoTrainer\StatsRepository;
 
@@ -17,7 +19,9 @@ $db = Database::connection();
 $auth = new AuthService($db);
 $auth->startSession();
 $stats = new StatsRepository($db);
-$router = new Router($repository, new MidiSearch(), $auth, $stats);
+$oauthConfig = OAuthConfig::fromEnv();
+$oauth = new OAuthService($oauthConfig, $auth);
+$router = new Router($repository, new MidiSearch(), $auth, $stats, $oauth);
 
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';

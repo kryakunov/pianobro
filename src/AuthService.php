@@ -101,7 +101,13 @@ final class AuthService
     $stmt->execute(['email' => $email]);
     $user = $stmt->fetch();
 
-    if ($user === false || !password_verify($password, (string) $user['password_hash'])) {
+    if ($user === false) {
+      throw new \InvalidArgumentException('Неверный email или пароль');
+    }
+    if (empty($user['password_hash'])) {
+      throw new \InvalidArgumentException('Этот аккаунт создан через соцсеть — войдите через неё');
+    }
+    if (!password_verify($password, (string) $user['password_hash'])) {
       throw new \InvalidArgumentException('Неверный email или пароль');
     }
 
@@ -122,6 +128,106 @@ final class AuthService
       setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
     }
     session_destroy();
+  }
+
+  /** @return array{id:int,email:string,name:string} */
+  public function loginWithOAuth(
+    string $provider,
+    string $providerUserId,
+    ?string $email,
+    string $name,
+  ): array {
+    $providerUserId = trim($providerUserId);
+    $name = trim($name);
+    $email = $email !== null ? strtolower(trim($email)) : null;
+
+    if ($providerUserId === '') {
+      throw new \InvalidArgumentException('Не удалось получить профиль');
+    }
+    if ($name === '') {
+      $name = 'Пользователь';
+    }
+
+    $stmt = $this->db->prepare(
+      'SELECT u.id, u.email, u.name
+       FROM oauth_accounts oa
+       JOIN users u ON u.id = oa.user_id
+       WHERE oa.provider = :provider AND oa.provider_user_id = :provider_user_id',
+    );
+    $stmt->execute(['provider' => $provider, 'provider_user_id' => $providerUserId]);
+    $existingOAuth = $stmt->fetch();
+    if ($existingOAuth !== false) {
+      $_SESSION['user_id'] = (int) $existingOAuth['id'];
+      return [
+        'id' => (int) $existingOAuth['id'],
+        'email' => (string) $existingOAuth['email'],
+        'name' => (string) $existingOAuth['name'],
+      ];
+    }
+
+    $userId = null;
+    if ($email !== null && $email !== '') {
+      $stmt = $this->db->prepare('SELECT id, email, name FROM users WHERE email = :email');
+      $stmt->execute(['email' => $email]);
+      $existingUser = $stmt->fetch();
+      if ($existingUser !== false) {
+        $userId = (int) $existingUser['id'];
+      }
+    }
+
+    if ($userId === null) {
+      if ($email === null || $email === '') {
+        $email = $provider . '_' . $providerUserId . '@oauth.local';
+      }
+
+      $insert = $this->db->prepare(
+        'INSERT INTO users (email, password_hash, name) VALUES (:email, NULL, :name)',
+      );
+      try {
+        $insert->execute(['email' => $email, 'name' => $name]);
+      } catch (\PDOException $e) {
+        if (str_contains($e->getMessage(), 'UNIQUE') && $email !== null) {
+          $stmt = $this->db->prepare('SELECT id FROM users WHERE email = :email');
+          $stmt->execute(['email' => $email]);
+          $row = $stmt->fetch();
+          if ($row === false) {
+            throw $e;
+          }
+          $userId = (int) $row['id'];
+        } else {
+          throw $e;
+        }
+      }
+
+      if ($userId === null) {
+        $userId = (int) $this->db->lastInsertId();
+      }
+    }
+
+    $link = $this->db->prepare(
+      'INSERT INTO oauth_accounts (user_id, provider, provider_user_id)
+       VALUES (:user_id, :provider, :provider_user_id)',
+    );
+    $link->execute([
+      'user_id' => $userId,
+      'provider' => $provider,
+      'provider_user_id' => $providerUserId,
+    ]);
+
+    $_SESSION['user_id'] = $userId;
+
+    $stmt = $this->db->prepare('SELECT id, email, name FROM users WHERE id = :id');
+    $stmt->execute(['id' => $userId]);
+    $user = $stmt->fetch();
+    if ($user === false) {
+      throw new \RuntimeException('User not found after OAuth login');
+    }
+
+    return [
+      'id' => (int) $user['id'],
+      'email' => (string) $user['email'],
+      'name' => (string) $user['name'],
+    ];
   }
 
   private function assertHoneypotEmpty(string $value): void

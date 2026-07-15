@@ -80,3 +80,16 @@ export async function loadNoteStats() {
   if (!isLoggedIn()) return null;
   return fetchJson('/api/stats/notes');
 }
+
+export async function loadOAuthProviders() {
+  try {
+    const data = await fetchJson('/api/auth/oauth/providers');
+    return data.providers ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export function redirectToOAuth(provider) {
+  window.location.href = `/api/auth/oauth/${encodeURIComponent(provider)}`;
+}

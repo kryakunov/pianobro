@@ -2995,6 +2995,84 @@ body {
   display: none !important;
 }
 
+.auth-social[hidden] {
+  display: none !important;
+}
+
+.auth-social {
+  margin-bottom: 1rem;
+}
+
+.auth-social__divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.875rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.auth-social__divider::before,
+.auth-social__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-social__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-social__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.auth-social__btn:hover {
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--border) 70%, var(--text) 30%);
+}
+
+.auth-social__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.auth-social__btn--google .auth-social__icon {
+  background: #ea4335;
+}
+
+.auth-social__btn--yandex .auth-social__icon {
+  background: #fc3f1d;
+}
+
+.auth-social__btn--vk .auth-social__icon {
+  background: #0077ff;
+}
+
 .auth-honeypot {
   position: absolute;
   left: -10000px;

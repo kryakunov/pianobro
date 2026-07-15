@@ -27,6 +27,22 @@ php -S localhost:8080 -t public
 
 Откройте в браузере: http://localhost:8080
 
+## Вход через соцсети
+
+Скопируйте `.env.example` в `.env` и укажите ключи OAuth-приложений. Кнопки появятся в окне входа только для настроенных провайдеров.
+
+```bash
+cp .env.example .env
+```
+
+| Провайдер | Где получить ключи | Redirect URI |
+|-----------|-------------------|--------------|
+| Google | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) | `http://localhost:8080/api/auth/oauth/google/callback` |
+| Яндекс | [OAuth Яндекса](https://oauth.yandex.ru/client/new) | `http://localhost:8080/api/auth/oauth/yandex/callback` |
+| ВКонтакте | [VK ID](https://id.vk.com/about/business/go/docs/ru/vkid/latest/vk-id/connection/create-application) | `http://localhost:8080/api/auth/oauth/vk/callback` |
+
+На продакшене замените `APP_URL` и redirect URI на ваш домен.
+
 1. Подключите пианино к компьютеру по USB
 2. Нажмите **«Подключить пианино»** и разрешите доступ к MIDI
 3. Выберите урок слева

@@ -7,7 +7,7 @@ import { StaffView } from './staff.js';
 import { normalizeLesson } from './lesson-utils.js';
 import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
-import { initAuth, getUser, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats } from './auth.js';
+import { initAuth, getUser, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, loadOAuthProviders, redirectToOAuth } from './auth.js';
 import { icon, iconBadgeColored } from './icons.js';
 import {
   addLocalDailyGoalProgress,
@@ -58,6 +58,8 @@ const els = {
   authFormRegister: $('#auth-form-register'),
   authErrorLogin: $('#auth-error-login'),
   authErrorRegister: $('#auth-error-register'),
+  authSocial: $('#auth-social'),
+  authSocialButtons: $('#auth-social-buttons'),
   btnBackMelody: $('#btn-back-melody'),
   btnBackNotes: $('#btn-back-notes'),
   btnBackPractice: $('#btn-back-practice'),
@@ -701,6 +703,67 @@ function openAuthModal(tab = 'login') {
 
 function closeAuthModal() {
   els.authModal.hidden = true;
+}
+
+const OAUTH_PROVIDER_ICONS = {
+  google: 'G',
+  yandex: 'Я',
+  vk: 'VK',
+};
+
+function renderOAuthProviders(providers) {
+  if (!els.authSocial || !els.authSocialButtons) return;
+
+  if (!providers.length) {
+    els.authSocial.hidden = true;
+    els.authSocialButtons.innerHTML = '';
+    return;
+  }
+
+  els.authSocial.hidden = false;
+  els.authSocialButtons.innerHTML = providers.map((provider) => `
+    <button
+      type="button"
+      class="auth-social__btn auth-social__btn--${provider.id}"
+      data-oauth-provider="${provider.id}"
+    >
+      <span class="auth-social__icon" aria-hidden="true">${OAUTH_PROVIDER_ICONS[provider.id] ?? '•'}</span>
+      <span class="auth-social__label">${provider.label}</span>
+    </button>
+  `).join('');
+
+  els.authSocialButtons.querySelectorAll('[data-oauth-provider]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      redirectToOAuth(btn.dataset.oauthProvider);
+    });
+  });
+}
+
+async function setupOAuthProviders() {
+  const providers = await loadOAuthProviders();
+  renderOAuthProviders(providers);
+}
+
+function handleOAuthRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const success = params.get('oauth') === 'success';
+  const error = params.get('oauth_error');
+
+  if (!success && !error) return;
+
+  if (error) {
+    openAuthModal('login');
+    if (els.authErrorLogin) {
+      els.authErrorLogin.textContent = error;
+      els.authErrorLogin.hidden = false;
+    }
+  }
+
+  params.delete('oauth');
+  params.delete('oauth_error');
+  const query = params.toString();
+  const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+  window.history.replaceState({}, '', nextUrl);
 }
 
 function setAuthTab(tab) {
@@ -1679,6 +1742,8 @@ document.addEventListener('keyup', (e) => {
 });
 
 loadLessons();
+setupOAuthProviders();
+handleOAuthRedirect();
 initAuth().then(() => {
   updateAuthUI();
   refreshDailyGoalPanel();

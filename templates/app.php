@@ -600,6 +600,10 @@
           <button type="button" class="auth-tab auth-tab--active" data-auth-tab="login" role="tab" aria-selected="true" aria-controls="auth-form-login">Вход</button>
           <button type="button" class="auth-tab" data-auth-tab="register" role="tab" aria-selected="false" aria-controls="auth-form-register">Регистрация</button>
         </div>
+        <div class="auth-social" id="auth-social" hidden>
+          <p class="auth-social__divider"><span>или</span></p>
+          <div class="auth-social__buttons" id="auth-social-buttons"></div>
+        </div>
         <form class="auth-form" id="auth-form-login" data-auth-form="login" role="tabpanel" aria-labelledby="auth-tab-login">
           <label class="auth-field">
             <span class="auth-field__label">Email</span>

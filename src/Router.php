@@ -11,6 +11,7 @@ final class Router
     private readonly MidiSearch $midiSearch,
     private readonly AuthService $auth,
     private readonly StatsRepository $stats,
+    private readonly OAuthService $oauth,
   ) {}
 
   public function dispatch(string $uri, string $method): void
@@ -57,6 +58,25 @@ final class Router
     if ($path === '/api/auth/logout' && $method === 'POST') {
       $this->auth->logout();
       $this->json(['ok' => true]);
+      return;
+    }
+
+    if ($path === '/api/auth/oauth/providers' && $method === 'GET') {
+      $this->json(['providers' => $this->oauth->availableProviders()]);
+      return;
+    }
+
+    if (preg_match('#^/api/auth/oauth/([a-z]+)$#', $path, $m) && $method === 'GET') {
+      try {
+        $this->oauth->start($m[1]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
+    if (preg_match('#^/api/auth/oauth/([a-z]+)/callback$#', $path, $m) && $method === 'GET') {
+      $this->oauth->handleCallback($m[1]);
       return;
     }
 
