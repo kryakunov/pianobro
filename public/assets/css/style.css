@@ -325,6 +325,22 @@ body {
     margin-left: 0;
   }
 
+  .app--home .header {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .app--home .header__brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .app--home .header__auth {
+    flex: 0 0 auto;
+    order: 0;
+    margin-left: auto;
+  }
+
   .next-note-panel__note {
     font-size: 2.25rem;
   }
@@ -3384,6 +3400,22 @@ body {
     flex: 1 1 100%;
     order: 3;
     margin-left: 0;
+    justify-content: flex-end;
+  }
+
+  .app--home .header {
+    flex-wrap: nowrap;
+  }
+
+  .app--home .header__brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .app--home .header__auth {
+    flex: 0 0 auto;
+    order: 0;
+    margin-left: auto;
     justify-content: flex-end;
   }
 
