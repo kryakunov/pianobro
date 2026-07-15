@@ -2502,7 +2502,7 @@ body {
   border: none;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: hidden;
 }
 

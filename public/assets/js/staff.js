@@ -108,7 +108,9 @@ export class StaffView {
   update(state) {
     if (!this.lesson || (this.drillMode && !state.preview)) return;
     this._updateNoteStyles(state);
-    this._scrollToIndex(state.index, state.running || state.preview);
+    if (!this.drillMode) {
+      this._scrollToIndex(state.index, state.running || state.preview);
+    }
   }
 
   _svgHeight(twoHands) {
@@ -152,8 +154,10 @@ export class StaffView {
     const lineStart = twoHands ? 36 * scale : 12 * scale;
     const braceX = twoHands ? 6 * scale : lineStart;
     const clefX = lineStart + 2 * scale;
-    const clefWidthPx = clefWidth('treble', lineGap);
-    const noteStartX = clefX + clefWidthPx + lineGap * 0.35;
+    const clefWidthPx = twoHands
+      ? Math.max(clefWidth('treble', lineGap), clefWidth('bass', lineGap))
+      : clefWidth(singleClef === 'bass' ? 'bass' : 'treble', lineGap);
+    const noteStartX = clefX + clefWidthPx + lineGap * 3.5;
 
     return {
       scale,
@@ -201,7 +205,6 @@ export class StaffView {
     const viewportW = this.viewport.clientWidth || 800;
     const twoHands = this.lesson.twoHands;
     const dualClef = this.drillMode && this.drillDualClef;
-    const singleClef = this.drillMode && !dualClef ? (this.drillClef ?? 'treble') : 'treble';
     this.referenceQuarter = referenceQuarterDuration(events);
 
     if (this.drillMode && events.length === 1 && events[0].notes.length === 1) {
@@ -220,12 +223,11 @@ export class StaffView {
       return;
     }
 
-    this.metrics = this._metrics(twoHands || dualClef, singleClef);
+    const fixedHeight = twoHands ? 268 : 168;
+    this.metrics = this._metrics(twoHands, 'treble', fixedHeight);
 
-    const minSpacing = twoHands ? 32 : 36;
-    const maxSpacing = twoHands ? 52 : 58;
-    const fitSpacing = (viewportW - this.metrics.noteStartX - this.padding) / events.length;
-    this.spacing = Math.max(minSpacing, Math.min(maxSpacing, fitSpacing));
+    const lineStart = this.metrics.lineStart;
+    this.spacing = twoHands ? 40 : 44;
 
     let x = this.metrics.noteStartX;
     this.eventPositions = events.map((ev) => {
@@ -234,14 +236,11 @@ export class StaffView {
       return pos;
     });
 
-    const totalWidth = x + this.padding;
-    this._drawEvents(
-      events,
-      totalWidth,
-      this.metrics.lineStart,
-      totalWidth - 20,
-      twoHands,
-    );
+    const contentWidth = x + this.padding;
+    const totalWidth = Math.max(viewportW, contentWidth);
+    const lineEnd = totalWidth - lineStart;
+
+    this._drawEvents(events, totalWidth, lineStart, lineEnd, twoHands);
     this.scrollEl.style.width = `${totalWidth}px`;
     this._scrollToIndex(0, false);
   }
