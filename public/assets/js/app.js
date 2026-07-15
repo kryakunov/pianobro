@@ -639,15 +639,12 @@ function onSessionComplete(stats) {
 
 function updateAuthUI() {
   const user = getUser();
-  if (user) {
-    els.btnOpenAuth.hidden = true;
-    els.authUser.hidden = false;
-    els.authUserName.textContent = user.name;
-  } else {
-    els.btnOpenAuth.hidden = false;
-    els.authUser.hidden = true;
-    els.authUserName.textContent = '';
-  }
+  const loggedIn = Boolean(user);
+
+  if (els.btnOpenAuth) els.btnOpenAuth.hidden = loggedIn;
+  if (els.authUser) els.authUser.hidden = !loggedIn;
+  if (els.btnLogout) els.btnLogout.hidden = !loggedIn;
+  if (els.authUserName) els.authUserName.textContent = user?.name ?? '';
 }
 
 function openAuthModal(tab = 'login') {

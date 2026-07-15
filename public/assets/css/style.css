@@ -2524,6 +2524,10 @@ body {
   margin-left: auto;
 }
 
+.header__auth [hidden] {
+  display: none !important;
+}
+
 .header__midi {
   margin-left: 0;
 }

@@ -78,7 +78,7 @@
         <div class="auth-user" id="auth-user" hidden>
           <span class="auth-user__name" id="auth-user-name"></span>
           <button type="button" class="btn btn--secondary btn--sm" id="btn-go-stats">Статистика</button>
-          <button type="button" class="btn btn--secondary btn--sm" id="btn-logout">Выйти</button>
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-logout" hidden>Выйти</button>
         </div>
       </div>
       <div class="header__midi" id="midi-panel">
