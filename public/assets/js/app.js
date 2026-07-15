@@ -81,10 +81,11 @@ const els = {
   practiceLayout: document.querySelector('.practice-layout'),
   practiceKeyboardArea: $('#practice-keyboard-area'),
   keyboardHintsPanel: $('#keyboard-hints-panel'),
+  keyboardVisibilityPanel: $('#keyboard-visibility-panel'),
   soundModePanel: $('#sound-mode-panel'),
   soundToggleTabs: document.querySelectorAll('#sound-mode-panel [data-sound]'),
+  keyboardToggleTabs: document.querySelectorAll('#keyboard-visibility-panel [data-keyboard]'),
   pianoWrap: $('#piano-wrap'),
-  btnTogglePiano: $('#btn-toggle-piano'),
   keyboardHintTabs: document.querySelectorAll('#keyboard-hints-panel [data-hints]'),
   piano: $('#piano'),
   btnConnectMidi: $('#btn-connect-midi'),
@@ -419,6 +420,13 @@ function syncSoundToggleUI() {
   });
 }
 
+function syncKeyboardToggleUI() {
+  const visible = !els.practiceKeyboardArea?.hidden;
+  els.keyboardToggleTabs?.forEach((tab) => {
+    tab.classList.toggle('keyboard-mode__tab--active', tab.dataset.keyboard === (visible ? 'on' : 'off'));
+  });
+}
+
 function syncPracticeSoundPanel() {
   if (!els.soundModePanel) return;
   syncSoundToggleUI();
@@ -432,12 +440,11 @@ function syncPracticeControls() {
   if (!inPractice) return;
 
   syncPracticeSoundPanel();
+  syncKeyboardToggleUI();
 
   if (!els.keyboardHintsPanel) return;
 
-  const pianoVisible = !els.practiceKeyboardArea.hidden;
-  const hideHints = !pianoVisible
-    || (appMode === 'notes' && noteTrainer.examMode);
+  const hideHints = appMode === 'notes' && noteTrainer.examMode;
   els.keyboardHintsPanel.hidden = hideHints;
 }
 
@@ -477,18 +484,7 @@ function setPianoVisible(visible) {
   els.practiceKeyboardArea.classList.toggle('practice-keyboard-area--hidden', !visible);
   els.practiceLayout?.classList.toggle('practice-layout--keyboard-hidden', !visible);
   syncPracticeControls();
-  if (els.btnTogglePiano) {
-    els.btnTogglePiano.setAttribute('aria-expanded', String(visible));
-    const label = els.btnTogglePiano.querySelector('.practice-spoiler__label');
-    const hint = els.btnTogglePiano.querySelector('.practice-spoiler__hint');
-    if (label) label.textContent = visible ? 'Скрыть клавиатуру' : 'Показать клавиатуру';
-    if (hint) {
-      hint.textContent = visible
-        ? 'Клавиши пианино на экране'
-        : 'Нажмите, чтобы открыть клавиши пианино';
-    }
-    els.btnTogglePiano.classList.toggle('practice-spoiler--open', visible);
-  }
+  syncKeyboardToggleUI();
   if (visible && currentScreen === 'practice') {
     requestAnimationFrame(() => {
       piano.relayout({ scrollToDefault: true });
@@ -1399,9 +1395,10 @@ els.notesSettingsForm?.addEventListener('change', () => {
   }
 });
 
-els.btnTogglePiano?.addEventListener('click', (e) => {
-  e.preventDefault();
-  setPianoVisible(els.practiceKeyboardArea.hidden);
+els.keyboardToggleTabs?.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    setPianoVisible(tab.dataset.keyboard === 'on');
+  });
 });
 
 els.keyboardHintTabs.forEach((tab) => {
@@ -1418,10 +1415,21 @@ els.soundToggleTabs?.forEach((tab) => {
 });
 
 els.btnGoMelodies.addEventListener('click', () => showScreen('melody-pick'));
-els.btnGoNotes.addEventListener('click', () => {
+
+function openNotesPickScreen() {
   applyTrainerPrefsToForm();
   refreshDailyGoalPanel();
   showScreen('notes-pick');
+}
+
+els.btnGoNotes.addEventListener('click', openNotesPickScreen);
+
+document.querySelectorAll('[data-landing-go="notes"]').forEach((btn) => {
+  btn.addEventListener('click', openNotesPickScreen);
+});
+
+document.querySelectorAll('[data-landing-go="melodies"]').forEach((btn) => {
+  btn.addEventListener('click', () => showScreen('melody-pick'));
 });
 els.btnGoStatsHome?.addEventListener('click', openStatsScreen);
 els.btnGoStats?.addEventListener('click', openStatsScreen);
