@@ -15,6 +15,8 @@
     $publicDir = dirname(__DIR__) . '/public';
     $assetVersion = max(
       filemtime($publicDir . '/assets/js/app.js'),
+      filemtime($publicDir . '/assets/js/stats-staff.js'),
+      filemtime($publicDir . '/assets/js/note-roadmap.js'),
       filemtime($publicDir . '/assets/js/staff.js'),
       filemtime($publicDir . '/assets/js/clef-glyphs.js'),
       filemtime($publicDir . '/assets/css/style.css'),
@@ -90,25 +92,23 @@
           <button type="button" class="btn btn--secondary btn--sm" id="btn-logout" hidden>Выйти</button>
         </div>
       </div>
-      <div class="header__midi" id="midi-panel" hidden>
-        <span class="midi-dot midi-dot--off"></span>
-        <div class="midi-panel__info">
-          <span id="midi-status-text">MIDI не подключён</span>
-          <span class="midi-panel__live" id="midi-live-note"></span>
-        </div>
-        <select class="midi-select" id="midi-device-select" disabled hidden>
+    </header>
+
+    <div
+      class="input-status-banner practice-input-status practice-input-status--off"
+      id="input-status-banner"
+      hidden
+    >
+      <span class="practice-input-status__dot" id="input-status-dot" aria-hidden="true"></span>
+      <span class="practice-input-status__text" id="input-status-text">Пианино не подключено</span>
+      <div class="input-status-banner__actions">
+        <select class="midi-select input-status-banner__select" id="input-status-midi-select" disabled hidden>
           <option value="">Выбор устройства…</option>
         </select>
-        <button type="button" class="btn btn--secondary btn--sm" id="btn-connect-midi">
-          <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-midi"/></svg>
-          Подключить пианино
-        </button>
-        <button type="button" class="btn btn--secondary btn--sm" id="btn-connect-mic">
-          <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-mic"/></svg>
-          Микрофон
-        </button>
+        <button type="button" class="practice-input-status__btn" id="btn-input-connect-midi">Подключить MIDI</button>
+        <button type="button" class="practice-input-status__btn" id="btn-input-connect-mic">Микрофон</button>
       </div>
-    </header>
+    </div>
 
     <!-- Главная -->
     <section class="screen screen--active" id="screen-home">
@@ -125,9 +125,13 @@
               или играйте на экране — нотный стан, подсказки и статистика прогресса уже ждут вас.
             </p>
             <div class="landing-hero__actions">
-              <button type="button" class="btn btn--primary btn--lg" id="btn-go-notes">
+              <button type="button" class="btn btn--primary btn--lg" id="btn-go-roadmap">
+                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-target"/></svg>
+                Путь новичка
+              </button>
+              <button type="button" class="btn btn--secondary btn--lg" id="btn-go-notes">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-notes"/></svg>
-                Начать тренировку
+                Свободная тренировка
               </button>
               <button type="button" class="btn btn--secondary btn--lg" id="btn-go-melodies">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-melody"/></svg>
@@ -202,7 +206,7 @@
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
               </span>
               <h4 class="landing-feature__title">Ежедневная цель</h4>
-              <p class="landing-feature__text">Ставьте цель на день в профиле и следите за прогрессом. Статистика покажет, какие ноты уже освоены, а какие стоит повторить.</p>
+              <p class="landing-feature__text">Ставьте цель на день в профиле и следите за прогрессом. Статистика покажет, какие ноты уже освоены, а какие ещё в процессе изучения.</p>
             </article>
             <article class="landing-feature">
               <span class="landing-feature__icon icon-badge icon-badge--brand" aria-hidden="true">
@@ -244,6 +248,14 @@
         <section class="landing-section" aria-labelledby="landing-modes-title">
           <h3 class="landing-section__title" id="landing-modes-title">Выберите, с чего начать</h3>
           <div class="landing-modes">
+            <button type="button" class="home-card home-card--roadmap landing-mode" id="btn-go-roadmap-card">
+              <span class="home-card__icon icon-badge icon-badge--roadmap" aria-hidden="true">
+                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
+              </span>
+              <span class="home-card__title">Путь новичка</span>
+              <span class="home-card__desc">8 уровней от простых белых нот до полного диапазона — с прогрессом и наградами</span>
+              <span class="landing-mode__cta">Открыть карту →</span>
+            </button>
             <button type="button" class="home-card home-card--notes landing-mode" data-landing-go="notes">
               <span class="home-card__icon icon-badge icon-badge--notes" aria-hidden="true">
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-notes"/></svg>
@@ -408,6 +420,46 @@
       </div>
     </section>
 
+    <!-- Путь новичка -->
+    <section class="screen" id="screen-roadmap" hidden>
+      <div class="screen-header">
+        <button type="button" class="btn-back" id="btn-back-roadmap">← Назад</button>
+        <h2 class="screen-header__title">
+          <span class="screen-header__icon icon-badge icon-badge--roadmap" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
+          </span>
+          Путь новичка
+        </h2>
+      </div>
+      <div class="roadmap-panel">
+        <div class="roadmap-hero" id="roadmap-hero">
+          <div class="roadmap-hero__rank">
+            <span class="roadmap-hero__emoji" id="roadmap-rank-emoji">🌱</span>
+            <div>
+              <p class="roadmap-hero__label">Ваш ранг</p>
+              <p class="roadmap-hero__title" id="roadmap-rank-title">Новичок</p>
+            </div>
+          </div>
+          <div class="roadmap-hero__stats">
+            <div class="roadmap-stat">
+              <span class="roadmap-stat__value" id="roadmap-xp-total">0</span>
+              <span class="roadmap-stat__label">XP</span>
+            </div>
+            <div class="roadmap-stat">
+              <span class="roadmap-stat__value" id="roadmap-stages-done">0/8</span>
+              <span class="roadmap-stat__label">Уровней</span>
+            </div>
+          </div>
+        </div>
+        <p class="roadmap-lead" id="roadmap-lead">Проходите уровни по порядку. В каждом уроке нужно верно сыграть все ноты задания — только они и каждая по разу.</p>
+        <div class="roadmap-guest-hint" id="roadmap-guest-hint" hidden>
+          <p>Войдите в аккаунт, чтобы сохранить прогресс на всех устройствах.</p>
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-roadmap-login">Войти</button>
+        </div>
+        <div class="roadmap-path" id="roadmap-path" aria-live="polite"></div>
+      </div>
+    </section>
+
     <!-- Настройки тренажёра нот -->
     <section class="screen" id="screen-notes-pick" hidden>
       <div class="screen-header">
@@ -420,7 +472,6 @@
         </h2>
       </div>
       <div class="pick-panel">
-        <div class="weak-notes-offer" id="weak-notes-offer" hidden></div>
         <form class="notes-settings" id="notes-settings-form">
           <div class="notes-settings__grid">
           <fieldset class="settings-group settings-group--treble">
@@ -527,12 +578,6 @@
         aria-label="Прогресс тренировки"
       >
         <div class="practice-session-progress__fill" id="practice-session-progress-fill"></div>
-      </div>
-
-      <div class="practice-input-status practice-input-status--off" id="practice-input-status">
-        <span class="practice-input-status__dot" id="practice-input-dot" aria-hidden="true"></span>
-        <span class="practice-input-status__text" id="practice-input-status-text">Пианино не подключено</span>
-        <button type="button" class="practice-input-status__btn" id="btn-practice-connect-midi">Подключить MIDI</button>
       </div>
 
       <div class="practice-feedback-wrap">
@@ -670,6 +715,8 @@
         </div>
         <div class="modal__actions">
           <button type="button" class="btn btn--primary" id="btn-modal-retry">Ещё раз</button>
+          <button type="button" class="btn btn--primary" id="btn-modal-roadmap-next" hidden>Следующий уровень</button>
+          <button type="button" class="btn btn--secondary" id="btn-modal-roadmap" hidden>К пути обучения</button>
           <button type="button" class="btn btn--secondary" id="btn-modal-pick">Другой урок</button>
           <button type="button" class="btn btn--secondary" id="btn-modal-home">На главную</button>
         </div>

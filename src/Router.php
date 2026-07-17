@@ -12,6 +12,7 @@ final class Router
     private readonly AuthService $auth,
     private readonly StatsRepository $stats,
     private readonly OAuthService $oauth,
+    private readonly RoadmapService $roadmap,
   ) {}
 
   public function dispatch(string $uri, string $method): void
@@ -80,6 +81,16 @@ final class Router
       return;
     }
 
+    if ($path === '/api/roadmap' && $method === 'GET') {
+      try {
+        $user = $this->auth->currentUser();
+        $this->json($this->roadmap->getRoadmap($user['id'] ?? null));
+      } catch (\Throwable $e) {
+        $this->json(['error' => 'Не удалось загрузить путь обучения'], 500);
+      }
+      return;
+    }
+
     if ($path === '/api/stats/notes' && $method === 'GET') {
       $user = $this->auth->currentUser();
       if ($user === null) {
@@ -87,6 +98,24 @@ final class Router
         return;
       }
       $this->json($this->stats->getNoteStats($user['id']));
+      return;
+    }
+
+    if ($path === '/api/stats/guest-merge' && $method === 'POST') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      try {
+        $body = $this->readJsonBody();
+        $notes = is_array($body['notes'] ?? null) ? $body['notes'] : [];
+        $merged = $this->stats->mergeGuestNoteStats($user['id'], $notes);
+        $this->json(['ok' => true, 'merged' => $merged]);
+      } catch (\Throwable $e) {
+        $this->json(['error' => 'Не удалось перенести прогресс'], 500);
+      }
       return;
     }
 

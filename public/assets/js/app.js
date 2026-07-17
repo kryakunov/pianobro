@@ -7,7 +7,7 @@ import { StaffView } from './staff.js';
 import { normalizeLesson } from './lesson-utils.js';
 import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
-import { initAuth, getUser, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, loadOAuthProviders, redirectToOAuth } from './auth.js';
+import { initAuth, getUser, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, mergeGuestNoteStats, loadOAuthProviders, redirectToOAuth } from './auth.js';
 import { icon, iconBadgeColored } from './icons.js';
 import {
   addLocalDailyGoalProgress,
@@ -18,6 +18,20 @@ import {
   DEFAULT_DAILY_GOAL_TARGET,
 } from './daily-goal.js';
 import { playTrainerNote, warmupTrainerSound } from './trainer-sounds.js';
+import {
+  loadRoadmap,
+  buildGuestRoadmapProgress,
+  buildRoadmapProgressFromStats,
+  buildPoolForStage,
+  findStage,
+  findStageProgress,
+  getNextStage,
+  mergeGuestAttempts,
+  projectNoteStatsFromAttempts,
+  getGuestNoteEntries,
+  clearGuestNoteMap,
+} from './note-roadmap.js';
+import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 
 const SESSION_LIMIT = 10;
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
@@ -30,6 +44,7 @@ const els = {
   screenHome: $('#screen-home'),
   screenMelodyPick: $('#screen-melody-pick'),
   screenNotesPick: $('#screen-notes-pick'),
+  screenRoadmap: $('#screen-roadmap'),
   screenStats: $('#screen-stats'),
   screenProfile: $('#screen-profile'),
   screenPractice: $('#screen-practice'),
@@ -43,6 +58,16 @@ const els = {
   profileSettingsForm: $('#profile-settings-form'),
   btnGoMelodies: $('#btn-go-melodies'),
   btnGoNotes: $('#btn-go-notes'),
+  btnGoRoadmap: $('#btn-go-roadmap'),
+  btnGoRoadmapCard: $('#btn-go-roadmap-card'),
+  btnBackRoadmap: $('#btn-back-roadmap'),
+  roadmapPath: $('#roadmap-path'),
+  roadmapRankEmoji: $('#roadmap-rank-emoji'),
+  roadmapRankTitle: $('#roadmap-rank-title'),
+  roadmapXpTotal: $('#roadmap-xp-total'),
+  roadmapStagesDone: $('#roadmap-stages-done'),
+  roadmapGuestHint: $('#roadmap-guest-hint'),
+  btnRoadmapLogin: $('#btn-roadmap-login'),
   btnGoStatsHome: $('#btn-go-stats-home'),
   btnGoStats: $('#btn-go-stats'),
   btnBackStats: $('#btn-back-stats'),
@@ -69,7 +94,6 @@ const els = {
   btnMidiUpload: $('#btn-midi-upload'),
   difficultyTabs: document.querySelectorAll('.difficulty-tab'),
   notesSettingsForm: $('#notes-settings-form'),
-  weakNotesOffer: $('#weak-notes-offer'),
   notesSettingsError: $('#notes-settings-error'),
   dailyGoalPanel: $('#daily-goal-panel'),
   dailyGoalText: $('#daily-goal-text'),
@@ -81,10 +105,12 @@ const els = {
   practiceProgress: $('#practice-progress'),
   practiceSessionProgress: $('#practice-session-progress'),
   practiceSessionProgressFill: $('#practice-session-progress-fill'),
-  practiceInputStatus: $('#practice-input-status'),
-  practiceInputDot: $('#practice-input-dot'),
-  practiceInputStatusText: $('#practice-input-status-text'),
-  btnPracticeConnectMidi: $('#btn-practice-connect-midi'),
+  inputStatusBanner: $('#input-status-banner'),
+  inputStatusDot: $('#input-status-dot'),
+  inputStatusText: $('#input-status-text'),
+  inputStatusMidiSelect: $('#input-status-midi-select'),
+  btnInputConnectMidi: $('#btn-input-connect-midi'),
+  btnInputConnectMic: $('#btn-input-connect-mic'),
   practiceFeedback: $('#practice-feedback'),
   practiceControls: $('#practice-controls'),
   staffViewport: $('#staff-viewport'),
@@ -98,18 +124,14 @@ const els = {
   pianoWrap: $('#piano-wrap'),
   keyboardHintTabs: document.querySelectorAll('#keyboard-hints-panel [data-hints]'),
   piano: $('#piano'),
-  btnConnectMidi: $('#btn-connect-midi'),
-  btnConnectMic: $('#btn-connect-mic'),
-  midiStatusText: $('#midi-status-text'),
-  midiLiveNote: $('#midi-live-note'),
-  midiDeviceSelect: $('#midi-device-select'),
-  midiDot: document.querySelector('.midi-dot'),
   sessionModal: $('#session-modal'),
   modalCorrect: $('#modal-correct'),
   modalWrong: $('#modal-wrong'),
   modalAccuracy: $('#modal-accuracy'),
   modalSubtitle: $('#modal-subtitle'),
   btnModalRetry: $('#btn-modal-retry'),
+  btnModalRoadmapNext: $('#btn-modal-roadmap-next'),
+  btnModalRoadmap: $('#btn-modal-roadmap'),
   btnModalPick: $('#btn-modal-pick'),
   btnModalHome: $('#btn-modal-home'),
 };
@@ -128,6 +150,9 @@ let searchRequestId = 0;
 let selectedDifficultyFilter = 'all';
 let lastSessionStats = null;
 let cachedNoteStats = null;
+let cachedRoadmapData = null;
+let activeRoadmapStageId = null;
+let lastRoadmapStageCompleted = false;
 let dailyGoalState = {
   date: new Date().toISOString().slice(0, 10),
   target: DEFAULT_DAILY_GOAL_TARGET,
@@ -141,12 +166,50 @@ const melodyTrainer = new MelodyTrainer(piano);
 const noteTrainer = new NoteTrainer(piano);
 const staffView = new StaffView(els.staffViewport);
 
+const PIANO_INPUT_SCREENS = new Set(['practice', 'melody-pick', 'notes-pick']);
+const MIDI_DEVICE_KEY = 'piano-midi-device-id';
+const INPUT_PREFS_KEY = 'piano-input-prefs';
+
+function loadInputPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(INPUT_PREFS_KEY) ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveInputPrefs(partial) {
+  try {
+    localStorage.setItem(INPUT_PREFS_KEY, JSON.stringify({ ...loadInputPrefs(), ...partial }));
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function loadSavedMidiDeviceId() {
+  try {
+    return localStorage.getItem(MIDI_DEVICE_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+function persistMidiDeviceId() {
+  if (!midi.selectedInputId) return;
+  try {
+    localStorage.setItem(MIDI_DEVICE_KEY, midi.selectedInputId);
+  } catch {
+    // ignore
+  }
+}
+
 function showScreen(name) {
   currentScreen = name;
   const screens = {
     home: els.screenHome,
     'melody-pick': els.screenMelodyPick,
     'notes-pick': els.screenNotesPick,
+    roadmap: els.screenRoadmap,
     stats: els.screenStats,
     profile: els.screenProfile,
     practice: els.screenPractice,
@@ -166,35 +229,72 @@ function showScreen(name) {
   els.mainHeader.hidden = isPractice;
   document.body.classList.toggle('body--practice', isPractice);
 
-  const midiPanel = $('#midi-panel');
-  if (midiPanel) midiPanel.hidden = name === 'home';
-
-  if (name === 'notes-pick') {
-    refreshWeakNotesOffer();
-  }
-
   if (name === 'profile') {
     updateProfileUI();
     void refreshDailyGoalPanel();
   }
-}
 
-function setMidiStatus(state, text) {
-  els.midiDot.className = 'midi-dot midi-dot--' + state;
-  els.midiStatusText.textContent = text;
-}
-
-function setMicStatus(active, text) {
-  if (active) {
-    els.btnConnectMic.textContent = 'Микрофон вкл';
-    els.btnConnectMic.classList.add('btn--primary');
-    els.btnConnectMic.classList.remove('btn--secondary');
-  } else {
-    els.btnConnectMic.textContent = 'Микрофон';
-    els.btnConnectMic.classList.remove('btn--primary');
-    els.btnConnectMic.classList.add('btn--secondary');
+  if (name === 'roadmap') {
+    renderRoadmapScreen();
   }
-  if (text) els.midiStatusText.textContent = text;
+
+  updateInputStatusBanner();
+}
+
+function updateInputStatusBanner({ error } = {}) {
+  if (!els.inputStatusBanner) return;
+
+  if (!PIANO_INPUT_SCREENS.has(currentScreen)) {
+    els.inputStatusBanner.hidden = true;
+    return;
+  }
+
+  if (error) {
+    els.inputStatusBanner.hidden = false;
+    els.inputStatusBanner.className = 'input-status-banner practice-input-status practice-input-status--off';
+    els.inputStatusText.textContent = error;
+    if (els.btnInputConnectMidi) els.btnInputConnectMidi.hidden = !midi.isSupported;
+    if (els.btnInputConnectMic) {
+      els.btnInputConnectMic.hidden = !micPitch.isSupported;
+      els.btnInputConnectMic.textContent = micPitch.isActive ? 'Выключить' : 'Микрофон';
+    }
+    return;
+  }
+
+  if (micPitch.isActive) {
+    els.inputStatusBanner.hidden = false;
+    els.inputStatusBanner.className = 'input-status-banner practice-input-status practice-input-status--on';
+    els.inputStatusText.textContent = 'Микрофон: слушаю ноты';
+    if (els.btnInputConnectMidi) els.btnInputConnectMidi.hidden = true;
+    if (els.inputStatusMidiSelect) els.inputStatusMidiSelect.hidden = true;
+    if (els.btnInputConnectMic) {
+      els.btnInputConnectMic.hidden = !micPitch.isSupported;
+      els.btnInputConnectMic.textContent = 'Выключить';
+      els.btnInputConnectMic.classList.add('practice-input-status__btn--active');
+    }
+    return;
+  }
+
+  if (midi.isConnected) {
+    els.inputStatusBanner.hidden = true;
+    return;
+  }
+
+  els.inputStatusBanner.hidden = false;
+  els.inputStatusBanner.className = 'input-status-banner practice-input-status practice-input-status--off';
+  els.inputStatusText.textContent = prefersTouchInput()
+    ? 'Пианино не подключено — нажимайте клавиши на экране или подключите MIDI'
+    : 'Пианино не подключено — нажимайте клавиши на экране, клавиатуре ПК (A–L) или подключите MIDI';
+  if (els.btnInputConnectMidi) {
+    els.btnInputConnectMidi.hidden = !midi.isSupported;
+    els.btnInputConnectMidi.textContent = 'Подключить MIDI';
+  }
+  if (els.btnInputConnectMic) {
+    els.btnInputConnectMic.hidden = !micPitch.isSupported;
+    els.btnInputConnectMic.textContent = 'Микрофон';
+    els.btnInputConnectMic.classList.remove('practice-input-status__btn--active');
+  }
+  renderMidiDevices(midi.listInputs());
 }
 
 function showFeedback(text, type) {
@@ -207,37 +307,44 @@ function showFeedback(text, type) {
   else if (type === 'info') els.practiceFeedback.classList.add('practice-feedback--info');
 }
 
-function updatePracticeInputStatus() {
-  if (!els.practiceInputStatus) return;
-
-  if (midi.isConnected || micPitch.isActive) {
-    els.practiceInputStatus.hidden = true;
-    return;
-  }
-
-  els.practiceInputStatus.hidden = false;
-  els.practiceInputStatus.className = 'practice-input-status practice-input-status--off';
-  els.practiceInputStatusText.textContent = prefersTouchInput()
-    ? 'Пианино не подключено — нажимайте клавиши на экране'
-    : 'Пианино не подключено — нажимайте клавиши на экране, клавиатуре ПК (A–L) или подключите MIDI';
-  if (els.btnPracticeConnectMidi) {
-    els.btnPracticeConnectMidi.hidden = !midi.isSupported;
+async function connectMidiDevice() {
+  try {
+    if (micPitch.isActive) stopMicListening({ persist: false });
+    const name = await midi.connect();
+    persistMidiDeviceId();
+    saveInputPrefs({ micEnabled: false });
+    renderMidiDevices(midi.listInputs());
+    updateInputStatusBanner();
+    return name;
+  } catch (e) {
+    updateInputStatusBanner({ error: e.message });
+    throw e;
   }
 }
 
-async function connectMidiDevice() {
-  try {
-    const name = await midi.connect();
-    setMidiStatus('on', `Подключено: ${name}`);
-    els.btnConnectMidi.textContent = 'Переподключить';
-    renderMidiDevices(midi.listInputs());
-    updatePracticeInputStatus();
-    return name;
-  } catch (e) {
-    setMidiStatus('error', e.message);
-    updatePracticeInputStatus();
-    throw e;
+async function restoreInputConnections() {
+  const prefs = loadInputPrefs();
+
+  if (prefs.micEnabled && micPitch.isSupported) {
+    try {
+      await startMicListening({ persist: false });
+      return;
+    } catch {
+      saveInputPrefs({ micEnabled: false });
+    }
   }
+
+  const savedId = loadSavedMidiDeviceId();
+  if (savedId && midi.isSupported) {
+    midi.selectedInputId = savedId;
+    try {
+      await connectMidiDevice();
+    } catch {
+      // banner shows error when on a piano screen
+    }
+  }
+
+  updateInputStatusBanner();
 }
 
 function escapeHtml(str) {
@@ -296,11 +403,55 @@ function showSessionModal(stats) {
   els.modalCorrect.textContent = String(stats.correct);
   els.modalWrong.textContent = String(stats.wrong);
   els.modalAccuracy.textContent = `${stats.accuracy}%`;
+
+  const fromRoadmap = Boolean(stats.roadmapStageId);
+  const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
   if (els.modalSubtitle) {
-    const total = stats.total ?? stats.correct;
-    els.modalSubtitle.textContent = `Вы прошли ${total} ${pluralNotes(total)}`;
+    if (stageCompleted) {
+      const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
+      els.modalSubtitle.textContent = stage
+        ? `Уровень «${stage.title}» завершён! +${stage.xp} XP`
+        : 'Уровень завершён!';
+    } else {
+      const total = stats.total ?? stats.correct;
+      els.modalSubtitle.textContent = fromRoadmap && isLoggedIn()
+        ? `Сохраняем прогресс… (${total} ${pluralNotes(total)})`
+        : `Вы прошли ${total} ${pluralNotes(total)}`;
+    }
   }
+
+  if (els.btnModalRoadmap) els.btnModalRoadmap.hidden = !fromRoadmap;
+  if (els.btnModalRoadmapNext) {
+    const showNext = stageCompleted && stats.nextRoadmapStage;
+    els.btnModalRoadmapNext.hidden = !showNext;
+  }
+  if (els.btnModalPick) {
+    els.btnModalPick.hidden = fromRoadmap;
+    els.btnModalPick.textContent = 'Другой урок';
+  }
+
   els.sessionModal.hidden = false;
+}
+
+function refreshSessionModalRoadmap(stats) {
+  if (!stats?.roadmapStageId || els.sessionModal?.hidden) return;
+
+  const fromRoadmap = Boolean(stats.roadmapStageId);
+  const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
+  if (els.modalSubtitle) {
+    if (stageCompleted) {
+      const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
+      els.modalSubtitle.textContent = stage
+        ? `Уровень «${stage.title}» завершён! +${stage.xp} XP`
+        : 'Уровень завершён!';
+    } else {
+      const total = stats.total ?? stats.correct;
+      els.modalSubtitle.textContent = `Вы прошли ${total} ${pluralNotes(total)}`;
+    }
+  }
+  if (els.btnModalRoadmapNext) {
+    els.btnModalRoadmapNext.hidden = !(stageCompleted && stats.nextRoadmapStage);
+  }
 }
 
 function pluralNotes(count) {
@@ -535,8 +686,10 @@ function setPianoVisible(visible) {
   }
 }
 
-function setKeyboardHints(enabled) {
-  keyboardHints = enabled;
+function setKeyboardHints(enabled, { persist = true } = {}) {
+  if (persist) {
+    keyboardHints = enabled;
+  }
   melodyTrainer.showKeyboardHints = enabled;
   noteTrainer.showKeyboardHints = enabled;
   els.keyboardHintTabs?.forEach((tab) => {
@@ -559,14 +712,18 @@ function showNoteDrillStaff(midi, { spelling, clef } = {}) {
   staffView.showDrillNote(midi, { spelling, clef, dualClef });
 }
 
-function enterPractice(mode, title) {
+function enterPractice(mode, title, { keyboardHints: hintsOverride } = {}) {
   appMode = mode;
   currentPracticeTitle = title;
   els.practiceTitle.textContent = title;
   if (mode === 'notes') {
     els.practiceDailyGoal.hidden = false;
     updatePracticeDailyGoalDisplay();
-    setKeyboardHints(keyboardHints);
+    if (hintsOverride === undefined) {
+      setKeyboardHints(keyboardHints);
+    } else {
+      setKeyboardHints(hintsOverride, { persist: false });
+    }
     syncPracticeControls();
     if (noteTrainer.soundEnabled) {
       void warmupTrainerSound();
@@ -581,7 +738,7 @@ function enterPractice(mode, title) {
   }
   resetPracticeProgress();
   showFeedback('', 'info');
-  updatePracticeInputStatus();
+  updateInputStatusBanner();
   showScreen('practice');
   setPianoVisible(true);
 
@@ -604,6 +761,7 @@ function enterPractice(mode, title) {
 function exitPractice() {
   melodyTrainer.reset();
   noteTrainer.stop();
+  activeRoadmapStageId = null;
   staffView.clear();
   els.staffViewport.classList.remove('staff-viewport--grand');
   piano.clearStates();
@@ -615,6 +773,23 @@ function exitPractice() {
 }
 
 function onSessionComplete(stats) {
+  if (activeRoadmapStageId && !stats.roadmapStageId) {
+    stats.roadmapStageId = activeRoadmapStageId;
+  }
+
+  if (stats.roadmapStageId && stats.mode === 'notes' && stats.attempts?.length) {
+    if (!isLoggedIn()) {
+      mergeGuestAttempts(stats.attempts);
+      updateRoadmapProgressFromSession(stats);
+    } else {
+      lastRoadmapStageCompleted = false;
+      stats.nextRoadmapStage = null;
+    }
+  } else {
+    lastRoadmapStageCompleted = false;
+    stats.nextRoadmapStage = null;
+  }
+
   showSessionModal(stats);
 
   if (stats.mode === 'notes' && stats.correct > 0) {
@@ -655,11 +830,43 @@ function onSessionComplete(stats) {
         dailyGoalState = resolveDailyGoal({ serverDailyGoal: data?.dailyGoal });
         renderDailyGoalPanel();
         updatePracticeDailyGoalDisplay();
+        if (stats.roadmapStageId) {
+          updateRoadmapProgressFromSession(stats, data);
+          refreshSessionModalRoadmap(stats);
+        }
+        await refreshRoadmapData(data);
+        if (currentScreen === 'stats') {
+          renderStatsPanel(data);
+        }
       } catch {
         /* ignore */
       }
     }
   });
+}
+
+function updateRoadmapProgressFromSession(stats, noteStats = null) {
+  if (!stats.roadmapStageId) return;
+
+  if (!cachedRoadmapData) return;
+
+  const before = findStageProgress(cachedRoadmapData, stats.roadmapStageId);
+  const refreshed = isLoggedIn()
+    ? buildRoadmapProgressFromStats(
+      cachedRoadmapData,
+      noteStats ?? projectNoteStatsFromAttempts(cachedNoteStats, stats.attempts ?? []),
+    )
+    : buildGuestRoadmapProgress(cachedRoadmapData);
+  const after = refreshed.stages.find((item) => item.id === stats.roadmapStageId);
+  lastRoadmapStageCompleted = Boolean(after?.completed && !before?.completed);
+  stats.nextRoadmapStage = lastRoadmapStageCompleted
+    ? getNextStage(cachedRoadmapData, stats.roadmapStageId)
+    : null;
+  cachedRoadmapData.progress = refreshed;
+
+  if (currentScreen === 'roadmap') {
+    renderRoadmapScreen();
+  }
 }
 
 function updateProfileUI() {
@@ -779,122 +986,6 @@ function setAuthTab(tab) {
   if (titleEl) titleEl.textContent = title;
 }
 
-const LEVEL_LABELS = {
-  mastered: 'Выучено хорошо',
-  learning: 'В процессе',
-  needs_practice: 'Нужно потренировать',
-};
-
-const LEVEL_ICONS = {
-  mastered: 'mastered',
-  learning: 'learning',
-  needs_practice: 'warning',
-};
-
-const LEVEL_ORDER = ['needs_practice', 'learning', 'mastered'];
-
-function getWeakNotesFromStats(data) {
-  if (!data?.notes?.length) return [];
-  return data.notes.filter((note) => note.level === 'needs_practice');
-}
-
-function describeWeakNotesTraining(weakNotes) {
-  if (!weakNotes.length) return 'Слабые ноты';
-  const names = weakNotes.map((note) => note.name);
-  if (names.length <= 4) return `Слабые ноты: ${names.join(', ')}`;
-  return `Слабые ноты: ${names.slice(0, 3).join(', ')} и ещё ${names.length - 3}`;
-}
-
-function startWeakNotesTraining(weakNotes) {
-  if (!weakNotes.length) return;
-
-  const midis = weakNotes.map((note) => note.midi);
-  noteTrainer.setCustomPool(midis);
-  noteTrainer.sessionLimit = Math.min(Math.max(10, midis.length), 30);
-  noteSettings = structuredClone(noteTrainer.settings);
-  enterPractice('notes', describeWeakNotesTraining(weakNotes));
-}
-
-function bindWeakNotesPracticeButton(button) {
-  button?.addEventListener('click', () => {
-    const weakNotes = getWeakNotesFromStats(cachedNoteStats);
-    startWeakNotesTraining(weakNotes);
-  });
-}
-
-function renderWeakNotesOffer(weakNotes) {
-  if (!els.weakNotesOffer) return;
-
-  if (!weakNotes.length) {
-    els.weakNotesOffer.hidden = true;
-    els.weakNotesOffer.innerHTML = '';
-    return;
-  }
-
-  const preview = weakNotes
-    .slice(0, 6)
-    .map((note) => `<span class="weak-notes-offer__tag">${escapeHtml(note.name)}</span>`)
-    .join('');
-  const more = weakNotes.length > 6
-    ? `<span class="weak-notes-offer__more">+${weakNotes.length - 6}</span>`
-    : '';
-
-  els.weakNotesOffer.hidden = false;
-  els.weakNotesOffer.innerHTML = `
-    <div class="weak-notes-offer__content">
-      ${iconBadgeColored('target', 'warn')}
-      <div class="weak-notes-offer__text">
-        <strong>Есть ${weakNotes.length} ${pluralNotes(weakNotes.length)} для повторения</strong>
-        <p>Запустим тренировку только по нотам, которые пока даются сложнее всего.</p>
-        <div class="weak-notes-offer__tags">${preview}${more}</div>
-      </div>
-      <button type="button" class="btn btn--primary" id="btn-weak-notes-offer">Потренировать слабые ноты</button>
-    </div>
-  `;
-  bindWeakNotesPracticeButton($('#btn-weak-notes-offer'));
-}
-
-async function refreshWeakNotesOffer() {
-  if (!isLoggedIn()) {
-    renderWeakNotesOffer([]);
-    return;
-  }
-
-  try {
-    if (!cachedNoteStats) {
-      cachedNoteStats = await loadNoteStats();
-    }
-    renderWeakNotesOffer(getWeakNotesFromStats(cachedNoteStats));
-  } catch {
-    renderWeakNotesOffer([]);
-  }
-}
-
-function renderWeakNotesPracticeCta(weakNotes) {
-  if (!weakNotes.length) return '';
-
-  const preview = weakNotes
-    .slice(0, 8)
-    .map((note) => `<span class="stats-practice-cta__tag">${escapeHtml(note.name)}</span>`)
-    .join('');
-
-  return `
-    <section class="stats-practice-cta">
-      <div class="stats-practice-cta__head">
-        ${iconBadgeColored('target', 'warn')}
-        <h3 class="stats-practice-cta__title">Рекомендуемая тренировка</h3>
-      </div>
-      <p class="stats-practice-cta__text">
-        Подобрали сессию из ${weakNotes.length} ${pluralNotes(weakNotes.length)}, которые стоит потренировать отдельно.
-      </p>
-      <div class="stats-practice-cta__tags">${preview}</div>
-      <button type="button" class="btn btn--primary" id="btn-practice-weak-notes">
-        Потренировать слабые ноты
-      </button>
-    </section>
-  `;
-}
-
 function formatChartDay(isoDate) {
   const date = new Date(`${isoDate}T12:00:00`);
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
@@ -942,7 +1033,7 @@ function renderStatsChart(dailyProgress) {
         </div>
       </div>
       <p class="stats-chart__hint">
-        Выучено — ноты, которые вы впервые угадали верно в этот день. Повторено — ноты, с которыми вы уже занимались раньше.
+        Выучено — ноты, которые в этот день впервые дошли до 2 верных подряд. Повторено — ноты, уже выученные ранее.
       </p>
       <div class="stats-chart__plot${hasActivity ? '' : ' stats-chart__plot--empty'}" role="img" aria-label="График прогресса по дням">
         ${columns}
@@ -966,12 +1057,6 @@ function renderStatsPanel(data) {
   }
 
   const { summary, notes, dailyProgress } = data;
-  const weakNotes = getWeakNotesFromStats(data);
-  const groups = LEVEL_ORDER.map((level) => ({
-    level,
-    label: LEVEL_LABELS[level],
-    items: notes.filter((n) => n.level === level),
-  })).filter((g) => g.items.length);
 
   const summaryHtml = `
     <div class="stats-summary">
@@ -985,44 +1070,18 @@ function renderStatsPanel(data) {
         <span class="stats-summary__value">${summary.mastered}</span>
         <span class="stats-summary__label">выучено</span>
       </div>
-      <div class="stats-summary__item stats-summary__item--warn">
-        ${iconBadgeColored('practice', 'warn')}
-        <span class="stats-summary__value">${summary.needsPractice}</span>
-        <span class="stats-summary__label">нужно потренировать</span>
+      <div class="stats-summary__item">
+        ${iconBadgeColored('learning', 'primary')}
+        <span class="stats-summary__value">${summary.learning}</span>
+        <span class="stats-summary__label">в процессе</span>
       </div>
     </div>
   `;
 
-  const groupsHtml = groups.length
-    ? groups.map((group) => `
-      <section class="stats-group stats-group--${group.level}">
-        <h3 class="stats-group__title">
-          ${iconBadgeColored(LEVEL_ICONS[group.level], group.level === 'mastered' ? 'success' : group.level === 'needs_practice' ? 'warn' : 'primary')}
-          ${escapeHtml(group.label)}
-          <span class="stats-group__count">${group.items.length}</span>
-        </h3>
-        <div class="stats-note-list">
-          ${group.items.map((note) => `
-            <div class="stats-note stats-note--${note.level}">
-              <span class="stats-note__name">${escapeHtml(note.name)}</span>
-              <span class="stats-note__meta">${note.accuracy}% · ${note.attempts} ${pluralAttempts(note.attempts)}</span>
-            </div>
-          `).join('')}
-        </div>
-      </section>
-    `).join('')
-    : '<p class="stats-empty__hint">Пройдите тренировку нот — здесь появится статистика по каждой ноте.</p>';
+  const staffHtml = renderStatsStaffInfographic(notes);
 
-  els.statsPanel.innerHTML = renderWeakNotesPracticeCta(weakNotes) + summaryHtml + renderStatsChart(dailyProgress) + groupsHtml;
-  bindWeakNotesPracticeButton($('#btn-practice-weak-notes'));
-}
-
-function pluralAttempts(n) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'попытка';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'попытки';
-  return 'попыток';
+  els.statsPanel.innerHTML = summaryHtml + renderStatsChart(dailyProgress) + staffHtml;
+  mountStatsStaffChart(els.statsPanel, notes);
 }
 
 async function openStatsScreen() {
@@ -1036,6 +1095,7 @@ async function openStatsScreen() {
     const data = await loadNoteStats();
     cachedNoteStats = data;
     renderStatsPanel(data);
+    await refreshRoadmapData(data);
   } catch {
     els.statsPanel.innerHTML = '<p class="loading">Не удалось загрузить статистику</p>';
   }
@@ -1341,7 +1401,164 @@ function validateNoteSettings(settings) {
   return null;
 }
 
+async function refreshRoadmapData(noteStats = null) {
+  try {
+    const data = await loadRoadmap();
+    if (noteStats) {
+      data.progress = buildRoadmapProgressFromStats(data, noteStats);
+    } else if (!isLoggedIn()) {
+      data.progress = buildGuestRoadmapProgress(data);
+    } else {
+      try {
+        cachedNoteStats = await loadNoteStats();
+        data.progress = buildRoadmapProgressFromStats(data, cachedNoteStats);
+      } catch {
+        // Оставляем progress с сервера (/api/roadmap), без гостевого fallback.
+      }
+    }
+    cachedRoadmapData = data;
+    if (currentScreen === 'roadmap') {
+      renderRoadmapScreen();
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+async function syncGuestProgressAfterAuth() {
+  if (!isLoggedIn()) return;
+
+  const entries = getGuestNoteEntries();
+  if (entries.length) {
+    try {
+      await mergeGuestNoteStats(entries);
+      clearGuestNoteMap();
+    } catch {
+      // ignore — серверная статистика остаётся как есть
+    }
+  }
+
+  cachedNoteStats = null;
+  await refreshRoadmapData();
+}
+
+function renderRoadmapScreen() {
+  if (!cachedRoadmapData || !els.roadmapPath) return;
+
+  const { stages, progress, ranks } = cachedRoadmapData;
+  const rank = progress?.rank ?? ranks?.[0] ?? { title: 'Новичок', emoji: '🌱' };
+
+  if (els.roadmapRankEmoji) els.roadmapRankEmoji.textContent = rank.emoji ?? '🌱';
+  if (els.roadmapRankTitle) els.roadmapRankTitle.textContent = rank.title ?? 'Новичок';
+  if (els.roadmapXpTotal) els.roadmapXpTotal.textContent = String(progress?.totalXp ?? 0);
+  if (els.roadmapStagesDone) {
+    els.roadmapStagesDone.textContent = `${progress?.completedCount ?? 0}/${progress?.totalStages ?? stages.length}`;
+  }
+  if (els.roadmapGuestHint) els.roadmapGuestHint.hidden = isLoggedIn();
+
+  els.roadmapPath.innerHTML = stages.map((stage) => {
+    const item = progress?.stages?.find((entry) => entry.id === stage.id) ?? {
+      progress: 0,
+      completed: false,
+      unlocked: false,
+      masteredNotes: 0,
+      poolSize: 0,
+    };
+    const isCurrent = progress?.currentStageId === stage.id;
+    const stateClass = item.completed
+      ? 'roadmap-stage--completed'
+      : isCurrent
+        ? 'roadmap-stage--current'
+        : item.unlocked
+          ? 'roadmap-stage--active'
+          : 'roadmap-stage--locked';
+
+    const isLocked = !item.unlocked && !item.completed;
+    const displayProgress = isLocked ? 0 : item.progress;
+
+    const status = item.completed
+      ? `<span class="roadmap-stage__status roadmap-stage__status--done">✓ Пройдено · ${item.masteredNotes}/${item.poolSize} нот</span>`
+      : isLocked
+        ? '<span class="roadmap-stage__status roadmap-stage__status--locked">🔒 Закрыто</span>'
+        : `<span class="roadmap-stage__progress-text"><strong>${item.progress}%</strong> · ${item.masteredNotes}/${item.poolSize} нот</span>`;
+
+    const action = item.completed
+      ? `<button type="button" class="btn btn--secondary btn--sm" data-roadmap-play="${stage.id}">Повторить</button>`
+      : item.unlocked
+        ? `<button type="button" class="btn btn--primary btn--sm" data-roadmap-play="${stage.id}">${isCurrent ? 'Продолжить' : 'Начать'} · ${item.poolSize} нот</button>`
+        : '<span class="roadmap-stage__lock">🔒 Пройдите предыдущий уровень</span>';
+
+    return `
+      <article class="roadmap-stage ${stateClass}">
+        <div class="roadmap-stage__track">
+          <div class="roadmap-stage__node">
+            <div class="roadmap-stage__ring" style="--progress: ${displayProgress}%"></div>
+            <span class="roadmap-stage__badge">${stage.emoji ?? stage.badge ?? '•'}</span>
+          </div>
+          <div class="roadmap-stage__connector"></div>
+        </div>
+        <div class="roadmap-stage__card">
+          <div class="roadmap-stage__head">
+            <div>
+              <h3 class="roadmap-stage__title">${stage.title}</h3>
+              <p class="roadmap-stage__subtitle">${stage.subtitle ?? ''}</p>
+            </div>
+            <span class="roadmap-stage__xp">+${stage.xp} XP</span>
+          </div>
+          <p class="roadmap-stage__desc">${stage.description ?? ''}</p>
+          <div class="roadmap-stage__meta">${status}</div>
+          <div class="roadmap-stage__bar" aria-hidden="true">
+            <div class="roadmap-stage__bar-fill" style="width: ${displayProgress}%"></div>
+          </div>
+          <div class="roadmap-stage__actions">${action}</div>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  els.roadmapPath.querySelectorAll('[data-roadmap-play]').forEach((btn) => {
+    btn.addEventListener('click', () => startRoadmapStage(btn.dataset.roadmapPlay));
+  });
+}
+
+async function openRoadmapScreen() {
+  showScreen('roadmap');
+  if (isLoggedIn()) {
+    try {
+      cachedNoteStats = await loadNoteStats();
+    } catch {
+      cachedNoteStats = null;
+    }
+  }
+  return refreshRoadmapData(cachedNoteStats);
+}
+
+async function startRoadmapStage(stageId) {
+  const stage = findStage(cachedRoadmapData, stageId);
+  const progress = findStageProgress(cachedRoadmapData, stageId);
+  if (!stage) return;
+  if (progress && !progress.unlocked && !progress.completed) return;
+
+  if (!cachedRoadmapData) {
+    await refreshRoadmapData(cachedNoteStats);
+  }
+
+  const pool = buildPoolForStage(stage);
+  if (!pool.length) return;
+
+  activeRoadmapStageId = stageId;
+  const options = readTrainerOptionsFromPrefs();
+  saveTrainerPrefs(options);
+  noteSettings = stage.settings;
+  noteTrainer.setCustomPool(pool, { coverAll: true });
+  noteTrainer.setOptions(options);
+  dailyGoalState.target = options.dailyTarget;
+  enterPractice('notes', `Путь: ${stage.title}`, { keyboardHints: false });
+}
+
 function startNotesTraining() {
+  activeRoadmapStageId = null;
   const settings = readNoteSettingsFromForm();
   const options = readTrainerOptionsFromPrefs();
   const error = validateNoteSettings(settings);
@@ -1401,78 +1618,52 @@ midi.onNoteOff = onNoteOff;
 micPitch.onNoteOn = onNoteOn;
 micPitch.onNoteOff = onNoteOff;
 
-function showInputActivity({ note, type, source }) {
-  if (type !== 'on') return;
-  if (currentScreen === 'practice') {
-    els.midiLiveNote.textContent = '';
-    return;
-  }
-  const name = midiToName(note);
-  if (source === 'mic') {
-    els.midiLiveNote.textContent = `🎤 ${name}`;
-    return;
-  }
-  els.midiLiveNote.textContent = `▸ ${name} (MIDI ${note})`;
-}
-
-midi.onActivity = showInputActivity;
-micPitch.onActivity = showInputActivity;
-
-micPitch.onStatusChange = (state) => {
-  if (state === 'on') {
-    els.midiDot.className = 'midi-dot midi-dot--on';
-    setMicStatus(true, 'Микрофон: слушаю ноты');
-  } else if (!midi.isConnected) {
-    els.midiDot.className = 'midi-dot midi-dot--off';
-    setMicStatus(false, 'MIDI не подключён');
-  } else {
-    setMidiStatus(false);
-  }
-  if (currentScreen === 'practice') updatePracticeInputStatus();
+micPitch.onStatusChange = () => {
+  updateInputStatusBanner();
 };
 
-async function startMicListening() {
+async function startMicListening({ persist = true } = {}) {
   try {
     await micPitch.start();
-    if (currentScreen === 'practice') updatePracticeInputStatus();
+    if (persist) saveInputPrefs({ micEnabled: true });
+    updateInputStatusBanner();
   } catch (error) {
-    setMicStatus(false);
-    setMidiStatus('error', error?.message ?? 'Не удалось включить микрофон');
-    if (currentScreen === 'practice') updatePracticeInputStatus();
+    if (persist) saveInputPrefs({ micEnabled: false });
+    updateInputStatusBanner({ error: error?.message ?? 'Не удалось включить микрофон' });
   }
 }
 
-function stopMicListening() {
+function stopMicListening({ persist = true } = {}) {
   micPitch.stop();
-  setMicStatus(false);
-  if (midi.isConnected) {
-    const input = midi.listInputs().find((i) => i.selected);
-    setMidiStatus('on', `Подключено: ${input?.name ?? midi.deviceName ?? 'MIDI'}`);
-  } else {
-    setMidiStatus('off', 'MIDI не подключён');
-  }
-  if (currentScreen === 'practice') updatePracticeInputStatus();
+  if (persist) saveInputPrefs({ micEnabled: false });
+  updateInputStatusBanner();
 }
 
 function renderMidiDevices(inputs) {
-  if (!inputs.length) {
-    els.midiDeviceSelect.hidden = true;
+  const select = els.inputStatusMidiSelect;
+  if (!select) return;
+
+  if (!inputs.length || inputs.length < 2 || midi.isConnected || micPitch.isActive) {
+    select.hidden = true;
+    select.disabled = true;
     return;
   }
-  els.midiDeviceSelect.hidden = false;
-  els.midiDeviceSelect.replaceChildren();
+
+  select.hidden = false;
+  select.disabled = false;
+  select.replaceChildren();
   for (const i of inputs) {
     const opt = document.createElement('option');
     opt.value = i.id;
     opt.textContent = i.name;
     opt.selected = i.selected;
-    els.midiDeviceSelect.appendChild(opt);
+    select.appendChild(opt);
   }
 }
 
 midi.onInputsChanged = (inputs) => {
   renderMidiDevices(inputs);
-  if (currentScreen === 'practice') updatePracticeInputStatus();
+  updateInputStatusBanner();
 };
 
 melodyTrainer.onUpdate = (state) => {
@@ -1485,7 +1676,12 @@ noteTrainer.onUpdate = (state) => {
   if (appMode === 'notes' && currentScreen === 'practice') updateNoteUI(state);
 };
 noteTrainer.onFeedback = showFeedback;
-noteTrainer.onComplete = onSessionComplete;
+noteTrainer.onComplete = (stats) => {
+  if (activeRoadmapStageId) {
+    stats.roadmapStageId = activeRoadmapStageId;
+  }
+  onSessionComplete(stats);
+};
 noteTrainer.onNoteChange = (midiNote, { spelling, clef } = {}) => {
   showNoteDrillStaff(midiNote, { spelling, clef });
 };
@@ -1542,6 +1738,10 @@ els.btnBackProfile?.addEventListener('click', () => showScreen('home'));
 els.btnGoMelodies?.addEventListener('click', () => showScreen('melody-pick'));
 
 els.btnGoNotes?.addEventListener('click', openNotesPickScreen);
+els.btnGoRoadmap?.addEventListener('click', openRoadmapScreen);
+els.btnGoRoadmapCard?.addEventListener('click', openRoadmapScreen);
+els.btnBackRoadmap?.addEventListener('click', () => showScreen('home'));
+els.btnRoadmapLogin?.addEventListener('click', () => openAuthModal('login'));
 
 document.querySelectorAll('[data-landing-go="notes"]').forEach((btn) => {
   btn.addEventListener('click', openNotesPickScreen);
@@ -1578,6 +1778,7 @@ els.authFormLogin?.addEventListener('submit', async (e) => {
   try {
     await login(form.get('email'), form.get('password'));
     updateAuthUI();
+    await syncGuestProgressAfterAuth();
     closeAuthModal();
   } catch (err) {
     els.authErrorLogin.textContent = err.message;
@@ -1611,6 +1812,7 @@ els.authFormRegister?.addEventListener('submit', async (e) => {
       form.get('website'),
     );
     updateAuthUI();
+    await syncGuestProgressAfterAuth();
     closeAuthModal();
   } catch (err) {
     els.authErrorRegister.textContent = err.message;
@@ -1675,6 +1877,22 @@ els.btnModalPick.addEventListener('click', () => {
   showScreen(appMode === 'melody' ? 'melody-pick' : 'notes-pick');
 });
 
+els.btnModalRoadmap?.addEventListener('click', () => {
+  hideSessionModal();
+  exitPractice();
+  openRoadmapScreen();
+});
+
+els.btnModalRoadmapNext?.addEventListener('click', () => {
+  const nextStage = lastSessionStats?.nextRoadmapStage;
+  hideSessionModal();
+  exitPractice();
+  void (async () => {
+    await openRoadmapScreen();
+    if (nextStage) startRoadmapStage(nextStage.id);
+  })();
+});
+
 els.btnModalHome.addEventListener('click', () => {
   exitPractice();
   showScreen('home');
@@ -1684,7 +1902,7 @@ els.sessionModal.querySelector('.modal__backdrop').addEventListener('click', () 
   hideSessionModal();
 });
 
-els.btnConnectMidi.addEventListener('click', async () => {
+els.btnInputConnectMidi?.addEventListener('click', async () => {
   try {
     await connectMidiDevice();
   } catch {
@@ -1692,15 +1910,7 @@ els.btnConnectMidi.addEventListener('click', async () => {
   }
 });
 
-els.btnPracticeConnectMidi?.addEventListener('click', async () => {
-  try {
-    await connectMidiDevice();
-  } catch {
-    // status already updated in connectMidiDevice
-  }
-});
-
-els.btnConnectMic.addEventListener('click', async () => {
+els.btnInputConnectMic?.addEventListener('click', async () => {
   if (micPitch.isActive) {
     stopMicListening();
     return;
@@ -1708,10 +1918,10 @@ els.btnConnectMic.addEventListener('click', async () => {
   await startMicListening();
 });
 
-els.midiDeviceSelect.addEventListener('change', () => {
-  midi.selectInput(els.midiDeviceSelect.value);
-  const input = midi.listInputs().find((i) => i.id === els.midiDeviceSelect.value);
-  if (input) setMidiStatus('on', `Подключено: ${input.name}`);
+els.inputStatusMidiSelect?.addEventListener('change', () => {
+  midi.selectInput(els.inputStatusMidiSelect.value);
+  persistMidiDeviceId();
+  renderMidiDevices(midi.listInputs());
 });
 
 const pressedKeys = new Set();
@@ -1744,8 +1954,9 @@ document.addEventListener('keyup', (e) => {
 loadLessons();
 setupOAuthProviders();
 handleOAuthRedirect();
-initAuth().then(() => {
+initAuth().then(async () => {
   updateAuthUI();
+  await syncGuestProgressAfterAuth();
   refreshDailyGoalPanel();
 });
 applyNoteSettingsToForm(DEFAULT_NOTE_SETTINGS);
@@ -1757,7 +1968,11 @@ setPianoVisible(false);
 melodyTrainer.showKeyboardHints = true;
 noteTrainer.showKeyboardHints = true;
 
+const savedMidiId = loadSavedMidiDeviceId();
+if (savedMidiId) midi.selectedInputId = savedMidiId;
+
 showScreen('home');
+void restoreInputConnections();
 
 window.addEventListener('resize', () => {
   if (currentScreen === 'practice') {

@@ -1,5 +1,7 @@
 import { isBlackKey } from './notes.js';
 
+const COVER_ALL_REPEATS = 2;
+
 export const OCTAVE_RANGES = {
   great: { min: 36, max: 47, label: 'Большая октава' },
   small: { min: 48, max: 59, label: 'Малая октава' },
@@ -33,21 +35,27 @@ function selectedRanges(settings) {
   return ranges;
 }
 
-export function buildPoolFromSettings(settings) {
+function resolvePoolMode(settings, poolMode) {
+  if (poolMode) return poolMode;
+  const includeChromatics = settings.alteration.sharp || settings.alteration.flat;
+  return includeChromatics ? 'all' : 'natural';
+}
+
+export function buildPoolFromSettings(settings, { poolMode } = {}) {
   const ranges = selectedRanges(settings);
   if (!ranges.length) return [];
 
   const min = Math.min(...ranges.map((r) => r.min));
   const max = Math.max(...ranges.map((r) => r.max));
-
-  const includeChromatics = settings.alteration.sharp
-    || settings.alteration.flat;
+  const mode = resolvePoolMode(settings, poolMode);
 
   const pool = [];
   for (let midi = min; midi <= max; midi++) {
     if (!ranges.some((r) => midi >= r.min && midi <= r.max)) continue;
 
-    if (isBlackKey(midi) && !includeChromatics) continue;
+    const black = isBlackKey(midi);
+    if (mode === 'natural' && black) continue;
+    if (mode === 'chromatic' && !black) continue;
 
     pool.push(midi);
   }
@@ -158,6 +166,15 @@ function pickRandom(pool, exclude) {
   return note;
 }
 
+function shuffleArray(items) {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export class NoteTrainer {
   constructor(piano) {
     this.piano = piano;
@@ -181,6 +198,9 @@ export class NoteTrainer {
     this.onNoteChange = null;
     this.onComplete = null;
     this.showKeyboardHints = true;
+    this.coverAll = false;
+    this._noteQueue = [];
+    this._queueIndex = 0;
     this.setConfig(DEFAULT_NOTE_SETTINGS);
   }
 
@@ -192,15 +212,16 @@ export class NoteTrainer {
     this._emitUpdate();
   }
 
-  setConfig(settings) {
+  setConfig(settings, { poolMode, coverAll = false } = {}) {
     this.settings = structuredClone(settings);
-    this.pool = buildPoolFromSettings(this.settings);
+    this.pool = buildPoolFromSettings(this.settings, { poolMode });
     this.spelling = resolveSpelling(this.settings);
     this.customPool = false;
+    this.coverAll = coverAll;
     this.reset();
   }
 
-  setCustomPool(midis) {
+  setCustomPool(midis, { coverAll = false } = {}) {
     const unique = [...new Set(midis)]
       .map((midi) => Number(midi))
       .filter((midi) => Number.isFinite(midi))
@@ -210,6 +231,7 @@ export class NoteTrainer {
     this.pool = unique;
     this.spelling = resolveSpelling(this.settings);
     this.customPool = true;
+    this.coverAll = coverAll;
     this.reset();
   }
 
@@ -225,8 +247,25 @@ export class NoteTrainer {
     this.total = 0;
     this.sessionAttempts = [];
     this.running = true;
-    this._nextNote();
-    this.onFeedback?.('Найдите и нажмите ноту на пианино', 'info');
+
+    if (this.coverAll) {
+      this._noteQueue = shuffleArray(
+        this.pool.flatMap((midi) => Array(COVER_ALL_REPEATS).fill(midi)),
+      );
+      this._queueIndex = 0;
+      this.sessionLimit = this._noteQueue.length;
+    } else {
+      this._noteQueue = [];
+      this._queueIndex = 0;
+    }
+
+    this._showCurrentNote();
+    this.onFeedback?.(
+      this.coverAll
+        ? `Пройдите все ${this.pool.length} нот — каждая минимум ${COVER_ALL_REPEATS} раза`
+        : 'Найдите и нажмите ноту на пианино',
+      'info',
+    );
     this._emitUpdate();
     return true;
   }
@@ -247,6 +286,8 @@ export class NoteTrainer {
     this.sessionAttempts = [];
     this.currentMidi = null;
     this.running = false;
+    this._noteQueue = [];
+    this._queueIndex = 0;
     this.piano.setTarget(null);
     this.piano.clearStates();
     this._emitUpdate();
@@ -269,12 +310,22 @@ export class NoteTrainer {
       this.onFeedback?.('Верно!', 'correct');
       this._emitUpdate();
 
+      if (this.coverAll) {
+        this._queueIndex++;
+        if (this._queueIndex >= this._noteQueue.length) {
+          this._finish();
+          return true;
+        }
+        this._showCurrentNote();
+        return true;
+      }
+
       if (this.correct >= this.sessionLimit) {
         this._finish();
         return true;
       }
 
-      this._nextNote();
+      this._showCurrentNote();
       return true;
     }
 
@@ -297,9 +348,15 @@ export class NoteTrainer {
     this.piano.releaseKey(midi);
   }
 
-  _nextNote() {
-    const prev = this.currentMidi;
-    this.currentMidi = pickRandom(this.pool, prev);
+  _showCurrentNote() {
+    if (this.coverAll) {
+      this.currentMidi = this._noteQueue[this._queueIndex] ?? null;
+    } else {
+      this.currentMidi = pickRandom(this.pool, this.currentMidi);
+    }
+
+    if (this.currentMidi === null) return;
+
     this.currentClef = resolveClefForNote(this.currentMidi, this.settings);
     this.currentSpelling = resolveNoteSpelling(this.settings, this.currentMidi);
     this._applyKeyboardHint();
@@ -338,6 +395,7 @@ export class NoteTrainer {
       mode: 'notes',
       settings: this.settings,
       attempts: [...this.sessionAttempts],
+      coverAll: this.coverAll,
     });
     this._emitUpdate();
   }

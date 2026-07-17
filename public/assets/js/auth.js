@@ -81,6 +81,14 @@ export async function loadNoteStats() {
   return fetchJson('/api/stats/notes');
 }
 
+export async function mergeGuestNoteStats(notes) {
+  if (!isLoggedIn() || !notes?.length) return { merged: 0 };
+  return fetchJson('/api/stats/guest-merge', {
+    method: 'POST',
+    body: JSON.stringify({ notes }),
+  });
+}
+
 export async function loadOAuthProviders() {
   try {
     const data = await fetchJson('/api/auth/oauth/providers');

@@ -59,7 +59,7 @@ final class StatsRepository
         if (!isset($aggregated[$midi])) {
           $aggregated[$midi] = ['correct' => 0, 'wrong' => 0];
         }
-        if ($attempt['correct']) {
+        if (!empty($attempt['correct'])) {
           $aggregated[$midi]['correct']++;
         } else {
           $aggregated[$midi]['wrong']++;
@@ -94,6 +94,59 @@ final class StatsRepository
     }
   }
 
+  /**
+   * @param list<array{midi:int,history?:list<int|bool>}> $entries
+   */
+  public function mergeGuestNoteStats(int $userId, array $entries): int
+  {
+    $attemptInsert = $this->db->prepare(
+      'INSERT INTO note_attempts (user_id, session_id, midi, correct, created_at)
+       VALUES (:user_id, NULL, :midi, :correct, datetime(\'now\'))',
+    );
+
+    $upsert = $this->db->prepare(
+      'INSERT INTO note_stats (user_id, midi, correct_count, wrong_count, last_practiced_at)
+       VALUES (:user_id, :midi, :correct, :wrong, datetime(\'now\'))
+       ON CONFLICT(user_id, midi) DO UPDATE SET
+         correct_count = correct_count + excluded.correct_count,
+         wrong_count = wrong_count + excluded.wrong_count,
+         last_practiced_at = datetime(\'now\')',
+    );
+
+    $merged = 0;
+    foreach ($entries as $entry) {
+      $history = NoteMastery::normalizeHistory($entry['history'] ?? []);
+      if ($history === []) {
+        continue;
+      }
+
+      $correct = 0;
+      $wrong = 0;
+      foreach ($history as $hit) {
+        if ($hit) {
+          $correct++;
+        } else {
+          $wrong++;
+        }
+        $attemptInsert->execute([
+          'user_id' => $userId,
+          'midi' => (int) ($entry['midi'] ?? 0),
+          'correct' => $hit ? 1 : 0,
+        ]);
+      }
+
+      $upsert->execute([
+        'user_id' => $userId,
+        'midi' => (int) ($entry['midi'] ?? 0),
+        'correct' => $correct,
+        'wrong' => $wrong,
+      ]);
+      $merged++;
+    }
+
+    return $merged;
+  }
+
   public function saveMelodySession(
     int $userId,
     int $correct,
@@ -120,46 +173,36 @@ final class StatsRepository
   /** @return array{summary:array,notes:array} */
   public function getNoteStats(int $userId): array
   {
-    $stmt = $this->db->prepare(
-      'SELECT midi, correct_count, wrong_count, last_practiced_at
-       FROM note_stats
-       WHERE user_id = :user_id
-       ORDER BY midi ASC',
-    );
-    $stmt->execute(['user_id' => $userId]);
-    $rows = $stmt->fetchAll();
+    $histories = NoteMastery::loadHistories($this->db, $userId);
 
     $notes = [];
     $mastered = 0;
     $learning = 0;
-    $needsPractice = 0;
     $totalAttempts = 0;
 
-    foreach ($rows as $row) {
-      $correct = (int) $row['correct_count'];
-      $wrong = (int) $row['wrong_count'];
-      $attempts = $correct + $wrong;
-      $accuracy = $attempts > 0 ? (int) round(($correct / $attempts) * 100) : 0;
-      $level = self::masteryLevel($correct, $wrong, $accuracy);
+    ksort($histories);
+    foreach ($histories as $midi => $history) {
+      $summary = NoteMastery::summarize($history);
+      $level = NoteMastery::masteryLevel($history);
 
       if ($level === 'mastered') {
         $mastered++;
-      } elseif ($level === 'needs_practice') {
-        $needsPractice++;
       } else {
         $learning++;
       }
 
-      $totalAttempts += $attempts;
+      $totalAttempts += $summary['attempts'];
       $notes[] = [
-        'midi' => (int) $row['midi'],
-        'name' => NoteNames::fromMidi((int) $row['midi']),
-        'correct' => $correct,
-        'wrong' => $wrong,
-        'attempts' => $attempts,
-        'accuracy' => $accuracy,
+        'midi' => $midi,
+        'name' => NoteNames::fromMidi($midi),
+        'correct' => $summary['correct'],
+        'wrong' => $summary['wrong'],
+        'attempts' => $summary['attempts'],
+        'accuracy' => $summary['accuracy'],
+        'streak' => $summary['streak'],
+        'history' => array_map(static fn(bool $hit): int => $hit ? 1 : 0, $history),
         'level' => $level,
-        'lastPracticedAt' => $row['last_practiced_at'],
+        'lastPracticedAt' => $this->lastPracticedAt($userId, $midi),
       ];
     }
 
@@ -176,7 +219,6 @@ final class StatsRepository
         'totalAttempts' => $totalAttempts,
         'mastered' => $mastered,
         'learning' => $learning,
-        'needsPractice' => $needsPractice,
       ],
       'notes' => $notes,
       'dailyProgress' => $this->getDailyProgress($userId),
@@ -185,6 +227,17 @@ final class StatsRepository
         'completed' => $this->getDailyGoalToday($userId),
       ],
     ];
+  }
+
+  private function lastPracticedAt(int $userId, int $midi): ?string
+  {
+    $stmt = $this->db->prepare(
+      'SELECT last_practiced_at FROM note_stats WHERE user_id = :user_id AND midi = :midi',
+    );
+    $stmt->execute(['user_id' => $userId, 'midi' => $midi]);
+    $value = $stmt->fetchColumn();
+
+    return $value !== false ? (string) $value : null;
   }
 
   public function getDailyGoalToday(int $userId): int
@@ -215,50 +268,36 @@ final class StatsRepository
       $byDay[$date] = ['date' => $date, 'learned' => 0, 'repeated' => 0];
     }
 
-    $preload = $this->db->prepare(
-      'SELECT DISTINCT midi
-       FROM note_attempts
-       WHERE user_id = :user_id AND correct = 1 AND date(created_at) < :start_date',
-    );
-    $preload->execute([
-      'user_id' => $userId,
-      'start_date' => $startDate,
-    ]);
-    $everHadCorrect = [];
-    foreach ($preload->fetchAll() as $row) {
-      $everHadCorrect[(int) $row['midi']] = true;
-    }
-
     $stmt = $this->db->prepare(
       'SELECT date(created_at) AS day, midi, correct
        FROM note_attempts
-       WHERE user_id = :user_id AND date(created_at) >= :start_date
+       WHERE user_id = :user_id
        ORDER BY created_at ASC, id ASC',
     );
-    $stmt->execute([
-      'user_id' => $userId,
-      'start_date' => $startDate,
-    ]);
+    $stmt->execute(['user_id' => $userId]);
 
+    $histories = [];
+    $masteredEver = [];
     $learnedByDay = [];
     $repeatedByDay = [];
 
     foreach ($stmt->fetchAll() as $row) {
       $day = (string) $row['day'];
       $midi = (int) $row['midi'];
-      $correct = (int) $row['correct'] === 1;
+      $hit = (int) $row['correct'] === 1;
+      $histories[$midi][] = $hit;
 
       if (!isset($byDay[$day])) {
         continue;
       }
 
-      if ($correct && !isset($everHadCorrect[$midi])) {
+      if (NoteMastery::isMastered($histories[$midi]) && !isset($masteredEver[$midi])) {
+        $masteredEver[$midi] = true;
         $learnedByDay[$day][$midi] = true;
-        $everHadCorrect[$midi] = true;
         continue;
       }
 
-      if (isset($everHadCorrect[$midi])) {
+      if (isset($masteredEver[$midi])) {
         $repeatedByDay[$day][$midi] = true;
       }
     }
@@ -270,21 +309,5 @@ final class StatsRepository
     unset($entry);
 
     return array_values($byDay);
-  }
-
-  public static function masteryLevel(int $correct, int $wrong, int $accuracy): string
-  {
-    $attempts = $correct + $wrong;
-    if ($attempts < 2) {
-      return 'learning';
-    }
-    if ($accuracy >= 85 && $correct >= 3) {
-      return 'mastered';
-    }
-    if ($accuracy < 60 || $wrong > $correct) {
-      return 'needs_practice';
-    }
-
-    return 'learning';
   }
 }
