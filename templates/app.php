@@ -76,7 +76,7 @@
     <header class="header" id="main-header">
       <div class="header__brand">
         <span class="header__logo icon-badge icon-badge--brand" aria-hidden="true">
-          <svg class="icon icon--badge" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-piano"/></svg>
+          <svg class="icon icon--badge icon--brand" viewBox="0 0 32 32" aria-hidden="true"><use href="#ico-brand"/></svg>
         </span>
         <div>
           <h1>Piano Bro</h1>
@@ -84,7 +84,6 @@
         </div>
       </div>
       <div class="header__auth" id="auth-panel">
-        <button type="button" class="btn btn--secondary btn--sm" id="btn-go-profile" hidden>Профиль</button>
         <button type="button" class="btn btn--secondary btn--sm" id="btn-open-auth">Войти</button>
         <div class="auth-user" id="auth-user" hidden>
           <span class="auth-user__name" id="auth-user-name"></span>
@@ -93,22 +92,6 @@
         </div>
       </div>
     </header>
-
-    <div
-      class="input-status-banner practice-input-status practice-input-status--off"
-      id="input-status-banner"
-      hidden
-    >
-      <span class="practice-input-status__dot" id="input-status-dot" aria-hidden="true"></span>
-      <span class="practice-input-status__text" id="input-status-text">Пианино не подключено</span>
-      <div class="input-status-banner__actions">
-        <select class="midi-select input-status-banner__select" id="input-status-midi-select" disabled hidden>
-          <option value="">Выбор устройства…</option>
-        </select>
-        <button type="button" class="practice-input-status__btn" id="btn-input-connect-midi">Подключить MIDI</button>
-        <button type="button" class="practice-input-status__btn" id="btn-input-connect-mic">Микрофон</button>
-      </div>
-    </div>
 
     <!-- Главная -->
     <section class="screen screen--active" id="screen-home">
@@ -203,10 +186,10 @@
             </article>
             <article class="landing-feature">
               <span class="landing-feature__icon icon-badge icon-badge--stats" aria-hidden="true">
-                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
+                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-stats"/></svg>
               </span>
-              <h4 class="landing-feature__title">Ежедневная цель</h4>
-              <p class="landing-feature__text">Ставьте цель на день в профиле и следите за прогрессом. Статистика покажет, какие ноты уже освоены, а какие ещё в процессе изучения.</p>
+              <h4 class="landing-feature__title">Статистика прогресса</h4>
+              <p class="landing-feature__text">Смотрите, какие ноты уже освоены, а какие ещё в процессе — на наглядном нотном стане и графике по дням.</p>
             </article>
             <article class="landing-feature">
               <span class="landing-feature__icon icon-badge icon-badge--brand" aria-hidden="true">
@@ -309,72 +292,6 @@
       </div>
       <div class="pick-panel stats-panel" id="stats-panel">
         <p class="loading">Загрузка статистики…</p>
-      </div>
-    </section>
-
-    <!-- Профиль -->
-    <section class="screen" id="screen-profile" hidden>
-      <div class="screen-header">
-        <button type="button" class="btn-back" id="btn-back-profile">← Назад</button>
-        <h2 class="screen-header__title">
-          <span class="screen-header__icon icon-badge icon-badge--brand" aria-hidden="true">
-            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-user"/></svg>
-          </span>
-          Профиль
-        </h2>
-      </div>
-      <div class="pick-panel profile-panel">
-        <div class="profile-user" id="profile-user-card">
-          <div class="profile-user__guest" id="profile-guest" hidden>
-            <p class="profile-user__text">Войдите, чтобы сохранять прогресс и статистику на всех устройствах.</p>
-            <button type="button" class="btn btn--primary btn--sm" id="btn-profile-login">Войти</button>
-          </div>
-          <div class="profile-user__info" id="profile-user-info" hidden>
-            <span class="profile-user__avatar icon-badge icon-badge--brand" aria-hidden="true">
-              <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-user"/></svg>
-            </span>
-            <div>
-              <strong class="profile-user__name" id="profile-user-name"></strong>
-              <p class="profile-user__email" id="profile-user-email"></p>
-            </div>
-          </div>
-        </div>
-
-        <div class="profile-settings">
-          <h3 class="profile-settings__title">Настройки</h3>
-
-          <div class="daily-goal" id="daily-goal-panel" hidden>
-            <div class="daily-goal__ring" aria-hidden="true">
-              <svg class="daily-goal__svg" viewBox="0 0 40 40">
-                <circle class="daily-goal__track" cx="20" cy="20" r="16"></circle>
-                <circle class="daily-goal__fill" id="daily-goal-ring" cx="20" cy="20" r="16"></circle>
-              </svg>
-              <span class="daily-goal__percent" id="daily-goal-percent">0%</span>
-            </div>
-            <div class="daily-goal__content">
-              <strong class="daily-goal__title">Ежедневная цель</strong>
-              <p class="daily-goal__text" id="daily-goal-text">Сегодня: 0 / 20 верных нот</p>
-            </div>
-          </div>
-
-          <form class="profile-settings__form" id="profile-settings-form">
-            <fieldset class="settings-group settings-group--daily">
-              <legend class="settings-group__head">
-                <span class="settings-group__icon icon-badge icon-badge--success"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-mastered"/></svg></span>
-                <span class="settings-group__title">Ежедневная цель</span>
-              </legend>
-              <label class="settings-select">
-                <span class="settings-select__label">Сколько верных нот в день</span>
-                <select name="daily-goal" id="profile-daily-goal" class="settings-select__input">
-                  <option value="10">10 нот</option>
-                  <option value="20" selected>20 нот</option>
-                  <option value="30">30 нот</option>
-                  <option value="50">50 нот</option>
-                </select>
-              </label>
-            </fieldset>
-          </form>
-        </div>
       </div>
     </section>
 
@@ -561,11 +478,23 @@
       <div class="practice-topbar">
         <button type="button" class="btn-back" id="btn-back-practice" aria-label="Назад">←</button>
         <h2 class="practice-topbar__title" id="practice-title">Тренировка</h2>
-        <div class="practice-daily-goal" id="practice-daily-goal" hidden>
-          <span class="practice-daily-goal__label">Цель</span>
-          <span class="practice-daily-goal__value" id="practice-daily-goal-text">0 / 20</span>
-        </div>
         <div class="practice-progress" id="practice-progress">0 / 10</div>
+      </div>
+
+      <div
+        class="input-status-banner practice-input-status practice-input-status--off"
+        id="input-status-banner"
+        hidden
+      >
+        <span class="practice-input-status__dot" id="input-status-dot" aria-hidden="true"></span>
+        <span class="practice-input-status__text" id="input-status-text">Пианино не подключено</span>
+        <div class="input-status-banner__actions">
+          <select class="midi-select input-status-banner__select" id="input-status-midi-select" disabled hidden>
+            <option value="">Выбор устройства…</option>
+          </select>
+          <button type="button" class="practice-input-status__btn" id="btn-input-connect-midi">Подключить MIDI</button>
+          <button type="button" class="practice-input-status__btn" id="btn-input-connect-mic">Микрофон</button>
+        </div>
       </div>
 
       <div
@@ -725,6 +654,10 @@
   </div>
 
   <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+    <symbol id="ico-brand" viewBox="0 0 32 32">
+      <ellipse cx="11.5" cy="22.5" rx="5" ry="3.8" transform="rotate(-18 11.5 22.5)" fill="currentColor"/>
+      <rect x="15.2" y="7" width="2.8" height="16.8" rx="1.4" fill="currentColor"/>
+    </symbol>
     <symbol id="ico-piano" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 10h16v10H4z"/><path d="M7 10V8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><path d="M8 14h2v4H8zM11 14h2v4h-2zM14 14h2v4h-2zM17 14h2v4h-2z"/><path d="M9.5 10v4M12.5 10v4M15.5 10v4" stroke-width="2"/>
     </symbol>

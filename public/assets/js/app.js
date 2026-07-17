@@ -9,14 +9,6 @@ import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
 import { initAuth, getUser, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, mergeGuestNoteStats, loadOAuthProviders, redirectToOAuth } from './auth.js';
 import { icon, iconBadgeColored } from './icons.js';
-import {
-  addLocalDailyGoalProgress,
-  getDailyGoalTarget,
-  resolveDailyGoal,
-  setDailyGoalTarget,
-  DAILY_GOAL_TARGETS,
-  DEFAULT_DAILY_GOAL_TARGET,
-} from './daily-goal.js';
 import { playTrainerNote, warmupTrainerSound } from './trainer-sounds.js';
 import {
   loadRoadmap,
@@ -46,16 +38,7 @@ const els = {
   screenNotesPick: $('#screen-notes-pick'),
   screenRoadmap: $('#screen-roadmap'),
   screenStats: $('#screen-stats'),
-  screenProfile: $('#screen-profile'),
   screenPractice: $('#screen-practice'),
-  btnGoProfile: $('#btn-go-profile'),
-  btnBackProfile: $('#btn-back-profile'),
-  btnProfileLogin: $('#btn-profile-login'),
-  profileGuest: $('#profile-guest'),
-  profileUserInfo: $('#profile-user-info'),
-  profileUserName: $('#profile-user-name'),
-  profileUserEmail: $('#profile-user-email'),
-  profileSettingsForm: $('#profile-settings-form'),
   btnGoMelodies: $('#btn-go-melodies'),
   btnGoNotes: $('#btn-go-notes'),
   btnGoRoadmap: $('#btn-go-roadmap'),
@@ -95,13 +78,7 @@ const els = {
   difficultyTabs: document.querySelectorAll('.difficulty-tab'),
   notesSettingsForm: $('#notes-settings-form'),
   notesSettingsError: $('#notes-settings-error'),
-  dailyGoalPanel: $('#daily-goal-panel'),
-  dailyGoalText: $('#daily-goal-text'),
-  dailyGoalPercent: $('#daily-goal-percent'),
-  dailyGoalRing: $('#daily-goal-ring'),
   practiceTitle: $('#practice-title'),
-  practiceDailyGoal: $('#practice-daily-goal'),
-  practiceDailyGoalText: $('#practice-daily-goal-text'),
   practiceProgress: $('#practice-progress'),
   practiceSessionProgress: $('#practice-session-progress'),
   practiceSessionProgressFill: $('#practice-session-progress-fill'),
@@ -153,11 +130,6 @@ let cachedNoteStats = null;
 let cachedRoadmapData = null;
 let activeRoadmapStageId = null;
 let lastRoadmapStageCompleted = false;
-let dailyGoalState = {
-  date: new Date().toISOString().slice(0, 10),
-  target: DEFAULT_DAILY_GOAL_TARGET,
-  completed: 0,
-};
 
 const piano = new PianoKeyboard(els.piano, PIANO_START, PIANO_END);
 const midi = new MidiInput();
@@ -166,7 +138,7 @@ const melodyTrainer = new MelodyTrainer(piano);
 const noteTrainer = new NoteTrainer(piano);
 const staffView = new StaffView(els.staffViewport);
 
-const PIANO_INPUT_SCREENS = new Set(['practice', 'melody-pick', 'notes-pick']);
+const PIANO_INPUT_SCREENS = new Set(['practice']);
 const MIDI_DEVICE_KEY = 'piano-midi-device-id';
 const INPUT_PREFS_KEY = 'piano-input-prefs';
 
@@ -211,7 +183,6 @@ function showScreen(name) {
     'notes-pick': els.screenNotesPick,
     roadmap: els.screenRoadmap,
     stats: els.screenStats,
-    profile: els.screenProfile,
     practice: els.screenPractice,
   };
 
@@ -228,11 +199,6 @@ function showScreen(name) {
   els.app.classList.toggle('app--home', isHome);
   els.mainHeader.hidden = isPractice;
   document.body.classList.toggle('body--practice', isPractice);
-
-  if (name === 'profile') {
-    updateProfileUI();
-    void refreshDailyGoalPanel();
-  }
 
   if (name === 'roadmap') {
     renderRoadmapScreen();
@@ -472,20 +438,6 @@ function readTrainerOptionsFromPrefs() {
   const prefs = loadTrainerPrefs();
   return {
     soundEnabled: prefs?.soundEnabled ?? DEFAULT_TRAINER_OPTIONS.soundEnabled,
-    dailyTarget: prefs?.dailyTarget ?? getDailyGoalTarget(),
-  };
-}
-
-function readProfileSettingsFromForm() {
-  const form = els.profileSettingsForm;
-  if (!form) return readTrainerOptionsFromPrefs();
-
-  const dailyTarget = parseInt(form.querySelector('[name="daily-goal"]')?.value ?? String(DEFAULT_DAILY_GOAL_TARGET), 10);
-  const prefs = loadTrainerPrefs();
-
-  return {
-    soundEnabled: prefs?.soundEnabled ?? DEFAULT_TRAINER_OPTIONS.soundEnabled,
-    dailyTarget: DAILY_GOAL_TARGETS.includes(dailyTarget) ? dailyTarget : DEFAULT_DAILY_GOAL_TARGET,
   };
 }
 
@@ -496,9 +448,6 @@ function loadTrainerPrefs() {
     const data = JSON.parse(raw);
     return {
       soundEnabled: data.soundEnabled ?? DEFAULT_TRAINER_OPTIONS.soundEnabled,
-      dailyTarget: DAILY_GOAL_TARGETS.includes(Number(data.dailyTarget))
-        ? Number(data.dailyTarget)
-        : getDailyGoalTarget(),
     };
   } catch {
     return null;
@@ -508,92 +457,7 @@ function loadTrainerPrefs() {
 function saveTrainerPrefs(options) {
   localStorage.setItem(TRAINER_PREFS_KEY, JSON.stringify({
     soundEnabled: options.soundEnabled,
-    dailyTarget: options.dailyTarget,
   }));
-  setDailyGoalTarget(options.dailyTarget);
-}
-
-function applyProfilePrefsToForm() {
-  const prefs = loadTrainerPrefs();
-  const form = els.profileSettingsForm;
-  if (!form) return;
-
-  const dailySelect = form.querySelector('[name="daily-goal"]');
-
-  if (prefs) {
-    if (dailySelect) dailySelect.value = String(prefs.dailyTarget);
-  } else if (dailySelect) {
-    dailySelect.value = String(getDailyGoalTarget());
-  }
-}
-
-function saveProfileSettingsFromForm() {
-  const options = readProfileSettingsFromForm();
-  const prefs = loadTrainerPrefs() ?? {
-    ...DEFAULT_TRAINER_OPTIONS,
-    dailyTarget: getDailyGoalTarget(),
-  };
-
-  saveTrainerPrefs({
-    ...prefs,
-    dailyTarget: options.dailyTarget,
-  });
-
-  noteTrainer.setOptions({
-    soundEnabled: options.soundEnabled,
-  });
-
-  dailyGoalState.target = options.dailyTarget;
-  renderDailyGoalPanel();
-  updatePracticeDailyGoalDisplay();
-}
-
-function renderDailyGoalPanel() {
-  if (!els.dailyGoalPanel) return;
-
-  const { completed, target } = dailyGoalState;
-  const pct = target > 0 ? Math.min(100, Math.round((completed / target) * 100)) : 0;
-
-  els.dailyGoalPanel.hidden = currentScreen !== 'profile';
-  if (currentScreen !== 'profile') return;
-  if (els.dailyGoalText) {
-    els.dailyGoalText.textContent = completed >= target
-      ? `Цель на сегодня выполнена: ${completed} / ${target}`
-      : `Сегодня: ${completed} / ${target} верных нот`;
-  }
-  if (els.dailyGoalPercent) els.dailyGoalPercent.textContent = `${pct}%`;
-
-  if (els.dailyGoalRing) {
-    const circumference = 2 * Math.PI * 16;
-    els.dailyGoalRing.style.strokeDasharray = `${circumference}`;
-    els.dailyGoalRing.style.strokeDashoffset = `${circumference * (1 - pct / 100)}`;
-  }
-
-  els.dailyGoalPanel.classList.toggle('daily-goal--done', completed >= target && target > 0);
-}
-
-function updatePracticeDailyGoalDisplay() {
-  if (!els.practiceDailyGoalText) return;
-  const { completed, target } = dailyGoalState;
-  els.practiceDailyGoalText.textContent = `${completed} / ${target}`;
-  els.practiceDailyGoal?.classList.toggle('practice-daily-goal--done', completed >= target && target > 0);
-}
-
-async function refreshDailyGoalPanel() {
-  dailyGoalState.target = getDailyGoalTarget();
-
-  if (isLoggedIn()) {
-    try {
-      if (!cachedNoteStats) cachedNoteStats = await loadNoteStats();
-      dailyGoalState = resolveDailyGoal({ serverDailyGoal: cachedNoteStats?.dailyGoal });
-    } catch {
-      dailyGoalState = resolveDailyGoal({});
-    }
-  } else {
-    dailyGoalState = resolveDailyGoal({});
-  }
-
-  renderDailyGoalPanel();
 }
 
 function syncSoundToggleUI() {
@@ -638,12 +502,7 @@ function setTrainerSoundEnabled(enabled) {
     void warmupTrainerSound();
   }
 
-  const prefs = loadTrainerPrefs() ?? {
-    ...DEFAULT_TRAINER_OPTIONS,
-    dailyTarget: getDailyGoalTarget(),
-  };
   saveTrainerPrefs({
-    ...prefs,
     soundEnabled: noteTrainer.soundEnabled,
   });
 }
@@ -717,8 +576,6 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride } = {}) {
   currentPracticeTitle = title;
   els.practiceTitle.textContent = title;
   if (mode === 'notes') {
-    els.practiceDailyGoal.hidden = false;
-    updatePracticeDailyGoalDisplay();
     if (hintsOverride === undefined) {
       setKeyboardHints(keyboardHints);
     } else {
@@ -729,7 +586,6 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride } = {}) {
       void warmupTrainerSound();
     }
   } else {
-    els.practiceDailyGoal.hidden = true;
     setKeyboardHints(true);
     syncPracticeControls();
     if (noteTrainer.soundEnabled) {
@@ -768,7 +624,6 @@ function exitPractice() {
   hideSessionModal();
   resetPracticeProgress();
   showFeedback('', 'info');
-  els.practiceDailyGoal.hidden = true;
   syncPracticeControls();
 }
 
@@ -791,17 +646,6 @@ function onSessionComplete(stats) {
   }
 
   showSessionModal(stats);
-
-  if (stats.mode === 'notes' && stats.correct > 0) {
-    if (isLoggedIn()) {
-      dailyGoalState.completed += stats.correct;
-    } else {
-      const local = addLocalDailyGoalProgress(stats.correct);
-      dailyGoalState = resolveDailyGoal({ localFallback: local });
-    }
-    renderDailyGoalPanel();
-    updatePracticeDailyGoalDisplay();
-  }
 
   if (!isLoggedIn()) return;
 
@@ -827,9 +671,6 @@ function onSessionComplete(stats) {
       try {
         const data = await loadNoteStats();
         cachedNoteStats = data;
-        dailyGoalState = resolveDailyGoal({ serverDailyGoal: data?.dailyGoal });
-        renderDailyGoalPanel();
-        updatePracticeDailyGoalDisplay();
         if (stats.roadmapStageId) {
           updateRoadmapProgressFromSession(stats, data);
           refreshSessionModalRoadmap(stats);
@@ -869,36 +710,14 @@ function updateRoadmapProgressFromSession(stats, noteStats = null) {
   }
 }
 
-function updateProfileUI() {
-  const user = getUser();
-  const loggedIn = Boolean(user);
-
-  if (els.profileGuest) els.profileGuest.hidden = loggedIn;
-  if (els.profileUserInfo) els.profileUserInfo.hidden = !loggedIn;
-  if (loggedIn) {
-    if (els.profileUserName) els.profileUserName.textContent = user.name;
-    if (els.profileUserEmail) els.profileUserEmail.textContent = user.email;
-  } else {
-    if (els.profileUserName) els.profileUserName.textContent = '';
-    if (els.profileUserEmail) els.profileUserEmail.textContent = '';
-  }
-
-  applyProfilePrefsToForm();
-}
-
 function updateAuthUI() {
   const user = getUser();
   const loggedIn = Boolean(user);
 
   if (els.btnOpenAuth) els.btnOpenAuth.hidden = loggedIn;
-  if (els.btnGoProfile) els.btnGoProfile.hidden = !loggedIn;
   if (els.authUser) els.authUser.hidden = !loggedIn;
   if (els.btnLogout) els.btnLogout.hidden = !loggedIn;
   if (els.authUserName) els.authUserName.textContent = user?.name ?? '';
-
-  if (currentScreen === 'profile') {
-    updateProfileUI();
-  }
 }
 
 function openAuthModal(tab = 'login') {
@@ -986,6 +805,65 @@ function setAuthTab(tab) {
   if (titleEl) titleEl.textContent = title;
 }
 
+function getLearningNotes(notes = []) {
+  return notes.filter((note) => note.level === 'learning' || note.level === 'needs_practice');
+}
+
+function renderLearningNotesOffer(notes = []) {
+  const learningNotes = getLearningNotes(notes);
+  if (!learningNotes.length) return '';
+
+  const maxTags = 10;
+  const visible = learningNotes.slice(0, maxTags);
+  const rest = learningNotes.length - visible.length;
+
+  const tags = visible.map((note) => (
+    `<span class="stats-practice-cta__tag">${escapeHtml(note.name)}</span>`
+  )).join('');
+
+  const moreTag = rest > 0
+    ? `<span class="stats-practice-cta__tag stats-practice-cta__more">+${rest}</span>`
+    : '';
+
+  return `
+    <section class="stats-practice-cta" aria-label="Тренировка невыученных нот">
+      <div class="stats-practice-cta__head">
+        ${iconBadgeColored('learning', 'primary')}
+        <h3 class="stats-practice-cta__title">Потренировать невыученные ноты</h3>
+      </div>
+      <p class="stats-practice-cta__text">
+        ${learningNotes.length} ${pluralNotes(learningNotes.length)} ещё не дошли до 2 верных подряд без ошибки — можно потренировать только их.
+      </p>
+      <div class="stats-practice-cta__tags">${tags}${moreTag}</div>
+      <button type="button" class="btn btn--primary btn--sm" id="btn-stats-practice-learning">
+        Начать тренировку
+      </button>
+    </section>
+  `;
+}
+
+function startLearningNotesTraining(notes) {
+  const learningNotes = getLearningNotes(notes);
+  if (!learningNotes.length) return;
+
+  activeRoadmapStageId = null;
+  const midis = learningNotes.map((note) => note.midi);
+  const options = readTrainerOptionsFromPrefs();
+
+  saveTrainerPrefs(options);
+  noteTrainer.setCustomPool(midis, { coverAll: true });
+  noteTrainer.setOptions(options);
+  noteTrainer.sessionLimit = DEFAULT_NOTE_SESSION_LIMIT;
+  noteSettings = noteTrainer.settings;
+  enterPractice('notes', 'Ноты в процессе');
+}
+
+function bindStatsPanelActions(notes) {
+  $('#btn-stats-practice-learning')?.addEventListener('click', () => {
+    startLearningNotesTraining(notes);
+  });
+}
+
 function formatChartDay(isoDate) {
   const date = new Date(`${isoDate}T12:00:00`);
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
@@ -1056,32 +934,14 @@ function renderStatsPanel(data) {
     return;
   }
 
-  const { summary, notes, dailyProgress } = data;
-
-  const summaryHtml = `
-    <div class="stats-summary">
-      <div class="stats-summary__item">
-        ${iconBadgeColored('sessions', 'primary')}
-        <span class="stats-summary__value">${summary.sessions}</span>
-        <span class="stats-summary__label">сессий</span>
-      </div>
-      <div class="stats-summary__item stats-summary__item--good">
-        ${iconBadgeColored('mastered', 'success')}
-        <span class="stats-summary__value">${summary.mastered}</span>
-        <span class="stats-summary__label">выучено</span>
-      </div>
-      <div class="stats-summary__item">
-        ${iconBadgeColored('learning', 'primary')}
-        <span class="stats-summary__value">${summary.learning}</span>
-        <span class="stats-summary__label">в процессе</span>
-      </div>
-    </div>
-  `;
-
+  const { notes, dailyProgress } = data;
   const staffHtml = renderStatsStaffInfographic(notes);
+  const offerHtml = renderLearningNotesOffer(notes);
+  const chartHtml = renderStatsChart(dailyProgress);
 
-  els.statsPanel.innerHTML = summaryHtml + renderStatsChart(dailyProgress) + staffHtml;
+  els.statsPanel.innerHTML = staffHtml + offerHtml + chartHtml;
   mountStatsStaffChart(els.statsPanel, notes);
+  bindStatsPanelActions(notes);
 }
 
 async function openStatsScreen() {
@@ -1553,7 +1413,6 @@ async function startRoadmapStage(stageId) {
   noteSettings = stage.settings;
   noteTrainer.setCustomPool(pool, { coverAll: true });
   noteTrainer.setOptions(options);
-  dailyGoalState.target = options.dailyTarget;
   enterPractice('notes', `Путь: ${stage.title}`, { keyboardHints: false });
 }
 
@@ -1575,7 +1434,6 @@ function startNotesTraining() {
   noteTrainer.setConfig(settings);
   noteTrainer.setOptions(options);
   noteTrainer.sessionLimit = readSessionLimitFromForm();
-  dailyGoalState.target = options.dailyTarget;
   enterPractice('notes', describeNoteSettings(settings, options));
 }
 
@@ -1695,14 +1553,6 @@ els.notesSettingsForm?.addEventListener('change', () => {
   if (!els.notesSettingsError.hidden) els.notesSettingsError.hidden = true;
 });
 
-els.profileSettingsForm?.addEventListener('change', () => {
-  saveProfileSettingsFromForm();
-});
-
-function openProfileScreen() {
-  showScreen('profile');
-}
-
 function openNotesPickScreen() {
   showScreen('notes-pick');
 }
@@ -1731,10 +1581,6 @@ els.screenPractice?.addEventListener('touchstart', () => {
   }
 }, { passive: true });
 
-els.btnGoProfile?.addEventListener('click', openProfileScreen);
-els.btnProfileLogin?.addEventListener('click', () => openAuthModal('login'));
-els.btnBackProfile?.addEventListener('click', () => showScreen('home'));
-
 els.btnGoMelodies?.addEventListener('click', () => showScreen('melody-pick'));
 
 els.btnGoNotes?.addEventListener('click', openNotesPickScreen);
@@ -1759,8 +1605,6 @@ els.btnLogout?.addEventListener('click', async () => {
   await logout();
   cachedNoteStats = null;
   updateAuthUI();
-  renderWeakNotesOffer([]);
-  if (currentScreen === 'profile') showScreen('home');
 });
 
 els.authTabs.forEach((tab) => {
@@ -1957,11 +1801,9 @@ handleOAuthRedirect();
 initAuth().then(async () => {
   updateAuthUI();
   await syncGuestProgressAfterAuth();
-  refreshDailyGoalPanel();
 });
 applyNoteSettingsToForm(DEFAULT_NOTE_SETTINGS);
 applySessionLimitToForm(DEFAULT_NOTE_SESSION_LIMIT);
-applyProfilePrefsToForm();
 noteTrainer.sessionLimit = DEFAULT_NOTE_SESSION_LIMIT;
 noteTrainer.setOptions(loadTrainerPrefs() ?? DEFAULT_TRAINER_OPTIONS);
 setPianoVisible(false);
