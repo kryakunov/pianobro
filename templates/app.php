@@ -104,8 +104,8 @@
             </p>
             <h2 class="landing-hero__title">Научитесь читать ноты и&nbsp;играть любимые мелодии</h2>
             <p class="landing-hero__lead">
-              Piano Bro — интерактивный тренажёр для цифрового пианино. Подключите MIDI-клавиатуру
-              или играйте на экране — нотный стан, подсказки и статистика прогресса уже ждут вас.
+              Интерактивный тренажёр в браузере — нотный стан, подсказки на клавишах
+              и статистика прогресса. Без установки и регистрации.
             </p>
             <div class="landing-hero__actions">
               <button type="button" class="btn btn--primary btn--lg" id="btn-go-roadmap">
@@ -114,7 +114,7 @@
               </button>
               <button type="button" class="btn btn--secondary btn--lg" id="btn-go-notes">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-notes"/></svg>
-                Свободная тренировка
+                Тренажёр нот
               </button>
               <button type="button" class="btn btn--secondary btn--lg" id="btn-go-melodies">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-melody"/></svg>
@@ -124,19 +124,15 @@
             <ul class="landing-hero__pills" aria-label="Возможности">
               <li class="landing-pill">
                 <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-midi"/></svg>
-                MIDI-клавиатура
+                MIDI · микрофон · экран
               </li>
               <li class="landing-pill">
-                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-mic"/></svg>
-                Микрофон
-              </li>
-              <li class="landing-pill">
-                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-keyboard"/></svg>
-                Экранное пианино
+                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-treble"/></svg>
+                Скрипичный и басовый ключ
               </li>
               <li class="landing-pill">
                 <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-chart"/></svg>
-                Статистика прогресса
+                Прогресс по каждой ноте
               </li>
             </ul>
           </div>
@@ -166,110 +162,153 @@
           </div>
         </div>
 
-        <section class="landing-section" aria-labelledby="landing-features-title">
-          <h3 class="landing-section__title" id="landing-features-title">Почему Piano Bro</h3>
-          <p class="landing-section__lead">Всё, что нужно для регулярных занятий — в одном месте</p>
-          <div class="landing-features">
-            <article class="landing-feature">
-              <span class="landing-feature__icon icon-badge icon-badge--notes" aria-hidden="true">
-                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-notes"/></svg>
-              </span>
-              <h4 class="landing-feature__title">Тренажёр нот</h4>
-              <p class="landing-feature__text">Скрипичный и басовый ключ, диезы и бемоли. Учитесь узнавать ноты на стане и находить их на клавиатуре за секунды.</p>
-            </article>
-            <article class="landing-feature">
-              <span class="landing-feature__icon icon-badge icon-badge--melody" aria-hidden="true">
-                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-melody"/></svg>
-              </span>
-              <h4 class="landing-feature__title">Мелодии и песни</h4>
-              <p class="landing-feature__text">От простых упражнений до классики и популярных треков. Играйте по нотному стану с подсказками на клавишах.</p>
-            </article>
-            <article class="landing-feature">
-              <span class="landing-feature__icon icon-badge icon-badge--stats" aria-hidden="true">
-                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-stats"/></svg>
-              </span>
-              <h4 class="landing-feature__title">Статистика прогресса</h4>
-              <p class="landing-feature__text">Смотрите, какие ноты уже освоены, а какие ещё в процессе — на наглядном нотном стане и графике по дням.</p>
-            </article>
-            <article class="landing-feature">
-              <span class="landing-feature__icon icon-badge icon-badge--brand" aria-hidden="true">
-                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-midi"/></svg>
-              </span>
-              <h4 class="landing-feature__title">MIDI и микрофон</h4>
-              <p class="landing-feature__text">Подключите цифровое пианино по USB или играйте в микрофон — тренажёр распознает нажатия и оценивает вашу игру.</p>
-            </article>
-          </div>
-        </section>
-
-        <section class="landing-section landing-section--steps" aria-labelledby="landing-steps-title">
-          <h3 class="landing-section__title" id="landing-steps-title">Как начать за 3 шага</h3>
-          <ol class="landing-steps">
-            <li class="landing-step">
-              <span class="landing-step__num">1</span>
-              <div class="landing-step__body">
-                <strong class="landing-step__title">Подключите инструмент</strong>
-                <p class="landing-step__text">MIDI-клавиатура, микрофон или экранное пианино — выберите удобный способ.</p>
-              </div>
-            </li>
-            <li class="landing-step">
-              <span class="landing-step__num">2</span>
-              <div class="landing-step__body">
-                <strong class="landing-step__title">Выберите режим</strong>
-                <p class="landing-step__text">Тренируйте отдельные ноты или учите целую мелодию по нотному стану.</p>
-              </div>
-            </li>
-            <li class="landing-step">
-              <span class="landing-step__num">3</span>
-              <div class="landing-step__body">
-                <strong class="landing-step__title">Играйте и растите</strong>
-                <p class="landing-step__text">Получайте мгновенную обратную связь, включайте подсказки и отслеживайте прогресс.</p>
-              </div>
-            </li>
-          </ol>
-        </section>
-
-        <section class="landing-section" aria-labelledby="landing-modes-title">
-          <h3 class="landing-section__title" id="landing-modes-title">Выберите, с чего начать</h3>
+        <section class="landing-section landing-section--modes" aria-labelledby="landing-modes-title">
+          <h3 class="landing-section__title" id="landing-modes-title">С чего начать</h3>
           <div class="landing-modes">
             <button type="button" class="home-card home-card--roadmap landing-mode" id="btn-go-roadmap-card">
               <span class="home-card__icon icon-badge icon-badge--roadmap" aria-hidden="true">
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
               </span>
               <span class="home-card__title">Путь новичка</span>
-              <span class="home-card__desc">8 уровней от простых белых нот до полного диапазона — с прогрессом и наградами</span>
-              <span class="landing-mode__cta">Открыть карту →</span>
+              <span class="home-card__desc">8 уровней с мелодиями-закреплением</span>
+              <span class="landing-mode__cta">Открыть →</span>
             </button>
             <button type="button" class="home-card home-card--notes landing-mode" data-landing-go="notes">
               <span class="home-card__icon icon-badge icon-badge--notes" aria-hidden="true">
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-notes"/></svg>
               </span>
               <span class="home-card__title">Тренажёр нот</span>
-              <span class="home-card__desc">Запоминайте ноты на стане и находите их на клавиатуре — идеально для начинающих</span>
-              <span class="landing-mode__cta">Настроить и начать →</span>
+              <span class="home-card__desc">Свободная тренировка по выбранным нотам</span>
+              <span class="landing-mode__cta">Начать →</span>
             </button>
             <button type="button" class="home-card home-card--melody landing-mode" data-landing-go="melodies">
               <span class="home-card__icon icon-badge icon-badge--melody" aria-hidden="true">
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-melody"/></svg>
               </span>
               <span class="home-card__title">Мелодии</span>
-              <span class="home-card__desc">Учите популярные песни и классику — ноты подсвечиваются на клавишах</span>
-              <span class="landing-mode__cta">Открыть каталог →</span>
+              <span class="home-card__desc">Популярные песни и классика</span>
+              <span class="landing-mode__cta">Каталог →</span>
             </button>
             <button type="button" class="home-card home-card--stats landing-mode" id="btn-go-stats-home">
               <span class="home-card__icon icon-badge icon-badge--stats" aria-hidden="true">
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-stats"/></svg>
               </span>
-              <span class="home-card__title">Моя статистика</span>
-              <span class="home-card__desc">Смотрите, какие ноты выучены хорошо, а какие стоит потренировать сегодня</span>
-              <span class="landing-mode__cta">Посмотреть прогресс →</span>
+              <span class="home-card__title">Статистика</span>
+              <span class="home-card__desc">Карта нот и график занятий</span>
+              <span class="landing-mode__cta">Открыть →</span>
             </button>
           </div>
         </section>
 
+        <div class="landing-divider" aria-hidden="true"></div>
+
+        <section class="landing-showcase" aria-labelledby="landing-show-notes">
+          <div class="landing-showcase__art" aria-hidden="true">
+            <div class="landing-art landing-art--notes">
+              <div class="landing-art__glow"></div>
+              <div class="landing-art__staff">
+                <div class="landing-art__lines"></div>
+                <div class="landing-art__clef"><svg viewBox="0 0 24 24"><use href="#ico-treble"/></svg></div>
+                <div class="landing-art__note landing-art__note--a"></div>
+                <div class="landing-art__cursor"></div>
+              </div>
+              <div class="landing-art__keys">
+                <span></span><span></span><span class="is-lit"></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+          <div class="landing-showcase__content">
+            <span class="landing-showcase__tag">Тренажёр</span>
+            <h3 class="landing-showcase__title" id="landing-show-notes">Узнавайте ноты за секунды</h3>
+            <p class="landing-showcase__text">Нотный стан и клавиатура рядом — нажимайте нужную клавишу и сразу видите результат.</p>
+          </div>
+        </section>
+
+        <section class="landing-showcase landing-showcase--reverse" aria-labelledby="landing-show-melody">
+          <div class="landing-showcase__art" aria-hidden="true">
+            <div class="landing-art landing-art--melody">
+              <div class="landing-art__glow landing-art__glow--violet"></div>
+              <div class="landing-art__wave">
+                <svg viewBox="0 0 240 80" preserveAspectRatio="none">
+                  <path d="M0 40 Q30 10 60 40 T120 40 T180 40 T240 40" fill="none" stroke="currentColor" stroke-width="3"/>
+                  <path d="M0 50 Q30 70 60 50 T120 50 T180 50 T240 50" fill="none" stroke="currentColor" stroke-width="2" opacity="0.4"/>
+                </svg>
+              </div>
+              <div class="landing-art__play">
+                <svg viewBox="0 0 24 24"><use href="#ico-volume"/></svg>
+              </div>
+              <div class="landing-art__melody-notes">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+          <div class="landing-showcase__content">
+            <span class="landing-showcase__tag">Мелодии</span>
+            <h3 class="landing-showcase__title" id="landing-show-melody">Играйте любимые песни</h3>
+            <p class="landing-showcase__text">Twinkle, Mario, «К Элизе» и десятки других — с прослушиванием и подсветкой клавиш.</p>
+          </div>
+        </section>
+
+        <section class="landing-showcase" aria-labelledby="landing-show-stats">
+          <div class="landing-showcase__art" aria-hidden="true">
+            <div class="landing-art landing-art--stats">
+              <div class="landing-art__glow landing-art__glow--green"></div>
+              <div class="landing-art__chart">
+                <span style="--h:35%"></span>
+                <span style="--h:55%"></span>
+                <span style="--h:40%"></span>
+                <span style="--h:70%"></span>
+                <span style="--h:60%"></span>
+                <span style="--h:85%"></span>
+                <span style="--h:75%"></span>
+              </div>
+              <div class="landing-art__dots">
+                <span class="is-mastered"></span><span class="is-mastered"></span><span></span>
+                <span class="is-mastered"></span><span></span><span class="is-mastered"></span>
+                <span></span><span class="is-mastered"></span><span></span><span class="is-mastered"></span>
+              </div>
+            </div>
+          </div>
+          <div class="landing-showcase__content">
+            <span class="landing-showcase__tag">Прогресс</span>
+            <h3 class="landing-showcase__title" id="landing-show-stats">Видно, что уже получается</h3>
+            <p class="landing-showcase__text">Карта нот на стане и график занятий — сразу понятно, что повторить сегодня.</p>
+          </div>
+        </section>
+
+        <section class="landing-quickstart" aria-label="Как начать">
+          <div class="landing-quickstart__item">
+            <span class="landing-quickstart__icon icon-badge icon-badge--brand" aria-hidden="true">
+              <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-midi"/></svg>
+            </span>
+            <span class="landing-quickstart__label">Подключите MIDI, микрофон или экран</span>
+          </div>
+          <span class="landing-quickstart__arrow" aria-hidden="true">→</span>
+          <div class="landing-quickstart__item">
+            <span class="landing-quickstart__icon icon-badge icon-badge--notes" aria-hidden="true">
+              <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-notes"/></svg>
+            </span>
+            <span class="landing-quickstart__label">Выберите ноты или мелодию</span>
+          </div>
+          <span class="landing-quickstart__arrow" aria-hidden="true">→</span>
+          <div class="landing-quickstart__item">
+            <span class="landing-quickstart__icon icon-badge icon-badge--melody" aria-hidden="true">
+              <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-play"/></svg>
+            </span>
+            <span class="landing-quickstart__label">Играйте — тренажёр подскажет</span>
+          </div>
+        </section>
+
         <section class="landing-cta" aria-labelledby="landing-cta-title">
-          <div class="landing-cta__card">
-            <h3 class="landing-cta__title" id="landing-cta-title">Готовы сыграть первую ноту?</h3>
-            <p class="landing-cta__text">Начните прямо сейчас — регистрация не обязательна, всё работает бесплатно в браузере.</p>
+          <div class="landing-cta__visual" aria-hidden="true">
+            <svg viewBox="0 0 120 120" class="landing-cta__note">
+              <ellipse cx="38" cy="78" rx="14" ry="10" transform="rotate(-18 38 78)" fill="currentColor"/>
+              <rect x="48" y="28" width="5" height="52" rx="2.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="landing-cta__body">
+            <h3 class="landing-cta__title" id="landing-cta-title">Первая нота — через минуту</h3>
             <button type="button" class="btn btn--primary btn--lg" data-landing-go="notes">
               <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
               Попробовать бесплатно
@@ -368,7 +407,7 @@
             </div>
           </div>
         </div>
-        <p class="roadmap-lead" id="roadmap-lead">Проходите уровни по порядку. В каждом уроке нужно верно сыграть все ноты задания — только они и каждая по разу.</p>
+        <p class="roadmap-lead" id="roadmap-lead">Проходите уровни по порядку: сначала закрепите все ноты уровня, затем сыграйте мелодию — так знания переходят в музыкальную практику.</p>
         <div class="roadmap-guest-hint" id="roadmap-guest-hint" hidden>
           <p>Войдите в аккаунт, чтобы сохранить прогресс на всех устройствах.</p>
           <button type="button" class="btn btn--secondary btn--sm" id="btn-roadmap-login">Войти</button>
@@ -515,6 +554,14 @@
 
       <div class="practice-controls" id="practice-controls" hidden>
         <div class="practice-controls__row">
+          <div class="practice-preview" id="melody-preview-panel" hidden>
+            <button type="button" class="practice-preview__btn" id="btn-preview-melody" aria-pressed="false">
+              <svg class="icon icon--btn practice-preview__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-volume"/></svg>
+              <span class="practice-preview__label">Прослушать</span>
+            </button>
+          </div>
+
+          <div class="practice-controls__settings">
           <div class="keyboard-mode" id="keyboard-visibility-panel">
             <span class="keyboard-mode__label">Клавиатура</span>
             <div class="keyboard-mode__tabs" role="group" aria-label="Видимость клавиатуры">
@@ -537,6 +584,8 @@
               <button type="button" class="keyboard-mode__tab keyboard-mode__tab--active" data-sound="on">Включён</button>
               <button type="button" class="keyboard-mode__tab" data-sound="off">Выключен</button>
             </div>
+          </div>
+
           </div>
         </div>
       </div>
@@ -645,6 +694,7 @@
         <div class="modal__actions">
           <button type="button" class="btn btn--primary" id="btn-modal-retry">Ещё раз</button>
           <button type="button" class="btn btn--primary" id="btn-modal-roadmap-next" hidden>Следующий уровень</button>
+          <button type="button" class="btn btn--primary" id="btn-modal-roadmap-capstone" hidden>Закрепить мелодией</button>
           <button type="button" class="btn btn--secondary" id="btn-modal-roadmap" hidden>К пути обучения</button>
           <button type="button" class="btn btn--secondary" id="btn-modal-pick">Другой урок</button>
           <button type="button" class="btn btn--secondary" id="btn-modal-home">На главную</button>
@@ -732,6 +782,12 @@
     </symbol>
     <symbol id="ico-play" viewBox="0 0 24 24">
       <polygon points="8,5 20,12 8,19" fill="currentColor"/>
+    </symbol>
+    <symbol id="ico-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/>
+    </symbol>
+    <symbol id="ico-stop" viewBox="0 0 24 24">
+      <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor"/>
     </symbol>
     <symbol id="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
       <path d="M5 12l4 4 10-10"/>

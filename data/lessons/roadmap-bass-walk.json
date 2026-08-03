@@ -1,0 +1,25 @@
+{
+  "id": "roadmap-bass-walk",
+  "title": "Прогулка по басу",
+  "composer": "Упражнение",
+  "difficulty": "beginner",
+  "category": "roadmap",
+  "tempo": 96,
+  "twoHands": true,
+  "events": [
+    { "duration": 400, "notes": [{ "midi": 48, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 49, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 51, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 52, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 54, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 56, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 58, "hand": "left" }] },
+    { "duration": 600, "notes": [{ "midi": 59, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 58, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 56, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 54, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 52, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 51, "hand": "left" }] },
+    { "duration": 800, "notes": [{ "midi": 48, "hand": "left" }] }
+  ]
+}

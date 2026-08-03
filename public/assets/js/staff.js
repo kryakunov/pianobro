@@ -37,6 +37,42 @@ function durationToSpacing(duration, baseSpacing, referenceQuarter = 400) {
   return baseSpacing * Math.max(0.55, Math.min(2.4, 0.45 + ratio * 0.55));
 }
 
+function measureBarGap(spacing, scale = 1) {
+  return Math.max(28 * scale, spacing * 0.72);
+}
+
+function layoutEventsOnStaff(events, startX, spacing, referenceQuarter, scale = 1, beatsPerMeasure = 4) {
+  const measureCapacity = beatsPerMeasure * referenceQuarter;
+  const barGap = measureBarGap(spacing, scale);
+  const positions = [];
+  const barXs = [];
+  let x = startX;
+  let accumulated = 0;
+
+  for (let i = 0; i < events.length; i++) {
+    const duration = events[i].duration ?? referenceQuarter;
+
+    if (accumulated === 0 && i > 0) {
+      barXs.push(x + barGap * 0.32);
+      x += barGap;
+    }
+
+    positions.push(x);
+    x += durationToSpacing(duration, spacing, referenceQuarter);
+    accumulated += duration;
+
+    if (accumulated >= measureCapacity - 1e-6) {
+      accumulated = 0;
+    }
+  }
+
+  const lastDuration = events[events.length - 1]?.duration ?? referenceQuarter;
+  const finalBarX = (positions.at(-1) ?? startX)
+    + durationToSpacing(lastDuration, spacing, referenceQuarter) * 0.62;
+
+  return { positions, barXs, finalBarX };
+}
+
 function diatonicSteps(midi) {
   const map = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6];
   return Math.floor(midi / 12) * 7 + map[midi % 12];
@@ -229,23 +265,34 @@ export class StaffView {
     const lineStart = this.metrics.lineStart;
     this.spacing = twoHands ? 40 : 44;
 
-    let x = this.metrics.noteStartX;
-    this.eventPositions = events.map((ev) => {
-      const pos = x;
-      x += durationToSpacing(ev.duration, this.spacing, this.referenceQuarter);
-      return pos;
-    });
+    const layout = layoutEventsOnStaff(
+      events,
+      this.metrics.noteStartX,
+      this.spacing,
+      this.referenceQuarter,
+      this.metrics.scale,
+    );
+    this.eventPositions = layout.positions;
 
-    const contentWidth = x + this.padding;
+    const contentWidth = layout.positions.at(-1)
+      + durationToSpacing(
+        events.at(-1).duration ?? this.referenceQuarter,
+        this.spacing,
+        this.referenceQuarter,
+      )
+      + this.padding;
     const totalWidth = Math.max(viewportW, contentWidth);
     const lineEnd = totalWidth - lineStart;
 
-    this._drawEvents(events, totalWidth, lineStart, lineEnd, twoHands);
+    this._drawEvents(events, totalWidth, lineStart, lineEnd, twoHands, 'treble', {
+      measureBars: layout.barXs,
+      finalBarX: layout.finalBarX,
+    });
     this.scrollEl.style.width = `${totalWidth}px`;
     this._scrollToIndex(0, false);
   }
 
-  _drawEvents(events, totalWidth, lineStart, lineEnd, twoHands, drillClef = 'treble') {
+  _drawEvents(events, totalWidth, lineStart, lineEnd, twoHands, drillClef = 'treble', barOptions = null) {
     const m = this.metrics;
     const svgHeight = m.svgHeight;
     this.svg.setAttribute('width', String(totalWidth));
@@ -272,6 +319,17 @@ export class StaffView {
     } else {
       parts.push(this._clef('treble', m.clefX, m.trebleBottom));
       parts.push(this._staffLines(lineStart, lineEnd, m.trebleBottom, 0));
+    }
+
+    if (barOptions && !this.drillMode) {
+      const minBarX = m.noteStartX + m.lineGap * 0.5;
+      for (const barX of barOptions.measureBars ?? []) {
+        if (barX <= minBarX) continue;
+        parts.push(this._barLine(barX, grandStaff, drillBass, trebleTop, bassTop));
+      }
+      if (barOptions.finalBarX && barOptions.finalBarX > minBarX) {
+        parts.push(this._barLine(barOptions.finalBarX, grandStaff, drillBass, trebleTop, bassTop, { final: true }));
+      }
     }
 
     events.forEach((event, eventIndex) => {
@@ -356,6 +414,31 @@ export class StaffView {
       lines.push(`<line x1="${lineStart}" y1="${y}" x2="${lineEnd}" y2="${y}" class="staff-line"/>`);
     }
     return lines.join('');
+  }
+
+  _barLine(x, grandStaff, drillBass, trebleTop, bassTop, { final = false } = {}) {
+    const m = this.metrics;
+    let yTop;
+    let yBottom;
+
+    if (grandStaff) {
+      yTop = trebleTop;
+      yBottom = m.bassBottom;
+    } else if (drillBass) {
+      yTop = bassTop;
+      yBottom = m.bassBottom;
+    } else {
+      yTop = trebleTop;
+      yBottom = m.trebleBottom;
+    }
+
+    const strokeW = 1.5 * m.scale;
+    const gap = 3.5 * m.scale;
+    const main = `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBottom}" class="staff-bar${final ? ' staff-bar--final' : ''}" stroke-width="${strokeW}"/>`;
+
+    if (!final) return main;
+
+    return `${main}<line x1="${x + gap}" y1="${yTop}" x2="${x + gap}" y2="${yBottom}" class="staff-bar staff-bar--final-thin" stroke-width="${strokeW * 0.85}"/>`;
   }
 
   _ledgerLines(x, y, bottom, top) {

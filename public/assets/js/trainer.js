@@ -10,6 +10,7 @@ export class MelodyTrainer {
     this.results = [];
     this.running = false;
     this.paused = false;
+    this._pausedForPreview = false;
     this._held = new Set();
     this.onUpdate = null;
     this.onComplete = null;
@@ -38,6 +39,7 @@ export class MelodyTrainer {
     this.results = [];
     this.running = false;
     this.paused = false;
+    this._pausedForPreview = false;
     this._held.clear();
     this.piano.clearStates();
     this._emitUpdate();
@@ -52,6 +54,7 @@ export class MelodyTrainer {
     this.results = events.map(() => null);
     this.running = true;
     this.paused = false;
+    this._pausedForPreview = false;
     this._held.clear();
     this._highlightCurrent();
     this._emitUpdate();
@@ -64,6 +67,23 @@ export class MelodyTrainer {
   pause() {
     this.paused = !this.paused;
     if (!this.paused) {
+      this._highlightCurrent();
+    }
+    this._emitUpdate();
+  }
+
+  pauseForPreview() {
+    if (!this.running || this.paused) return;
+    this._pausedForPreview = true;
+    this.paused = true;
+    this._emitUpdate();
+  }
+
+  resumeAfterPreview() {
+    if (!this._pausedForPreview) return;
+    this._pausedForPreview = false;
+    if (this.running) {
+      this.paused = false;
       this._highlightCurrent();
     }
     this._emitUpdate();

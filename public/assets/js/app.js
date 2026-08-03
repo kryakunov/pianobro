@@ -9,7 +9,13 @@ import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
 import { initAuth, getUser, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, mergeGuestNoteStats, loadOAuthProviders, redirectToOAuth } from './auth.js';
 import { icon, iconBadgeColored } from './icons.js';
-import { playTrainerNote, warmupTrainerSound } from './trainer-sounds.js';
+import { playTrainerNote, warmupTrainerSound, unlockTrainerSoundFromGesture } from './trainer-sounds.js';
+import {
+  playMelodyPreview,
+  stopMelodyPreview,
+  isMelodyPreviewPlaying,
+  getMelodyPreviewId,
+} from './melody-preview.js';
 import {
   loadRoadmap,
   buildGuestRoadmapProgress,
@@ -22,6 +28,13 @@ import {
   projectNoteStatsFromAttempts,
   getGuestNoteEntries,
   clearGuestNoteMap,
+  markCapstoneComplete,
+  mergeCapstoneIntoProgress,
+  getCapstoneLabel,
+  meetsCapstoneAccuracy,
+  getStageIncompleteNotes,
+  getCurrentStageIncompleteNotes,
+  enrichNotesForRoadmapDisplay,
 } from './note-roadmap.js';
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 
@@ -80,6 +93,8 @@ const els = {
   notesSettingsError: $('#notes-settings-error'),
   practiceTitle: $('#practice-title'),
   practiceProgress: $('#practice-progress'),
+  melodyPreviewPanel: $('#melody-preview-panel'),
+  btnPreviewMelody: $('#btn-preview-melody'),
   practiceSessionProgress: $('#practice-session-progress'),
   practiceSessionProgressFill: $('#practice-session-progress-fill'),
   inputStatusBanner: $('#input-status-banner'),
@@ -108,6 +123,7 @@ const els = {
   modalSubtitle: $('#modal-subtitle'),
   btnModalRetry: $('#btn-modal-retry'),
   btnModalRoadmapNext: $('#btn-modal-roadmap-next'),
+  btnModalRoadmapCapstone: $('#btn-modal-roadmap-capstone'),
   btnModalRoadmap: $('#btn-modal-roadmap'),
   btnModalPick: $('#btn-modal-pick'),
   btnModalHome: $('#btn-modal-home'),
@@ -120,6 +136,8 @@ let selectedImportedId = null;
 let noteSettings = structuredClone(DEFAULT_NOTE_SETTINGS);
 let currentPracticeTitle = '';
 let lessons = [];
+const lessonCache = new Map();
+let previewUiLessonId = null;
 let remoteSearchResults = [];
 let remoteSearchDone = false;
 let searchQuery = '';
@@ -129,7 +147,10 @@ let lastSessionStats = null;
 let cachedNoteStats = null;
 let cachedRoadmapData = null;
 let activeRoadmapStageId = null;
+let activeRoadmapCapstone = false;
 let lastRoadmapStageCompleted = false;
+let lastRoadmapCapstoneReady = false;
+let practiceReturnScreen = 'home';
 
 const piano = new PianoKeyboard(els.piano, PIANO_START, PIANO_END);
 const midi = new MidiInput();
@@ -202,6 +223,11 @@ function showScreen(name) {
 
   if (name === 'roadmap') {
     renderRoadmapScreen();
+  }
+
+  if (!['melody-pick', 'roadmap', 'practice'].includes(name) && isMelodyPreviewPlaying()) {
+    stopMelodyPreview();
+    handlePreviewStop();
   }
 
   updateInputStatusBanner();
@@ -372,12 +398,18 @@ function showSessionModal(stats) {
 
   const fromRoadmap = Boolean(stats.roadmapStageId);
   const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
+  const capstoneReady = fromRoadmap && lastRoadmapCapstoneReady;
+  const stage = fromRoadmap ? findStage(cachedRoadmapData, stats.roadmapStageId) : null;
+
   if (els.modalSubtitle) {
     if (stageCompleted) {
-      const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
       els.modalSubtitle.textContent = stage
         ? `Уровень «${stage.title}» завершён! +${stage.xp} XP`
         : 'Уровень завершён!';
+    } else if (capstoneReady && stage?.capstone) {
+      els.modalSubtitle.textContent = `Все ноты освоены! Закрепите уровень мелодией «${getCapstoneLabel(stage)}»`;
+    } else if (fromRoadmap && stats.roadmapCapstoneFailed) {
+      els.modalSubtitle.textContent = `Нужна точность от ${stage?.capstone?.minAccuracy ?? 75}% — попробуйте ещё раз`;
     } else {
       const total = stats.total ?? stats.correct;
       els.modalSubtitle.textContent = fromRoadmap && isLoggedIn()
@@ -387,6 +419,12 @@ function showSessionModal(stats) {
   }
 
   if (els.btnModalRoadmap) els.btnModalRoadmap.hidden = !fromRoadmap;
+  if (els.btnModalRoadmapCapstone) {
+    els.btnModalRoadmapCapstone.hidden = !(capstoneReady && stage?.capstone?.lessonId);
+    if (!els.btnModalRoadmapCapstone.hidden) {
+      els.btnModalRoadmapCapstone.textContent = `Закрепить: ${getCapstoneLabel(stage)}`;
+    }
+  }
   if (els.btnModalRoadmapNext) {
     const showNext = stageCompleted && stats.nextRoadmapStage;
     els.btnModalRoadmapNext.hidden = !showNext;
@@ -404,15 +442,25 @@ function refreshSessionModalRoadmap(stats) {
 
   const fromRoadmap = Boolean(stats.roadmapStageId);
   const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
+  const capstoneReady = fromRoadmap && lastRoadmapCapstoneReady;
+  const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
+
   if (els.modalSubtitle) {
     if (stageCompleted) {
-      const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
       els.modalSubtitle.textContent = stage
         ? `Уровень «${stage.title}» завершён! +${stage.xp} XP`
         : 'Уровень завершён!';
+    } else if (capstoneReady && stage?.capstone) {
+      els.modalSubtitle.textContent = `Все ноты освоены! Закрепите уровень мелодией «${getCapstoneLabel(stage)}»`;
     } else {
       const total = stats.total ?? stats.correct;
       els.modalSubtitle.textContent = `Вы прошли ${total} ${pluralNotes(total)}`;
+    }
+  }
+  if (els.btnModalRoadmapCapstone) {
+    els.btnModalRoadmapCapstone.hidden = !(capstoneReady && stage?.capstone?.lessonId);
+    if (!els.btnModalRoadmapCapstone.hidden) {
+      els.btnModalRoadmapCapstone.textContent = `Закрепить: ${getCapstoneLabel(stage)}`;
     }
   }
   if (els.btnModalRoadmapNext) {
@@ -484,6 +532,9 @@ function syncPracticeControls() {
 
   const inPractice = currentScreen === 'practice';
   els.practiceControls.hidden = !inPractice;
+  if (els.melodyPreviewPanel) {
+    els.melodyPreviewPanel.hidden = !(inPractice && appMode === 'melody' && melodyTrainer.lesson);
+  }
   if (!inPractice) return;
 
   syncPracticeSoundPanel();
@@ -492,6 +543,130 @@ function syncPracticeControls() {
   if (els.keyboardHintsPanel) {
     els.keyboardHintsPanel.hidden = false;
   }
+}
+
+function syncPreviewButton() {
+  if (!els.btnPreviewMelody) return;
+
+  const visible = currentScreen === 'practice' && appMode === 'melody' && melodyTrainer.lesson;
+  if (els.melodyPreviewPanel) els.melodyPreviewPanel.hidden = !visible;
+  if (!visible) return;
+
+  const playing = isMelodyPreviewPlaying();
+  els.btnPreviewMelody.classList.toggle('practice-preview__btn--active', playing);
+  els.btnPreviewMelody.setAttribute('aria-pressed', playing ? 'true' : 'false');
+  const label = els.btnPreviewMelody.querySelector('.practice-preview__label');
+  if (label) label.textContent = playing ? 'Стоп' : 'Прослушать';
+  const icon = els.btnPreviewMelody.querySelector('.practice-preview__icon use');
+  if (icon) icon.setAttribute('href', playing ? '#ico-stop' : '#ico-volume');
+}
+
+function updatePreviewUi(activeId = null) {
+  previewUiLessonId = activeId;
+  document.querySelectorAll('[data-preview-lesson]').forEach((btn) => {
+    const playing = activeId !== null && btn.dataset.previewLesson === activeId && isMelodyPreviewPlaying();
+    btn.classList.toggle('lesson-card__preview--active', playing);
+    btn.setAttribute('aria-pressed', playing ? 'true' : 'false');
+    btn.setAttribute('aria-label', playing ? 'Остановить прослушивание' : 'Прослушать мелодию');
+  });
+  syncPreviewButton();
+}
+
+function handlePreviewEvent(state) {
+  if (!state?.event || currentScreen !== 'practice' || appMode !== 'melody') return;
+
+  piano.clearStates(['correct', 'wrong', 'pressed']);
+  piano.setTargets(state.event.notes.map((note) => note.midi), state.event.notes);
+  staffView.update({
+    ...state,
+    results: [],
+    correct: 0,
+    wrong: 0,
+  });
+}
+
+function handlePreviewStop() {
+  piano.clearStates(['target', 'target-left', 'target-right', 'correct', 'wrong', 'pressed']);
+  updatePreviewUi(null);
+  melodyTrainer.resumeAfterPreview();
+
+  if (currentScreen === 'practice' && appMode === 'melody' && melodyTrainer.lesson) {
+    staffView.update({
+      ...melodyTrainer.state,
+      preview: false,
+      events: melodyTrainer.lesson.events,
+    });
+    if (melodyTrainer.running) melodyTrainer.refreshKeyboardHighlight();
+  }
+}
+
+async function fetchLessonById(id) {
+  if (lessonCache.has(id)) return lessonCache.get(id);
+  const lesson = normalizeLesson(await fetchJson(`/api/lessons/${id}`));
+  lessonCache.set(id, lesson);
+  return lesson;
+}
+
+async function previewLessonById(id, { remoteId = null, remoteTitle = '' } = {}) {
+  unlockTrainerSoundFromGesture();
+
+  if (isMelodyPreviewPlaying() && getMelodyPreviewId() === id) {
+    stopMelodyPreview();
+    handlePreviewStop();
+    return;
+  }
+
+  try {
+    let lesson;
+    if (remoteId) {
+      const res = await fetch(`/api/midi/${remoteId}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      lesson = normalizeLesson(await midiToLesson(await res.arrayBuffer(), {
+        id,
+        title: remoteTitle.trim() || 'MIDI мелодия',
+        composer: 'FreeMidi',
+      }));
+    } else {
+      lesson = await fetchLessonById(id);
+    }
+
+    stopMelodyPreview();
+    if (currentScreen === 'practice' && appMode === 'melody' && melodyTrainer.running) {
+      melodyTrainer.pauseForPreview();
+    }
+
+    updatePreviewUi(id);
+    await playMelodyPreview(lesson, {
+      id,
+      onEvent: handlePreviewEvent,
+      onComplete: handlePreviewStop,
+      onStop: handlePreviewStop,
+    });
+  } catch {
+    handlePreviewStop();
+    alert('Не удалось прослушать мелодию');
+  }
+}
+
+function previewCurrentMelody() {
+  if (!melodyTrainer.lesson) return;
+  unlockTrainerSoundFromGesture();
+  const id = selectedLessonId ?? selectedImportedId ?? 'practice-current';
+  if (isMelodyPreviewPlaying() && getMelodyPreviewId() === id) {
+    stopMelodyPreview();
+    handlePreviewStop();
+    return;
+  }
+
+  if (melodyTrainer.running) melodyTrainer.pauseForPreview();
+
+  updatePreviewUi(id);
+  void playMelodyPreview(melodyTrainer.lesson, {
+    id,
+    onEvent: handlePreviewEvent,
+    onComplete: handlePreviewStop,
+    onStop: handlePreviewStop,
+  });
 }
 
 function setTrainerSoundEnabled(enabled) {
@@ -571,7 +746,12 @@ function showNoteDrillStaff(midi, { spelling, clef } = {}) {
   staffView.showDrillNote(midi, { spelling, clef, dualClef });
 }
 
-function enterPractice(mode, title, { keyboardHints: hintsOverride } = {}) {
+function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo } = {}) {
+  if (returnTo) {
+    practiceReturnScreen = returnTo;
+  } else if (currentScreen !== 'practice') {
+    practiceReturnScreen = currentScreen;
+  }
   appMode = mode;
   currentPracticeTitle = title;
   els.practiceTitle.textContent = title;
@@ -610,14 +790,18 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride } = {}) {
         noteTrainer.start();
       }
       setTimeout(() => piano.relayout({ scrollToDefault: true }), 150);
+      syncPreviewButton();
     });
   });
 }
 
 function exitPractice() {
+  stopMelodyPreview();
+  handlePreviewStop();
   melodyTrainer.reset();
   noteTrainer.stop();
   activeRoadmapStageId = null;
+  activeRoadmapCapstone = false;
   staffView.clear();
   els.staffViewport.classList.remove('staff-viewport--grand');
   piano.clearStates();
@@ -627,22 +811,47 @@ function exitPractice() {
   syncPracticeControls();
 }
 
-function onSessionComplete(stats) {
+function leavePractice() {
+  const destination = practiceReturnScreen || 'home';
+  exitPractice();
+  if (destination === 'roadmap') {
+    void openRoadmapScreen();
+  } else {
+    showScreen(destination);
+  }
+}
+
+async function onSessionComplete(stats) {
   if (activeRoadmapStageId && !stats.roadmapStageId) {
     stats.roadmapStageId = activeRoadmapStageId;
   }
 
+  lastRoadmapStageCompleted = false;
+  lastRoadmapCapstoneReady = false;
+  stats.nextRoadmapStage = null;
+
   if (stats.roadmapStageId && stats.mode === 'notes' && stats.attempts?.length) {
     if (!isLoggedIn()) {
       mergeGuestAttempts(stats.attempts);
+    } else if (!cachedNoteStats) {
+      try {
+        cachedNoteStats = await loadNoteStats();
+      } catch {
+        // ignore — ниже используем только попытки текущей сессии
+      }
+    }
+    const projected = isLoggedIn()
+      ? projectNoteStatsFromAttempts(cachedNoteStats, stats.attempts)
+      : null;
+    updateRoadmapProgressFromSession(stats, projected);
+  } else if (stats.roadmapStageId && stats.mode === 'melody' && activeRoadmapCapstone) {
+    const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
+    if (stage && meetsCapstoneAccuracy(stage, stats.accuracy)) {
+      markCapstoneComplete(stats.roadmapStageId);
       updateRoadmapProgressFromSession(stats);
     } else {
-      lastRoadmapStageCompleted = false;
-      stats.nextRoadmapStage = null;
+      stats.roadmapCapstoneFailed = true;
     }
-  } else {
-    lastRoadmapStageCompleted = false;
-    stats.nextRoadmapStage = null;
   }
 
   showSessionModal(stats);
@@ -700,6 +909,7 @@ function updateRoadmapProgressFromSession(stats, noteStats = null) {
     : buildGuestRoadmapProgress(cachedRoadmapData);
   const after = refreshed.stages.find((item) => item.id === stats.roadmapStageId);
   lastRoadmapStageCompleted = Boolean(after?.completed && !before?.completed);
+  lastRoadmapCapstoneReady = Boolean(after?.capstoneReady && !after?.completed);
   stats.nextRoadmapStage = lastRoadmapStageCompleted
     ? getNextStage(cachedRoadmapData, stats.roadmapStageId)
     : null;
@@ -806,6 +1016,10 @@ function setAuthTab(tab) {
 }
 
 function getLearningNotes(notes = []) {
+  if (cachedRoadmapData) {
+    const incomplete = getCurrentStageIncompleteNotes(cachedRoadmapData, { notes });
+    if (incomplete.length) return incomplete;
+  }
   return notes.filter((note) => note.level === 'learning' || note.level === 'needs_practice');
 }
 
@@ -825,6 +1039,13 @@ function renderLearningNotesOffer(notes = []) {
     ? `<span class="stats-practice-cta__tag stats-practice-cta__more">+${rest}</span>`
     : '';
 
+  const stage = cachedRoadmapData
+    ? findStage(cachedRoadmapData, cachedRoadmapData.progress?.currentStageId)
+    : null;
+  const offerText = stage
+    ? `На уровне «${stage.title}» ${learningNotes.length} ${pluralNotes(learningNotes.length)} ещё не дошли до 2 верных подряд — можно потренировать только их.`
+    : `${learningNotes.length} ${pluralNotes(learningNotes.length)} ещё не дошли до 2 верных подряд без ошибки — можно потренировать только их.`;
+
   return `
     <section class="stats-practice-cta" aria-label="Тренировка невыученных нот">
       <div class="stats-practice-cta__head">
@@ -832,7 +1053,7 @@ function renderLearningNotesOffer(notes = []) {
         <h3 class="stats-practice-cta__title">Потренировать невыученные ноты</h3>
       </div>
       <p class="stats-practice-cta__text">
-        ${learningNotes.length} ${pluralNotes(learningNotes.length)} ещё не дошли до 2 верных подряд без ошибки — можно потренировать только их.
+        ${offerText}
       </p>
       <div class="stats-practice-cta__tags">${tags}${moreTag}</div>
       <button type="button" class="btn btn--primary btn--sm" id="btn-stats-practice-learning">
@@ -855,7 +1076,7 @@ function startLearningNotesTraining(notes) {
   noteTrainer.setOptions(options);
   noteTrainer.sessionLimit = DEFAULT_NOTE_SESSION_LIMIT;
   noteSettings = noteTrainer.settings;
-  enterPractice('notes', 'Ноты в процессе');
+  enterPractice('notes', 'Ноты в процессе', { returnTo: 'stats' });
 }
 
 function bindStatsPanelActions(notes) {
@@ -935,12 +1156,13 @@ function renderStatsPanel(data) {
   }
 
   const { notes, dailyProgress } = data;
-  const staffHtml = renderStatsStaffInfographic(notes);
+  const displayNotes = enrichNotesForRoadmapDisplay(notes, cachedRoadmapData);
+  const staffHtml = renderStatsStaffInfographic(displayNotes);
   const offerHtml = renderLearningNotesOffer(notes);
   const chartHtml = renderStatsChart(dailyProgress);
 
   els.statsPanel.innerHTML = staffHtml + offerHtml + chartHtml;
-  mountStatsStaffChart(els.statsPanel, notes);
+  mountStatsStaffChart(els.statsPanel, displayNotes);
   bindStatsPanelActions(notes);
 }
 
@@ -954,8 +1176,8 @@ async function openStatsScreen() {
   try {
     const data = await loadNoteStats();
     cachedNoteStats = data;
-    renderStatsPanel(data);
     await refreshRoadmapData(data);
+    renderStatsPanel(data);
   } catch {
     els.statsPanel.innerHTML = '<p class="loading">Не удалось загрузить статистику</p>';
   }
@@ -1030,21 +1252,26 @@ function lessonCardHtml(lesson, { remote = false } = {}) {
   if (lesson.noteCount) metaParts.push(`${lesson.noteCount} нот`);
   if (remote) metaParts.push('из интернета');
 
-  const classes = ['lesson-card'];
-  if (remote) classes.push('lesson-card--remote');
-  if (lesson.category === 'popular') classes.push('lesson-card--popular');
-
   return `
-    <button type="button" class="${classes.join(' ')}"
-            data-id="${escapeHtml(lesson.id)}"
-            ${remote ? `data-remote-id="${lesson.remoteId}"` : ''}>
-      <span class="lesson-card__icon icon-badge icon-badge--melody" aria-hidden="true">${icon('melody', 'icon icon--badge')}</span>
-      <span class="lesson-card__body">
-        <span class="lesson-card__title">${escapeHtml(lesson.title)}</span>
-        <span class="lesson-card__meta">${escapeHtml(metaParts.join(' · '))}</span>
-      </span>
-      <span class="lesson-card__play" aria-hidden="true">${icon('play', 'icon icon--sm')}</span>
-    </button>
+    <article class="lesson-card-wrap">
+      <button type="button"
+              class="lesson-card__preview"
+              data-preview-lesson="${escapeHtml(lesson.id)}"
+              ${remote ? `data-preview-remote-id="${lesson.remoteId}"` : ''}
+              aria-label="Прослушать мелодию">
+        ${icon('volume', 'icon icon--sm')}
+      </button>
+      <button type="button" class="lesson-card ${remote ? 'lesson-card--remote' : ''}${lesson.category === 'popular' ? ' lesson-card--popular' : ''}"
+              data-id="${escapeHtml(lesson.id)}"
+              ${remote ? `data-remote-id="${lesson.remoteId}"` : ''}>
+        <span class="lesson-card__icon icon-badge icon-badge--melody" aria-hidden="true">${icon('melody', 'icon icon--badge')}</span>
+        <span class="lesson-card__body">
+          <span class="lesson-card__title">${escapeHtml(lesson.title)}</span>
+          <span class="lesson-card__meta">${escapeHtml(metaParts.join(' · '))}</span>
+        </span>
+        <span class="lesson-card__play" aria-hidden="true">${icon('play', 'icon icon--sm')}</span>
+      </button>
+    </article>
   `;
 }
 
@@ -1094,14 +1321,28 @@ function renderLessonList() {
   }
 
   els.lessonList.innerHTML = parts.join('');
+  updatePreviewUi(previewUiLessonId);
 
   els.lessonList.querySelectorAll('.lesson-card').forEach((card) => {
     card.addEventListener('click', () => {
+      stopMelodyPreview();
+      handlePreviewStop();
       if (card.dataset.remoteId) {
         loadRemoteMidi(Number(card.dataset.remoteId), card.querySelector('.lesson-card__title')?.textContent ?? '');
       } else {
         selectLesson(card.dataset.id);
       }
+    });
+  });
+
+  els.lessonList.querySelectorAll('[data-preview-lesson]').forEach((btn) => {
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void previewLessonById(btn.dataset.previewLesson, {
+        remoteId: btn.dataset.previewRemoteId ? Number(btn.dataset.previewRemoteId) : null,
+        remoteTitle: btn.closest('.lesson-card-wrap')?.querySelector('.lesson-card__title')?.textContent ?? '',
+      });
     });
   });
 }
@@ -1139,9 +1380,11 @@ async function runMelodySearch(query) {
 
 let searchDebounceTimer = null;
 
-function loadMelodyLesson(lesson, { activeId = null } = {}) {
+function loadMelodyLesson(lesson, { activeId = null, title = null, sessionLimit = SESSION_LIMIT, returnTo } = {}) {
+  stopMelodyPreview();
+  handlePreviewStop();
   const normalized = normalizeLesson(lesson);
-  melodyTrainer.loadLesson(normalized, { sessionLimit: SESSION_LIMIT });
+  melodyTrainer.loadLesson(normalized, { sessionLimit });
   noteTrainer.sessionLimit = SESSION_LIMIT;
 
   if (activeId?.startsWith('remote-')) {
@@ -1152,7 +1395,7 @@ function loadMelodyLesson(lesson, { activeId = null } = {}) {
     selectedImportedId = null;
   }
 
-  enterPractice('melody', normalized.title);
+  enterPractice('melody', title ?? normalized.title, { returnTo });
 }
 
 async function loadRemoteMidi(remoteId, title) {
@@ -1273,7 +1516,9 @@ async function refreshRoadmapData(noteStats = null) {
         cachedNoteStats = await loadNoteStats();
         data.progress = buildRoadmapProgressFromStats(data, cachedNoteStats);
       } catch {
-        // Оставляем progress с сервера (/api/roadmap), без гостевого fallback.
+        if (data.progress) {
+          data.progress = mergeCapstoneIntoProgress(data, data.progress);
+        }
       }
     }
     cachedRoadmapData = data;
@@ -1329,7 +1574,9 @@ function renderRoadmapScreen() {
     const stateClass = item.completed
       ? 'roadmap-stage--completed'
       : isCurrent
-        ? 'roadmap-stage--current'
+        ? item.capstoneReady
+          ? 'roadmap-stage--current roadmap-stage--capstone-ready'
+          : 'roadmap-stage--current'
         : item.unlocked
           ? 'roadmap-stage--active'
           : 'roadmap-stage--locked';
@@ -1341,13 +1588,45 @@ function renderRoadmapScreen() {
       ? `<span class="roadmap-stage__status roadmap-stage__status--done">✓ Пройдено · ${item.masteredNotes}/${item.poolSize} нот</span>`
       : isLocked
         ? '<span class="roadmap-stage__status roadmap-stage__status--locked">🔒 Закрыто</span>'
-        : `<span class="roadmap-stage__progress-text"><strong>${item.progress}%</strong> · ${item.masteredNotes}/${item.poolSize} нот</span>`;
+        : item.capstoneReady
+          ? `<span class="roadmap-stage__status roadmap-stage__status--capstone">Шаг 2 из 2 · ноты освоены, осталось сыграть мелодию</span>`
+          : `<span class="roadmap-stage__progress-text"><strong>${item.progress}%</strong> · ${item.masteredNotes}/${item.poolSize} нот</span>`;
 
-    const action = item.completed
-      ? `<button type="button" class="btn btn--secondary btn--sm" data-roadmap-play="${stage.id}">Повторить</button>`
-      : item.unlocked
-        ? `<button type="button" class="btn btn--primary btn--sm" data-roadmap-play="${stage.id}">${isCurrent ? 'Продолжить' : 'Начать'} · ${item.poolSize} нот</button>`
-        : '<span class="roadmap-stage__lock">🔒 Пройдите предыдущий уровень</span>';
+    const incompleteNotes = !isLocked && !item.notesComplete
+      ? getStageIncompleteNotes(stage, cachedNoteStats)
+      : [];
+    const remainingHtml = incompleteNotes.length
+      ? `<p class="roadmap-stage__remaining">Осталось: ${incompleteNotes.map((note) => escapeHtml(note.name)).join(', ')}</p>`
+      : '';
+
+    const capstoneBlock = stage.capstone?.lessonId && !isLocked
+      ? `<div class="roadmap-stage__capstone${item.capstoneReady ? ' roadmap-stage__capstone--next' : ''}">
+          <span class="roadmap-stage__capstone-label">${item.capstoneReady ? '▶ Следующий шаг' : '🎼 Закрепление:'}</span>
+          <span class="roadmap-stage__capstone-title">${getCapstoneLabel(stage)}</span>
+          ${item.capstoneComplete ? '<span class="roadmap-stage__capstone-done">✓</span>' : ''}
+          <button type="button" class="roadmap-stage__capstone-preview" data-roadmap-preview="${stage.capstone.lessonId}" aria-label="Прослушать мелодию">
+            ${icon('volume', 'icon icon--sm')}
+          </button>
+        </div>`
+      : '';
+
+    let actions = '';
+    if (item.completed) {
+      actions = `<button type="button" class="btn btn--secondary btn--sm" data-roadmap-play="${stage.id}">Повторить ноты</button>`;
+      if (stage.capstone?.lessonId) {
+        actions += `<button type="button" class="btn btn--secondary btn--sm" data-roadmap-melody="${stage.id}">Мелодия</button>`;
+      }
+    } else if (item.unlocked) {
+      if (item.capstoneReady && stage.capstone?.lessonId) {
+        actions = `<button type="button" class="btn btn--primary btn--sm" data-roadmap-melody="${stage.id}">Сыграть мелодию · завершить уровень</button>`;
+        actions += `<button type="button" class="btn btn--secondary btn--sm" data-roadmap-play="${stage.id}">Повторить ноты</button>`;
+      } else {
+        const notesLabel = isCurrent ? 'Продолжить' : 'Начать';
+        actions = `<button type="button" class="btn btn--primary btn--sm" data-roadmap-play="${stage.id}">${notesLabel} · ${item.poolSize} нот</button>`;
+      }
+    } else {
+      actions = '<span class="roadmap-stage__lock">🔒 Пройдите предыдущий уровень</span>';
+    }
 
     return `
       <article class="roadmap-stage ${stateClass}">
@@ -1367,11 +1646,13 @@ function renderRoadmapScreen() {
             <span class="roadmap-stage__xp">+${stage.xp} XP</span>
           </div>
           <p class="roadmap-stage__desc">${stage.description ?? ''}</p>
+          ${capstoneBlock}
           <div class="roadmap-stage__meta">${status}</div>
+          ${remainingHtml}
           <div class="roadmap-stage__bar" aria-hidden="true">
             <div class="roadmap-stage__bar-fill" style="width: ${displayProgress}%"></div>
           </div>
-          <div class="roadmap-stage__actions">${action}</div>
+          <div class="roadmap-stage__actions">${actions}</div>
         </div>
       </article>
     `;
@@ -1380,10 +1661,19 @@ function renderRoadmapScreen() {
   els.roadmapPath.querySelectorAll('[data-roadmap-play]').forEach((btn) => {
     btn.addEventListener('click', () => startRoadmapStage(btn.dataset.roadmapPlay));
   });
+  els.roadmapPath.querySelectorAll('[data-roadmap-melody]').forEach((btn) => {
+    btn.addEventListener('click', () => startRoadmapMelody(btn.dataset.roadmapMelody));
+  });
+  els.roadmapPath.querySelectorAll('[data-roadmap-preview]').forEach((btn) => {
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void previewLessonById(btn.dataset.roadmapPreview);
+    });
+  });
 }
 
 async function openRoadmapScreen() {
-  showScreen('roadmap');
   if (isLoggedIn()) {
     try {
       cachedNoteStats = await loadNoteStats();
@@ -1391,7 +1681,8 @@ async function openRoadmapScreen() {
       cachedNoteStats = null;
     }
   }
-  return refreshRoadmapData(cachedNoteStats);
+  await refreshRoadmapData(cachedNoteStats);
+  showScreen('roadmap');
 }
 
 async function startRoadmapStage(stageId) {
@@ -1408,12 +1699,44 @@ async function startRoadmapStage(stageId) {
   if (!pool.length) return;
 
   activeRoadmapStageId = stageId;
+  activeRoadmapCapstone = false;
   const options = readTrainerOptionsFromPrefs();
   saveTrainerPrefs(options);
   noteSettings = stage.settings;
   noteTrainer.setCustomPool(pool, { coverAll: true });
   noteTrainer.setOptions(options);
-  enterPractice('notes', `Путь: ${stage.title}`, { keyboardHints: false });
+  enterPractice('notes', `Путь: ${stage.title}`, { keyboardHints: false, returnTo: 'roadmap' });
+}
+
+async function startRoadmapMelody(stageId) {
+  const stage = findStage(cachedRoadmapData, stageId);
+  const progress = findStageProgress(cachedRoadmapData, stageId);
+  if (!stage?.capstone?.lessonId) return;
+  if (progress && !progress.unlocked && !progress.completed) return;
+  if (!progress?.notesComplete && !progress?.completed) return;
+
+  if (!cachedRoadmapData) {
+    await refreshRoadmapData(cachedNoteStats);
+  }
+
+  try {
+    const res = await fetch(`/api/lessons/${stage.capstone.lessonId}`, { credentials: 'same-origin' });
+    const lesson = await res.json();
+    if (!res.ok) throw new Error(lesson.error || `HTTP ${res.status}`);
+
+    activeRoadmapStageId = stageId;
+    activeRoadmapCapstone = true;
+    selectedLessonId = stage.capstone.lessonId;
+    selectedImportedId = null;
+    loadMelodyLesson(lesson, {
+      activeId: stage.capstone.lessonId,
+      title: `Закрепление: ${getCapstoneLabel(stage)}`,
+      sessionLimit: null,
+      returnTo: 'roadmap',
+    });
+  } catch {
+    alert('Не удалось загрузить мелодию для закрепления.');
+  }
 }
 
 function startNotesTraining() {
@@ -1434,13 +1757,13 @@ function startNotesTraining() {
   noteTrainer.setConfig(settings);
   noteTrainer.setOptions(options);
   noteTrainer.sessionLimit = readSessionLimitFromForm();
-  enterPractice('notes', describeNoteSettings(settings, options));
+  enterPractice('notes', describeNoteSettings(settings, options), { returnTo: 'notes-pick' });
 }
 
 async function selectLesson(id) {
   try {
     const lesson = normalizeLesson(await fetchJson(`/api/lessons/${id}`));
-    loadMelodyLesson(lesson, { activeId: id });
+    loadMelodyLesson(lesson, { activeId: id, returnTo: 'melody-pick' });
   } catch {
     alert('Не удалось загрузить урок');
   }
@@ -1528,7 +1851,12 @@ melodyTrainer.onUpdate = (state) => {
   if (appMode === 'melody' && currentScreen === 'practice') updateMelodyUI(state);
 };
 melodyTrainer.onFeedback = showFeedback;
-melodyTrainer.onComplete = onSessionComplete;
+melodyTrainer.onComplete = (stats) => {
+  if (activeRoadmapStageId) {
+    stats.roadmapStageId = activeRoadmapStageId;
+  }
+  onSessionComplete(stats);
+};
 
 noteTrainer.onUpdate = (state) => {
   if (appMode === 'notes' && currentScreen === 'practice') updateNoteUI(state);
@@ -1668,8 +1996,12 @@ els.btnBackMelody?.addEventListener('click', () => showScreen('home'));
 els.btnBackNotes?.addEventListener('click', () => showScreen('home'));
 
 els.btnBackPractice?.addEventListener('click', () => {
-  exitPractice();
-  showScreen(appMode === 'melody' ? 'melody-pick' : 'notes-pick');
+  leavePractice();
+});
+
+els.btnPreviewMelody?.addEventListener('click', () => {
+  unlockTrainerSoundFromGesture();
+  previewCurrentMelody();
 });
 
 els.melodySearch?.addEventListener('input', () => {
@@ -1717,8 +2049,7 @@ els.btnModalRetry.addEventListener('click', () => {
 });
 
 els.btnModalPick.addEventListener('click', () => {
-  exitPractice();
-  showScreen(appMode === 'melody' ? 'melody-pick' : 'notes-pick');
+  leavePractice();
 });
 
 els.btnModalRoadmap?.addEventListener('click', () => {
@@ -1735,6 +2066,13 @@ els.btnModalRoadmapNext?.addEventListener('click', () => {
     await openRoadmapScreen();
     if (nextStage) startRoadmapStage(nextStage.id);
   })();
+});
+
+els.btnModalRoadmapCapstone?.addEventListener('click', () => {
+  const stageId = lastSessionStats?.roadmapStageId;
+  hideSessionModal();
+  exitPractice();
+  if (stageId) void startRoadmapMelody(stageId);
 });
 
 els.btnModalHome.addEventListener('click', () => {

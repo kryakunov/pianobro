@@ -2,49 +2,59 @@
   "ranks": [
     { "minXp": 0, "title": "Новичок", "emoji": "🌱" },
     { "minXp": 100, "title": "Ученик", "emoji": "📖" },
-    { "minXp": 300, "title": "Пианист", "emoji": "🎹" },
-    { "minXp": 600, "title": "Виртуоз", "emoji": "⭐" },
-    { "minXp": 800, "title": "Мастер нот", "emoji": "🏆" }
+    { "minXp": 350, "title": "Пианист", "emoji": "🎹" },
+    { "minXp": 650, "title": "Виртуоз", "emoji": "⭐" },
+    { "minXp": 900, "title": "Мастер нот", "emoji": "🏆" }
   ],
   "stages": [
     {
       "id": "stage-1",
       "order": 1,
       "title": "Белые ноты",
-      "subtitle": "Первая октава",
-      "description": "7 белых нот от До до Си на скрипичном ключе — только они, каждая по разу.",
+      "subtitle": "Первая октава · скрипичный ключ",
+      "description": "Семь белых клавиш от До до Си — основа чтения нот. Учимся узнавать каждую ноту на нотном стане и находить её на клавиатуре.",
       "badge": "1",
       "emoji": "🎵",
-      "xp": 100,
+      "xp": 80,
       "poolMode": "natural",
       "settings": {
         "treble": { "enabled": true, "first": true, "second": false },
         "bass": { "enabled": false, "small": false, "great": false },
         "alteration": { "sharp": false, "flat": false }
+      },
+      "capstone": {
+        "lessonId": "mary-lamb",
+        "title": "«Mary Had a Little Lamb»",
+        "minAccuracy": 75
       }
     },
     {
       "id": "stage-2",
       "order": 2,
-      "title": "Чёрные клавиши",
-      "subtitle": "Первая октава",
-      "description": "5 чёрных клавиш первой октавы — диезы и бемоли, без белых нот.",
+      "title": "Хроматика",
+      "subtitle": "Первая октава · все 12 нот",
+      "description": "Добавляем чёрные клавиши к уже знакомым белым — теперь вся первая октава. Диезы и бемоли встречаются в реальной музыке рядом с «белыми» соседями.",
       "badge": "2",
       "emoji": "♯",
       "xp": 100,
-      "poolMode": "chromatic",
+      "poolMode": "all",
       "settings": {
         "treble": { "enabled": true, "first": true, "second": false },
         "bass": { "enabled": false, "small": false, "great": false },
         "alteration": { "sharp": true, "flat": true }
+      },
+      "capstone": {
+        "lessonId": "twinkle",
+        "title": "«Twinkle Twinkle Little Star»",
+        "minAccuracy": 75
       }
     },
     {
       "id": "stage-3",
       "order": 3,
       "title": "Вторая октава",
-      "subtitle": "Скрипичный ключ",
-      "description": "7 белых нот второй октавы — только они, без нот из других октав.",
+      "subtitle": "Скрипичный ключ · выше",
+      "description": "Расширяем диапазон вверх — те же белые ноты, но на октаву выше. Закрепляем ориентиры: До второй октавы и соседние ступени.",
       "badge": "3",
       "emoji": "⬆️",
       "xp": 100,
@@ -53,54 +63,74 @@
         "treble": { "enabled": true, "first": false, "second": true },
         "bass": { "enabled": false, "small": false, "great": false },
         "alteration": { "sharp": false, "flat": false }
+      },
+      "capstone": {
+        "lessonId": "mario",
+        "title": "«Super Mario»",
+        "minAccuracy": 75
       }
     },
     {
       "id": "stage-4",
       "order": 4,
       "title": "Две октавы",
-      "subtitle": "Скрипичный ключ",
-      "description": "14 белых нот первой и второй октав — все по очереди, без диезов и бемолей.",
+      "subtitle": "Скрипичный ключ · 14 нот",
+      "description": "Объединяем первую и вторую октавы — 14 белых нот подряд. Учимся быстро переключаться между регистрами без «потери» ноты на стане.",
       "badge": "4",
       "emoji": "🎼",
-      "xp": 150,
+      "xp": 130,
       "poolMode": "natural",
       "settings": {
         "treble": { "enabled": true, "first": true, "second": true },
         "bass": { "enabled": false, "small": false, "great": false },
         "alteration": { "sharp": false, "flat": false }
+      },
+      "capstone": {
+        "lessonId": "william-tell",
+        "title": "«Увертюра „Вильгельм Телль“»",
+        "minAccuracy": 75
       }
     },
     {
       "id": "stage-5",
       "order": 5,
       "title": "Басовый ключ",
-      "subtitle": "Малая октава",
-      "description": "7 белых нот малой октавы в басовом ключе — только они.",
+      "subtitle": "Малая октава · белые ноты",
+      "description": "Знакомимся с басовым ключе — те же 7 белых нот, но ниже центрального До. Это фундамент для аккомпанемента и двухручной игры.",
       "badge": "5",
       "emoji": "𝄢",
-      "xp": 150,
+      "xp": 130,
       "poolMode": "natural",
       "settings": {
         "treble": { "enabled": false, "first": false, "second": false },
         "bass": { "enabled": true, "small": true, "great": false },
         "alteration": { "sharp": false, "flat": false }
+      },
+      "capstone": {
+        "lessonId": "roadmap-bass-scale",
+        "title": "«Гамма в басовом ключе»",
+        "minAccuracy": 75
       }
     },
     {
       "id": "stage-6",
       "order": 6,
-      "title": "Бас: чёрные клавиши",
-      "subtitle": "Малая октава",
-      "description": "5 чёрных клавиш малой октавы в басовом ключе — только диезы и бемоли.",
+      "title": "Бас: хроматика",
+      "subtitle": "Малая октава · все 12 нот",
+      "description": "Чёрные клавиши в басовом ключе — завершаем малую октаву. Теперь уверенно читаем любую ноту в нижнем регистре.",
       "badge": "6",
       "emoji": "♭",
-      "xp": 150,
-      "poolMode": "chromatic",
+      "xp": 130,
+      "poolMode": "all",
       "settings": {
         "treble": { "enabled": false, "first": false, "second": false },
         "bass": { "enabled": true, "small": true, "great": false },
         "alteration": { "sharp": true, "flat": true }
+      },
+      "capstone": {
+        "lessonId": "roadmap-bass-walk",
+        "title": "«Прогулка по басу»",
+        "minAccuracy": 75
       }
     },
     {
@@ -108,15 +138,20 @@
       "order": 7,
       "title": "Оба ключа",
       "subtitle": "Скрипичный + бас",
-      "description": "14 белых нот: первая октава скрипичного и малая октава басового — только они.",
+      "description": "Сочетаем первую октаву скрипичного ключа и малую октаву басового — 14 белых нот в двух ключах. Готовимся к полноценному чтению партитуры.",
       "badge": "7",
       "emoji": "🎹",
-      "xp": 200,
+      "xp": 180,
       "poolMode": "natural",
       "settings": {
         "treble": { "enabled": true, "first": true, "second": false },
         "bass": { "enabled": true, "small": true, "great": false },
         "alteration": { "sharp": false, "flat": false }
+      },
+      "capstone": {
+        "lessonId": "roadmap-grand-dialogue",
+        "title": "«Диалог двух ключей»",
+        "minAccuracy": 75
       }
     },
     {
@@ -124,7 +159,7 @@
       "order": 8,
       "title": "Полный диапазон",
       "subtitle": "Финальный уровень",
-      "description": "Все 48 нот во всех октавах — белые и чёрные, оба ключа.",
+      "description": "Все 48 нот во всех октавах — белые и чёрные, оба ключа. Финальная проверка перед свободной игрой по любым мелодиям.",
       "badge": "8",
       "emoji": "🏆",
       "xp": 250,
@@ -133,6 +168,11 @@
         "treble": { "enabled": true, "first": true, "second": true },
         "bass": { "enabled": true, "small": true, "great": true },
         "alteration": { "sharp": true, "flat": true }
+      },
+      "capstone": {
+        "lessonId": "fur-elise",
+        "title": "«К Элизе» (фрагмент)",
+        "minAccuracy": 70
       }
     }
   ]

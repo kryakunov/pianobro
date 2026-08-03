@@ -55,3 +55,11 @@ export async function warmupTrainerSound() {
     /* ignore */
   }
 }
+
+export function stopTrainerSound() {
+  try {
+    synth.stopAll();
+  } catch {
+    /* ignore */
+  }
+}

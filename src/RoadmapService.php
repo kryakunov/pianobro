@@ -36,6 +36,10 @@ final class RoadmapService
         'id' => $stage['id'],
         'progress' => $progress['progress'],
         'completed' => $progress['completed'],
+        'notesComplete' => $progress['notesComplete'],
+        'capstoneComplete' => $progress['capstoneComplete'],
+        'capstoneReady' => $progress['capstoneReady'],
+        'hasCapstone' => $progress['hasCapstone'],
         'unlocked' => $unlocked,
         'masteredNotes' => $progress['masteredNotes'],
         'poolSize' => $progress['poolSize'],
@@ -99,6 +103,10 @@ final class RoadmapService
    * @return array{
    *   progress:int,
    *   completed:bool,
+   *   notesComplete:bool,
+   *   capstoneComplete:bool,
+   *   capstoneReady:bool,
+   *   hasCapstone:bool,
    *   masteredNotes:int,
    *   poolSize:int,
    *   inProgressNotes:int
@@ -110,11 +118,16 @@ final class RoadmapService
     $poolMode = isset($stage['poolMode']) ? (string) $stage['poolMode'] : null;
     $pool = NotePool::fromSettings(is_array($settings) ? $settings : [], $poolMode);
     $poolSize = count($pool);
+    $hasCapstone = isset($stage['capstone']['lessonId']);
 
     if ($poolSize === 0) {
       return [
         'progress' => 0,
         'completed' => false,
+        'notesComplete' => false,
+        'capstoneComplete' => false,
+        'capstoneReady' => false,
+        'hasCapstone' => $hasCapstone,
         'masteredNotes' => 0,
         'poolSize' => 0,
         'inProgressNotes' => 0,
@@ -137,11 +150,28 @@ final class RoadmapService
       }
     }
 
-    $progress = (int) round($sum / $poolSize);
+    $notesProgress = (int) round($sum / $poolSize);
+    $notesComplete = $masteredNotes === $poolSize;
+    $capstoneComplete = false;
+    $capstoneReady = $notesComplete && $hasCapstone;
+
+    if ($notesComplete && !$hasCapstone) {
+      $progress = 100;
+    } elseif ($notesComplete && $hasCapstone) {
+      $progress = 90;
+    } elseif ($hasCapstone) {
+      $progress = (int) round($notesProgress * 0.9);
+    } else {
+      $progress = $notesProgress;
+    }
 
     return [
       'progress' => $progress,
-      'completed' => $poolSize > 0 && $masteredNotes === $poolSize,
+      'completed' => $notesComplete && !$hasCapstone,
+      'notesComplete' => $notesComplete,
+      'capstoneComplete' => $capstoneComplete,
+      'capstoneReady' => $capstoneReady,
+      'hasCapstone' => $hasCapstone,
       'masteredNotes' => $masteredNotes,
       'poolSize' => $poolSize,
       'inProgressNotes' => $inProgressNotes,

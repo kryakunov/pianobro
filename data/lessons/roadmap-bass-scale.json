@@ -1,0 +1,24 @@
+{
+  "id": "roadmap-bass-scale",
+  "title": "Гамма в басовом ключе",
+  "composer": "Упражнение",
+  "difficulty": "beginner",
+  "category": "roadmap",
+  "tempo": 88,
+  "twoHands": true,
+  "events": [
+    { "duration": 400, "notes": [{ "midi": 48, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 50, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 52, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 53, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 55, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 57, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 59, "hand": "left" }] },
+    { "duration": 600, "notes": [{ "midi": 57, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 55, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 53, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 52, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 50, "hand": "left" }] },
+    { "duration": 800, "notes": [{ "midi": 48, "hand": "left" }] }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "roadmap-grand-dialogue",
+  "title": "Диалог двух ключей",
+  "composer": "Упражнение",
+  "difficulty": "beginner",
+  "category": "roadmap",
+  "tempo": 100,
+  "twoHands": true,
+  "events": [
+    { "duration": 400, "notes": [{ "midi": 48, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 60, "hand": "right" }] },
+    { "duration": 400, "notes": [{ "midi": 52, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 64, "hand": "right" }] },
+    { "duration": 400, "notes": [{ "midi": 55, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 67, "hand": "right" }] },
+    { "duration": 400, "notes": [{ "midi": 57, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 69, "hand": "right" }] },
+    { "duration": 400, "notes": [{ "midi": 59, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 71, "hand": "right" }] },
+    { "duration": 400, "notes": [{ "midi": 57, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 69, "hand": "right" }] },
+    { "duration": 400, "notes": [{ "midi": 55, "hand": "left" }] },
+    { "duration": 400, "notes": [{ "midi": 67, "hand": "right" }] },
+    { "duration": 400, "notes": [{ "midi": 52, "hand": "left" }] },
+    { "duration": 800, "notes": [{ "midi": 64, "hand": "right" }] }
+  ]
+}

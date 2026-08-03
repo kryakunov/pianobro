@@ -20,11 +20,18 @@ export const STATS_LEVEL_META = {
     hint: 'Ещё нет 2 верных подряд — продолжайте тренировку',
     className: 'learning',
   },
+  not_started: {
+    color: '#94a3b8',
+    label: 'Ещё не тренировали',
+    hint: 'Нота входит в текущий уровень пути, но вы её ещё не пробовали',
+    className: 'not-started',
+  },
 };
 
 export const DEFAULT_STATS_STAFF_VISIBILITY = {
   mastered: true,
   learning: true,
+  not_started: true,
 };
 
 export const STATS_STAFF_MODES = {
@@ -121,8 +128,7 @@ function renderNoteHead(midi, x, metrics, statsByMidi) {
   if (!stat) return '';
 
   const level = stat.level === 'needs_practice' ? 'learning' : stat.level;
-  const meta = STATS_LEVEL_META[level];
-  if (!meta) return '';
+  const meta = STATS_LEVEL_META[level] ?? STATS_LEVEL_META.learning;
 
   const { y, clef } = resolveGrandStaffNote(midi, metrics);
   const tooltip = escapeXml(noteTooltip(midi, statsByMidi));
