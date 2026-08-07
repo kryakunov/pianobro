@@ -1167,11 +1167,11 @@ function renderStatsPanel(data) {
 }
 
 async function openStatsScreen() {
+  showScreen('stats');
   if (!isLoggedIn()) {
-    openAuthModal('login');
+    renderStatsPanel(null);
     return;
   }
-  showScreen('stats');
   els.statsPanel.innerHTML = '<p class="loading">Загрузка статистики…</p>';
   try {
     const data = await loadNoteStats();
@@ -1180,6 +1180,15 @@ async function openStatsScreen() {
     renderStatsPanel(data);
   } catch {
     els.statsPanel.innerHTML = '<p class="loading">Не удалось загрузить статистику</p>';
+  }
+}
+
+async function afterAuthSuccess() {
+  updateAuthUI();
+  await syncGuestProgressAfterAuth();
+  closeAuthModal();
+  if (window.location.pathname === ROUTES.stats) {
+    await openStatsScreen();
   }
 }
 
@@ -2040,9 +2049,7 @@ els.authFormLogin?.addEventListener('submit', async (e) => {
   els.authErrorLogin.hidden = true;
   try {
     await login(form.get('email'), form.get('password'));
-    updateAuthUI();
-    await syncGuestProgressAfterAuth();
-    closeAuthModal();
+    await afterAuthSuccess();
   } catch (err) {
     els.authErrorLogin.textContent = err.message;
     els.authErrorLogin.hidden = false;
@@ -2074,9 +2081,7 @@ els.authFormRegister?.addEventListener('submit', async (e) => {
       passwordConfirm,
       form.get('website'),
     );
-    updateAuthUI();
-    await syncGuestProgressAfterAuth();
-    closeAuthModal();
+    await afterAuthSuccess();
   } catch (err) {
     els.authErrorRegister.textContent = err.message;
     els.authErrorRegister.hidden = false;
@@ -2244,6 +2249,7 @@ handleOAuthRedirect();
 initAuth().then(async () => {
   updateAuthUI();
   await syncGuestProgressAfterAuth();
+  await bootApp();
 });
 applyNoteSettingsToForm(DEFAULT_NOTE_SETTINGS);
 applySessionLimitToForm(DEFAULT_NOTE_SESSION_LIMIT);
@@ -2256,7 +2262,6 @@ noteTrainer.showKeyboardHints = true;
 const savedMidiId = loadSavedMidiDeviceId();
 if (savedMidiId) midi.selectedInputId = savedMidiId;
 
-void bootApp();
 void restoreInputConnections();
 
 window.addEventListener('resize', () => {
