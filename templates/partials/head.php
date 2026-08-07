@@ -3,10 +3,9 @@
 declare(strict_types=1);
 
 /** @var array<string, mixed> $page */
-/** @var string $baseUrl */
 /** @var int $assetVersion */
 
-$canonical = rtrim($baseUrl, '/') . ($page['path'] ?? '/');
+$canonical = \PianoTrainer\AppUrl::canonical((string) ($page['path'] ?? '/'));
 $title = (string) ($page['title'] ?? 'Piano Bro');
 $description = (string) ($page['description'] ?? '');
 $keywords = (string) ($page['keywords'] ?? '');

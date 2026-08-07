@@ -13,10 +13,6 @@
     ];
     $initialScreen = (string) ($page['screen'] ?? 'home');
 
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $baseUrl = \PianoTrainer\Env::get('APP_URL') !== ''
-      ? rtrim(\PianoTrainer\Env::get('APP_URL'), '/')
-      : $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
     $publicDir = dirname(__DIR__) . '/public';
     $assetVersion = max(
       filemtime($publicDir . '/assets/js/app.js'),

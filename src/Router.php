@@ -263,15 +263,7 @@ final class Router
 
   private function baseUrl(): string
   {
-    $configured = Env::get('APP_URL');
-    if ($configured !== '') {
-      return rtrim($configured, '/');
-    }
-
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-
-    return $scheme . '://' . $host;
+    return AppUrl::base();
   }
 
   private function renderRobotsTxt(): void

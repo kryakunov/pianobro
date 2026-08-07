@@ -12,19 +12,9 @@ final class OAuthConfig
   {
     Env::load(dirname(__DIR__) . '/.env');
 
-    $appUrl = rtrim(Env::get('APP_URL', self::detectAppUrl()), '/');
+    $appUrl = AppUrl::base();
 
     return new self($appUrl);
-  }
-
-  private static function detectAppUrl(): string
-  {
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-      || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-    $scheme = $https ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8080';
-
-    return $scheme . '://' . $host;
   }
 
   public function appUrl(): string
