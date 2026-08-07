@@ -22,6 +22,7 @@
       filemtime($publicDir . '/assets/js/staff.js'),
       filemtime($publicDir . '/assets/js/clef-glyphs.js'),
       filemtime($publicDir . '/assets/css/style.css'),
+      filemtime($publicDir . '/assets/js/cookie-consent.js'),
       filemtime($publicDir . '/assets/favicon.svg'),
     );
 
@@ -804,6 +805,7 @@
     </symbol>
   </svg>
 
+  <?php require __DIR__ . '/partials/cookie-banner.php'; ?>
   <script type="module" src="/assets/js/app.js?v=<?= (int) $assetVersion ?>"></script>
 </body>
 </html>
