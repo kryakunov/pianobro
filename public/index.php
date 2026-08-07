@@ -6,6 +6,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 use PianoTrainer\AuthService;
 use PianoTrainer\Database;
+use PianoTrainer\Env;
 use PianoTrainer\LessonRepository;
 use PianoTrainer\MidiSearch;
 use PianoTrainer\OAuthConfig;
@@ -13,6 +14,8 @@ use PianoTrainer\OAuthService;
 use PianoTrainer\RoadmapService;
 use PianoTrainer\Router;
 use PianoTrainer\StatsRepository;
+
+Env::load(dirname(__DIR__) . '/.env');
 
 $lessonsDir = dirname(__DIR__) . '/data/lessons';
 $repository = new LessonRepository($lessonsDir);

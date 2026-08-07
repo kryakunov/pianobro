@@ -18,6 +18,7 @@ final class Router
   public function dispatch(string $uri, string $method): void
   {
     $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+    $path = rtrim($path, '/') ?: '/';
 
     if ($path === '/api/auth/me' && $method === 'GET') {
       $user = $this->auth->currentUser();
@@ -231,7 +232,12 @@ final class Router
     }
 
     if ($path === '/robots.txt' && $method === 'GET') {
-      $this->serveStatic('/robots.txt');
+      $this->renderRobotsTxt();
+      return;
+    }
+
+    if ($path === '/sitemap.xml' && $method === 'GET') {
+      $this->renderSitemap();
       return;
     }
 
@@ -240,18 +246,53 @@ final class Router
       return;
     }
 
-    if ($path !== '/' && !str_starts_with($path, '/assets/')) {
-      http_response_code(404);
-      echo '404 Not Found';
-      return;
-    }
-
     if (str_starts_with($path, '/assets/')) {
       $this->serveStatic($path);
       return;
     }
 
-    $this->renderApp();
+    $page = PageRegistry::match($path, $this->lessons);
+    if ($page !== null) {
+      $this->renderApp($page);
+      return;
+    }
+
+    http_response_code(404);
+    echo '404 Not Found';
+  }
+
+  private function baseUrl(): string
+  {
+    $configured = Env::get('APP_URL');
+    if ($configured !== '') {
+      return rtrim($configured, '/');
+    }
+
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+    return $scheme . '://' . $host;
+  }
+
+  private function renderRobotsTxt(): void
+  {
+    header('Content-Type: text/plain; charset=utf-8');
+    echo "User-agent: *\nAllow: /\n\nSitemap: {$this->baseUrl()}/sitemap.xml\n";
+  }
+
+  private function renderSitemap(): void
+  {
+    header('Content-Type: application/xml; charset=utf-8');
+    $base = $this->baseUrl();
+    $paths = PageRegistry::sitemapPaths($this->lessons);
+
+    echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+    foreach ($paths as $path) {
+      $loc = htmlspecialchars($base . $path, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+      echo "  <url><loc>{$loc}</loc></url>\n";
+    }
+    echo "</urlset>\n";
   }
 
   /** @return array<string, mixed> */
@@ -295,7 +336,7 @@ final class Router
     readfile($file);
   }
 
-  private function renderApp(): void
+  private function renderApp(array $page): void
   {
     header('Content-Type: text/html; charset=utf-8');
     include dirname(__DIR__) . '/templates/app.php';

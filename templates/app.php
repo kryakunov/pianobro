@@ -1,20 +1,26 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Piano Bro — онлайн обучение игре на пианино с MIDI</title>
-  <meta name="description" content="ПианоТренажёр — бесплатный онлайн-тренажёр для обучения игре на цифровом пианино. Подключите MIDI-клавиатуру, учите ноты до ре ми фа соль ля си, тренируйте мелодии с нотным станом и прослушиванием.">
-  <meta name="keywords" content="обучение пианино, тренажёр пианино, цифровое пианино, MIDI клавиатура, ноты для начинающих, до ре ми, нотный стан, игра на пианино онлайн, Ludovico Einaudi, мелодии для пианино">
-  <meta name="author" content="ПианоТренажёр">
-  <meta name="robots" content="index, follow">
-  <meta name="theme-color" content="#6c8cff">
   <?php
+    use PianoTrainer\PageRegistry;
+
+    $page = $page ?? PageRegistry::match('/') ?? [
+      'screen' => 'home',
+      'path' => '/',
+      'title' => 'Piano Bro',
+      'description' => '',
+      'boot' => ['screen' => 'home'],
+    ];
+    $initialScreen = (string) ($page['screen'] ?? 'home');
+
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $baseUrl = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $baseUrl = \PianoTrainer\Env::get('APP_URL') !== ''
+      ? rtrim(\PianoTrainer\Env::get('APP_URL'), '/')
+      : $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
     $publicDir = dirname(__DIR__) . '/public';
     $assetVersion = max(
       filemtime($publicDir . '/assets/js/app.js'),
+      filemtime($publicDir . '/assets/js/routes.js'),
       filemtime($publicDir . '/assets/js/stats-staff.js'),
       filemtime($publicDir . '/assets/js/note-roadmap.js'),
       filemtime($publicDir . '/assets/js/staff.js'),
@@ -22,79 +28,81 @@
       filemtime($publicDir . '/assets/css/style.css'),
       filemtime($publicDir . '/assets/favicon.svg'),
     );
+
+    $screenActive = static function (string $screen) use ($initialScreen): string {
+      return $screen === $initialScreen ? ' screen--active' : '';
+    };
+    $screenHidden = static function (string $screen) use ($initialScreen): string {
+      return $screen === $initialScreen ? '' : ' hidden';
+    };
+
+    require __DIR__ . '/partials/head.php';
   ?>
-  <link rel="canonical" href="<?= htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') ?>/">
-  <link rel="icon" href="/assets/favicon.svg?v=<?= (int) $assetVersion ?>" type="image/svg+xml">
-  <link rel="icon" href="/favicon.ico?v=<?= (int) $assetVersion ?>" sizes="32x32">
-  <link rel="apple-touch-icon" href="/assets/favicon.svg?v=<?= (int) $assetVersion ?>">
-  <meta property="og:type" content="website">
-  <meta property="og:locale" content="ru_RU">
-  <meta property="og:title" content="ПианоТренажёр — обучение игре на пианино онлайн">
-  <meta property="og:description" content="Учитесь играть на цифровом пианино: MIDI, нотный стан, мелодии, тренажёр нот до ре ми. Бесплатно в браузере.">
-  <meta property="og:site_name" content="ПианоТренажёр">
-  <meta property="og:url" content="<?= htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') ?>/">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="ПианоТренажёр — обучение игре на пианино">
-  <meta name="twitter:description" content="Онлайн-тренажёр пианино с MIDI, нотным станом и мелодиями для начинающих и продвинутых.">
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "ПианоТренажёр",
-    "description": "Онлайн-тренажёр для обучения игре на цифровом пианино с поддержкой MIDI, нотного стана и мелодий.",
-    "applicationCategory": "EducationalApplication",
-    "operatingSystem": "Web",
-    "inLanguage": "ru",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "RUB"
-    }
-  }
+  <script>
+    window.__BOOT__ = <?= json_encode($page['boot'] ?? ['screen' => 'home'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/style.css?v=<?= (int) $assetVersion ?>">
-
-  <!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-    (function(m,e,t,r,i,k,a){
-        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=110624464', 'ym');
-
-    ym(110624464, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/110624464" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-<!-- /Yandex.Metrika counter -->
 </head>
 <body>
   <div class="app" id="app">
     <header class="header" id="main-header">
       <div class="header__brand">
-        <span class="header__logo icon-badge icon-badge--brand" aria-hidden="true">
-          <svg class="icon icon--badge icon--brand" viewBox="0 0 32 32" aria-hidden="true"><use href="#ico-brand"/></svg>
-        </span>
-        <div>
-          <h1>Piano Bro</h1>
-          <p class="header__subtitle">Обучение на пианино</p>
-        </div>
+        <a href="/" class="header__brand-link">
+          <span class="header__logo icon-badge icon-badge--brand" aria-hidden="true">
+            <svg class="icon icon--badge icon--brand" viewBox="0 0 32 32" aria-hidden="true"><use href="#ico-brand"/></svg>
+          </span>
+          <div>
+            <h2>Piano Bro</h2>
+            <p class="header__subtitle">Обучение на пианино</p>
+          </div>
+        </a>
       </div>
+      <nav class="header__nav" aria-label="Разделы">
+        <a href="/put-novichka" class="header__nav-link">Путь</a>
+        <a href="/noty" class="header__nav-link">Ноты</a>
+        <a href="/melodii" class="header__nav-link">Мелодии</a>
+      </nav>
       <div class="header__auth" id="auth-panel">
         <button type="button" class="btn btn--secondary btn--sm" id="btn-open-auth">Войти</button>
         <div class="auth-user" id="auth-user" hidden>
           <span class="auth-user__name" id="auth-user-name"></span>
-          <button type="button" class="btn btn--secondary btn--sm" id="btn-go-stats">Статистика</button>
+          <a href="/statistika" class="btn btn--secondary btn--sm" id="btn-go-stats">Статистика</a>
           <button type="button" class="btn btn--secondary btn--sm" id="btn-logout" hidden>Выйти</button>
         </div>
       </div>
     </header>
 
+    <?php if (!empty($page['lesson']) && is_array($page['lesson'])): ?>
+    <article class="seo-intro seo-intro--compact seo-intro--crawler" id="seo-intro" aria-hidden="true">
+      <div class="seo-intro__inner">
+        <h1 class="seo-intro__title"><?= htmlspecialchars((string) $page['lesson']['title'], ENT_QUOTES, 'UTF-8') ?> — ноты для пианино</h1>
+        <p class="seo-intro__lead">
+          Мелодия «<?= htmlspecialchars((string) $page['lesson']['title'], ENT_QUOTES, 'UTF-8') ?>»
+          (<?= htmlspecialchars((string) $page['lesson']['composer'], ENT_QUOTES, 'UTF-8') ?>).
+          Сложность: <?= htmlspecialchars((string) $page['lesson']['difficulty'], ENT_QUOTES, 'UTF-8') ?>.
+          Тренажёр мелодий на нотном стане с подсказками на клавишах.
+        </p>
+      </div>
+    </article>
+    <?php elseif (!empty($page['seoIntro']) && is_array($page['seoIntro'])): ?>
+    <article class="seo-intro seo-intro--compact seo-intro--crawler" id="seo-intro" aria-hidden="true">
+      <div class="seo-intro__inner">
+        <h1 class="seo-intro__title"><?= htmlspecialchars((string) ($page['seoIntro']['h1'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h1>
+        <?php if (!empty($page['seoIntro']['lead'])): ?>
+        <p class="seo-intro__lead"><?= htmlspecialchars((string) $page['seoIntro']['lead'], ENT_QUOTES, 'UTF-8') ?></p>
+        <?php endif; ?>
+      </div>
+      <?php if (!empty($page['seoIntro']['features']) && is_array($page['seoIntro']['features'])): ?>
+      <ul class="seo-intro__list">
+        <?php foreach ($page['seoIntro']['features'] as $feature): ?>
+        <li><?= htmlspecialchars((string) $feature, ENT_QUOTES, 'UTF-8') ?></li>
+        <?php endforeach; ?>
+      </ul>
+      <?php endif; ?>
+    </article>
+    <?php endif; ?>
+
     <!-- Главная -->
-    <section class="screen screen--active" id="screen-home">
+    <section class="screen<?= $screenActive('home') ?>" id="screen-home"<?= $screenHidden('home') ?>>
       <div class="landing">
         <div class="landing-hero">
           <div class="landing-hero__content">
@@ -102,24 +110,24 @@
               <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-check"/></svg>
               Бесплатно · Без установки · В браузере
             </p>
-            <h2 class="landing-hero__title">Научитесь читать ноты и&nbsp;играть любимые мелодии</h2>
+            <h1 class="landing-hero__title">Тренажёр нот онлайн — читайте ноты и&nbsp;играйте мелодии</h1>
             <p class="landing-hero__lead">
-              Интерактивный тренажёр в браузере — нотный стан, подсказки на клавишах
-              и статистика прогресса. Без установки и регистрации.
+              Угадай ноту на нотном стане, тренируйте попадание в клавиши и запоминание нот.
+              Скрипичный и басовый ключ, MIDI-клавиатура, микрофон — без установки и регистрации.
             </p>
             <div class="landing-hero__actions">
-              <button type="button" class="btn btn--primary btn--lg" id="btn-go-roadmap">
+              <a href="/put-novichka" class="btn btn--primary btn--lg" id="btn-go-roadmap">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-target"/></svg>
                 Путь новичка
-              </button>
-              <button type="button" class="btn btn--secondary btn--lg" id="btn-go-notes">
+              </a>
+              <a href="/noty" class="btn btn--secondary btn--lg" id="btn-go-notes">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-notes"/></svg>
                 Тренажёр нот
-              </button>
-              <button type="button" class="btn btn--secondary btn--lg" id="btn-go-melodies">
+              </a>
+              <a href="/melodii" class="btn btn--secondary btn--lg" id="btn-go-melodies">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-melody"/></svg>
                 Выбрать мелодию
-              </button>
+              </a>
             </div>
             <ul class="landing-hero__pills" aria-label="Возможности">
               <li class="landing-pill">
@@ -165,38 +173,38 @@
         <section class="landing-section landing-section--modes" aria-labelledby="landing-modes-title">
           <h3 class="landing-section__title" id="landing-modes-title">С чего начать</h3>
           <div class="landing-modes">
-            <button type="button" class="home-card home-card--roadmap landing-mode" id="btn-go-roadmap-card">
+            <a href="/put-novichka" class="home-card home-card--roadmap landing-mode" id="btn-go-roadmap-card">
               <span class="home-card__icon icon-badge icon-badge--roadmap" aria-hidden="true">
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
               </span>
               <span class="home-card__title">Путь новичка</span>
               <span class="home-card__desc">8 уровней с мелодиями-закреплением</span>
               <span class="landing-mode__cta">Открыть →</span>
-            </button>
-            <button type="button" class="home-card home-card--notes landing-mode" data-landing-go="notes">
+            </a>
+            <a href="/noty" class="home-card home-card--notes landing-mode">
               <span class="home-card__icon icon-badge icon-badge--notes" aria-hidden="true">
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-notes"/></svg>
               </span>
               <span class="home-card__title">Тренажёр нот</span>
               <span class="home-card__desc">Свободная тренировка по выбранным нотам</span>
               <span class="landing-mode__cta">Начать →</span>
-            </button>
-            <button type="button" class="home-card home-card--melody landing-mode" data-landing-go="melodies">
+            </a>
+            <a href="/melodii" class="home-card home-card--melody landing-mode">
               <span class="home-card__icon icon-badge icon-badge--melody" aria-hidden="true">
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-melody"/></svg>
               </span>
               <span class="home-card__title">Мелодии</span>
               <span class="home-card__desc">Популярные песни и классика</span>
               <span class="landing-mode__cta">Каталог →</span>
-            </button>
-            <button type="button" class="home-card home-card--stats landing-mode" id="btn-go-stats-home">
+            </a>
+            <a href="/statistika" class="home-card home-card--stats landing-mode" id="btn-go-stats-home">
               <span class="home-card__icon icon-badge icon-badge--stats" aria-hidden="true">
                 <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-stats"/></svg>
               </span>
               <span class="home-card__title">Статистика</span>
               <span class="home-card__desc">Карта нот и график занятий</span>
               <span class="landing-mode__cta">Открыть →</span>
-            </button>
+            </a>
           </div>
         </section>
 
@@ -220,8 +228,8 @@
           </div>
           <div class="landing-showcase__content">
             <span class="landing-showcase__tag">Тренажёр</span>
-            <h3 class="landing-showcase__title" id="landing-show-notes">Узнавайте ноты за секунды</h3>
-            <p class="landing-showcase__text">Нотный стан и клавиатура рядом — нажимайте нужную клавишу и сразу видите результат.</p>
+            <h3 class="landing-showcase__title" id="landing-show-notes">Тренажёр нот на нотном стане</h3>
+            <p class="landing-showcase__text">Угадай ноту, тренируй попадание в клавиши и запоминание — скрипичный и басовый ключ, чтение нот с листа.</p>
           </div>
         </section>
 
@@ -309,19 +317,19 @@
           </div>
           <div class="landing-cta__body">
             <h3 class="landing-cta__title" id="landing-cta-title">Первая нота — через минуту</h3>
-            <button type="button" class="btn btn--primary btn--lg" data-landing-go="notes">
+            <a href="/noty" class="btn btn--primary btn--lg">
               <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
               Попробовать бесплатно
-            </button>
+            </a>
           </div>
         </section>
       </div>
     </section>
 
     <!-- Статистика -->
-    <section class="screen" id="screen-stats" hidden>
+    <section class="screen<?= $screenActive('stats') ?>" id="screen-stats"<?= $screenHidden('stats') ?>>
       <div class="screen-header">
-        <button type="button" class="btn-back" id="btn-back-stats">← Назад</button>
+        <a href="/" class="btn-back" id="btn-back-stats">← Назад</a>
         <h2 class="screen-header__title">
           <span class="screen-header__icon icon-badge icon-badge--stats" aria-hidden="true">
             <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-stats"/></svg>
@@ -335,9 +343,9 @@
     </section>
 
     <!-- Выбор мелодии -->
-    <section class="screen" id="screen-melody-pick" hidden>
+    <section class="screen<?= $screenActive('melody-pick') ?>" id="screen-melody-pick"<?= $screenHidden('melody-pick') ?>>
       <div class="screen-header">
-        <button type="button" class="btn-back" id="btn-back-melody">← Назад</button>
+        <a href="/" class="btn-back" id="btn-back-melody">← Назад</a>
         <h2 class="screen-header__title">
           <span class="screen-header__icon icon-badge icon-badge--melody" aria-hidden="true">
             <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-melody"/></svg>
@@ -377,9 +385,9 @@
     </section>
 
     <!-- Путь новичка -->
-    <section class="screen" id="screen-roadmap" hidden>
+    <section class="screen<?= $screenActive('roadmap') ?>" id="screen-roadmap"<?= $screenHidden('roadmap') ?>>
       <div class="screen-header">
-        <button type="button" class="btn-back" id="btn-back-roadmap">← Назад</button>
+        <a href="/" class="btn-back" id="btn-back-roadmap">← Назад</a>
         <h2 class="screen-header__title">
           <span class="screen-header__icon icon-badge icon-badge--roadmap" aria-hidden="true">
             <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
@@ -417,9 +425,9 @@
     </section>
 
     <!-- Настройки тренажёра нот -->
-    <section class="screen" id="screen-notes-pick" hidden>
+    <section class="screen<?= $screenActive('notes-pick') ?>" id="screen-notes-pick"<?= $screenHidden('notes-pick') ?>>
       <div class="screen-header">
-        <button type="button" class="btn-back" id="btn-back-notes">← Назад</button>
+        <a href="/" class="btn-back" id="btn-back-notes">← Назад</a>
         <h2 class="screen-header__title">
           <span class="screen-header__icon icon-badge icon-badge--notes" aria-hidden="true">
             <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-notes"/></svg>
@@ -513,7 +521,7 @@
     </section>
 
     <!-- Тренировка -->
-    <section class="screen screen--practice" id="screen-practice" hidden>
+    <section class="screen screen--practice<?= $screenActive('practice') ?>" id="screen-practice"<?= $screenHidden('practice') ?>>
       <div class="practice-topbar">
         <button type="button" class="btn-back" id="btn-back-practice" aria-label="Назад">←</button>
         <h2 class="practice-topbar__title" id="practice-title">Тренировка</h2>
