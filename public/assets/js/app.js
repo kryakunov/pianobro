@@ -38,6 +38,7 @@ import {
 } from './note-roadmap.js';
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 import { ROUTES, routeForScreen, navigateTo } from './routes.js';
+import { initMetrikaPageview, trackGoal, trackPracticePageView } from './metrika.js';
 
 const SESSION_LIMIT = 10;
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
@@ -781,6 +782,12 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
   updateInputStatusBanner();
   showScreen('practice');
   setPianoVisible(true);
+  trackPracticePageView(
+    mode,
+    title,
+    mode === 'melody' ? melodyTrainer.lesson?.id ?? null : null,
+  );
+  trackGoal(mode === 'melody' ? 'practice_melody_start' : 'practice_notes_start');
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -855,6 +862,11 @@ async function onSessionComplete(stats) {
   }
 
   showSessionModal(stats);
+  trackGoal(stats.mode === 'melody' ? 'practice_melody_complete' : 'practice_notes_complete', {
+    accuracy: stats.accuracy,
+    correct: stats.correct,
+    wrong: stats.wrong,
+  });
 
   if (!isLoggedIn()) return;
 
@@ -2246,6 +2258,7 @@ document.addEventListener('keyup', (e) => {
 loadLessons();
 setupOAuthProviders();
 handleOAuthRedirect();
+initMetrikaPageview();
 initAuth().then(async () => {
   updateAuthUI();
   await syncGuestProgressAfterAuth();

@@ -23,6 +23,7 @@
       filemtime($publicDir . '/assets/js/clef-glyphs.js'),
       filemtime($publicDir . '/assets/css/style.css'),
       filemtime($publicDir . '/assets/js/cookie-consent.js'),
+      filemtime($publicDir . '/assets/js/metrika.js'),
       filemtime($publicDir . '/assets/favicon.svg'),
     );
 
