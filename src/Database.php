@@ -83,6 +83,7 @@ final class Database
 
     self::migrateOAuthAccounts($pdo);
     self::migrateNullablePasswordHash($pdo);
+    self::migrateLastLoginAt($pdo);
   }
 
   private static function migrateOAuthAccounts(PDO $pdo): void
@@ -129,6 +130,31 @@ final class Database
 
       DROP TABLE users;
       ALTER TABLE users_oauth_migration RENAME TO users;
+      SQL);
+  }
+
+  private static function migrateLastLoginAt(PDO $pdo): void
+  {
+    $columns = $pdo->query('PRAGMA table_info(users)')->fetchAll();
+    foreach ($columns as $column) {
+      if (($column['name'] ?? '') === 'last_login_at') {
+        return;
+      }
+    }
+
+    $pdo->exec('ALTER TABLE users ADD COLUMN last_login_at TEXT');
+
+    $pdo->exec(<<<'SQL'
+      UPDATE users
+      SET last_login_at = (
+        SELECT MAX(dt) FROM (
+          SELECT MAX(created_at) AS dt FROM training_sessions WHERE user_id = users.id
+          UNION ALL
+          SELECT MAX(created_at) AS dt FROM note_attempts WHERE user_id = users.id
+        )
+        WHERE dt IS NOT NULL
+      )
+      WHERE last_login_at IS NULL
       SQL);
   }
 }

@@ -13,6 +13,7 @@ final class Router
     private readonly StatsRepository $stats,
     private readonly OAuthService $oauth,
     private readonly RoadmapService $roadmap,
+    private readonly AdminService $admin,
   ) {}
 
   public function dispatch(string $uri, string $method): void
@@ -241,6 +242,11 @@ final class Router
       return;
     }
 
+    if ($path === '/admin' && $method === 'GET') {
+      $this->renderAdmin();
+      return;
+    }
+
     if ($path === '/favicon.ico' && $method === 'GET') {
       $this->serveStatic('/assets/favicon.svg', 'image/svg+xml');
       return;
@@ -332,6 +338,19 @@ final class Router
   {
     header('Content-Type: text/html; charset=utf-8');
     include dirname(__DIR__) . '/templates/app.php';
+  }
+
+  private function renderAdmin(): void
+  {
+    header('Content-Type: text/html; charset=utf-8');
+    header('X-Robots-Tag: noindex, nofollow');
+
+    $user = $this->auth->currentUser();
+    $isAdmin = $this->admin->isAdmin($user);
+    $users = $isAdmin ? $this->admin->listUsersWithRoadmap() : [];
+    $adminConfigured = AdminService::adminEmails() !== [];
+
+    include dirname(__DIR__) . '/templates/admin.php';
   }
 
   /** @param mixed $data */

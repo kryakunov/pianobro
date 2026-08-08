@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
+use PianoTrainer\AdminService;
 use PianoTrainer\AuthService;
 use PianoTrainer\Database;
 use PianoTrainer\Env;
@@ -26,7 +27,8 @@ $stats = new StatsRepository($db);
 $oauthConfig = OAuthConfig::fromEnv();
 $oauth = new OAuthService($oauthConfig, $auth);
 $roadmap = new RoadmapService($db);
-$router = new Router($repository, new MidiSearch(), $auth, $stats, $oauth, $roadmap);
+$admin = new AdminService($db, $roadmap);
+$router = new Router($repository, new MidiSearch(), $auth, $stats, $oauth, $roadmap, $admin);
 
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';

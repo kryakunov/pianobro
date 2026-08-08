@@ -89,6 +89,7 @@ final class AuthService
 
     $userId = (int) $this->db->lastInsertId();
     $_SESSION['user_id'] = $userId;
+    $this->touchLastLogin($userId);
 
     return ['id' => $userId, 'email' => $email, 'name' => $name];
   }
@@ -112,6 +113,7 @@ final class AuthService
     }
 
     $_SESSION['user_id'] = (int) $user['id'];
+    $this->touchLastLogin((int) $user['id']);
 
     return [
       'id' => (int) $user['id'],
@@ -158,6 +160,7 @@ final class AuthService
     $existingOAuth = $stmt->fetch();
     if ($existingOAuth !== false) {
       $_SESSION['user_id'] = (int) $existingOAuth['id'];
+      $this->touchLastLogin((int) $existingOAuth['id']);
       return [
         'id' => (int) $existingOAuth['id'],
         'email' => (string) $existingOAuth['email'],
@@ -215,6 +218,7 @@ final class AuthService
     ]);
 
     $_SESSION['user_id'] = $userId;
+    $this->touchLastLogin($userId);
 
     $stmt = $this->db->prepare('SELECT id, email, name FROM users WHERE id = :id');
     $stmt->execute(['id' => $userId]);
@@ -235,5 +239,11 @@ final class AuthService
     if (trim($value) !== '') {
       throw new \InvalidArgumentException('Не удалось обработать запрос');
     }
+  }
+
+  private function touchLastLogin(int $userId): void
+  {
+    $stmt = $this->db->prepare('UPDATE users SET last_login_at = datetime(\'now\') WHERE id = :id');
+    $stmt->execute(['id' => $userId]);
   }
 }
