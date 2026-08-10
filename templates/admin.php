@@ -6,6 +6,7 @@ declare(strict_types=1);
 /** @var bool $isAdmin */
 /** @var bool $adminConfigured */
 /** @var list<array<string, mixed>> $users */
+/** @var array{today:int,yesterday:int} $onlineStats */
 
 $formatDate = static function (?string $value): string {
   if ($value === null || $value === '') {
@@ -81,6 +82,14 @@ $stageStatusLabel = static function (array $stage): string {
     </section>
     <?php else: ?>
     <section class="admin-summary">
+      <div class="admin-stat">
+        <span class="admin-stat__value"><?= (int) $onlineStats['today'] ?></span>
+        <span class="admin-stat__label">Было онлайн сегодня</span>
+      </div>
+      <div class="admin-stat">
+        <span class="admin-stat__value"><?= (int) $onlineStats['yesterday'] ?></span>
+        <span class="admin-stat__label">Было онлайн вчера</span>
+      </div>
       <div class="admin-stat">
         <span class="admin-stat__value"><?= count($users) ?></span>
         <span class="admin-stat__label">Пользователей</span>

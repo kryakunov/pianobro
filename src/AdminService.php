@@ -43,6 +43,25 @@ final class AdminService
     return array_values(array_unique($emails));
   }
 
+  /** @return array{today:int,yesterday:int} */
+  public function getDailyOnlineCounts(): array
+  {
+    $todayStart = new \DateTimeImmutable('today');
+    $todayEnd = $todayStart->modify('+1 day');
+    $yesterdayStart = $todayStart->modify('-1 day');
+
+    return [
+      'today' => $this->countActiveUsersBetween(
+        $todayStart->format('Y-m-d H:i:s'),
+        $todayEnd->format('Y-m-d H:i:s'),
+      ),
+      'yesterday' => $this->countActiveUsersBetween(
+        $yesterdayStart->format('Y-m-d H:i:s'),
+        $todayStart->format('Y-m-d H:i:s'),
+      ),
+    ];
+  }
+
   /** @return list<array<string, mixed>> */
   public function listUsersWithRoadmap(): array
   {
@@ -156,5 +175,27 @@ final class AdminService
     usort($candidates, static fn(string $a, string $b): int => strcmp($b, $a));
 
     return $candidates[0];
+  }
+
+  private function countActiveUsersBetween(string $start, string $end): int
+  {
+    $stmt = $this->db->prepare(<<<'SQL'
+      SELECT COUNT(DISTINCT user_id) FROM (
+        SELECT id AS user_id
+        FROM users
+        WHERE last_login_at >= :start AND last_login_at < :end
+        UNION
+        SELECT user_id
+        FROM training_sessions
+        WHERE created_at >= :start AND created_at < :end
+        UNION
+        SELECT user_id
+        FROM note_attempts
+        WHERE created_at >= :start AND created_at < :end
+      )
+      SQL);
+    $stmt->execute(['start' => $start, 'end' => $end]);
+
+    return (int) $stmt->fetchColumn();
   }
 }

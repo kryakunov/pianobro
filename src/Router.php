@@ -348,6 +348,7 @@ final class Router
     $user = $this->auth->currentUser();
     $isAdmin = $this->admin->isAdmin($user);
     $users = $isAdmin ? $this->admin->listUsersWithRoadmap() : [];
+    $onlineStats = $isAdmin ? $this->admin->getDailyOnlineCounts() : ['today' => 0, 'yesterday' => 0];
     $adminConfigured = AdminService::adminEmails() !== [];
 
     include dirname(__DIR__) . '/templates/admin.php';
