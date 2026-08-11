@@ -11,6 +11,7 @@ final class AdminService
   public function __construct(
     private readonly PDO $db,
     private readonly RoadmapService $roadmap,
+    private readonly RoleService $roles,
   ) {}
 
   public function isAdmin(?array $user): bool
@@ -97,12 +98,14 @@ final class AdminService
       SQL);
 
     $rows = $stmt->fetchAll();
+    $rolesByUser = $this->roles->getRolesByUser();
     $users = [];
 
     foreach ($rows as $row) {
       $userId = (int) $row['id'];
       $roadmap = $this->roadmap->getRoadmap($userId);
       $progress = $roadmap['progress'];
+      $roles = $rolesByUser[$userId] ?? [];
 
       $users[] = [
         'id' => $userId,
@@ -116,6 +119,8 @@ final class AdminService
         ),
         'sessionsCount' => (int) $row['sessions_count'],
         'practicedNotesCount' => (int) $row['practiced_notes_count'],
+        'roles' => $roles,
+        'isTeacher' => in_array(RoleService::ROLE_TEACHER, $roles, true),
         'roadmap' => [
           'totalXp' => (int) ($progress['totalXp'] ?? 0),
           'rank' => $progress['rank'] ?? ['title' => '—', 'emoji' => ''],
@@ -128,6 +133,30 @@ final class AdminService
     }
 
     return $users;
+  }
+
+  /** @return array{id:int,roles:list<string>,isTeacher:bool} */
+  public function setUserTeacherRole(int $userId, bool $enabled): array
+  {
+    $stmt = $this->db->prepare('SELECT id FROM users WHERE id = :id');
+    $stmt->execute(['id' => $userId]);
+    if ($stmt->fetch() === false) {
+      throw new \InvalidArgumentException('Пользователь не найден');
+    }
+
+    if ($enabled) {
+      $this->roles->grantRole($userId, RoleService::ROLE_TEACHER);
+    } else {
+      $this->roles->revokeRole($userId, RoleService::ROLE_TEACHER);
+    }
+
+    $roles = $this->roles->getRoles($userId);
+
+    return [
+      'id' => $userId,
+      'roles' => $roles,
+      'isTeacher' => in_array(RoleService::ROLE_TEACHER, $roles, true),
+    ];
   }
 
   /**

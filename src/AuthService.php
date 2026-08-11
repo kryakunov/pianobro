@@ -8,7 +8,20 @@ use PDO;
 
 final class AuthService
 {
+  private ?TeacherService $teacher = null;
+  private ?RoleService $roles = null;
+
   public function __construct(private readonly PDO $db) {}
+
+  public function setTeacherService(TeacherService $teacher): void
+  {
+    $this->teacher = $teacher;
+  }
+
+  public function setRoleService(RoleService $roles): void
+  {
+    $this->roles = $roles;
+  }
 
   public function startSession(): void
   {
@@ -23,7 +36,7 @@ final class AuthService
     }
   }
 
-  /** @return array{id:int,email:string,name:string}|null */
+  /** @return array{id:int,email:string,name:string,roles:list<string>}|null */
   public function currentUser(): ?array
   {
     $id = $_SESSION['user_id'] ?? null;
@@ -31,15 +44,23 @@ final class AuthService
       return null;
     }
 
+    $userId = (int) $id;
     $stmt = $this->db->prepare('SELECT id, email, name FROM users WHERE id = :id');
-    $stmt->execute(['id' => (int) $id]);
+    $stmt->execute(['id' => $userId]);
     $user = $stmt->fetch();
 
-    return $user !== false ? [
-      'id' => (int) $user['id'],
+    if ($user === false) {
+      return null;
+    }
+
+    $this->syncRoleFromEnv($userId, (string) $user['email']);
+
+    return [
+      'id' => $userId,
       'email' => (string) $user['email'],
       'name' => (string) $user['name'],
-    ] : null;
+      'roles' => $this->roles?->getRoles($userId) ?? [],
+    ];
   }
 
   public function requireUser(): ?array
@@ -54,6 +75,8 @@ final class AuthService
     string $password,
     string $passwordConfirm,
     string $honeypot = '',
+    string $inviteToken = '',
+    bool $isTeacher = false,
   ): array {
     $this->assertHoneypotEmpty($honeypot);
 
@@ -90,12 +113,22 @@ final class AuthService
     $userId = (int) $this->db->lastInsertId();
     $_SESSION['user_id'] = $userId;
     $this->touchLastLogin($userId);
+    $this->syncRoleFromEnv($userId, $email);
+    if ($isTeacher) {
+      $this->roles?->grantRole($userId, RoleService::ROLE_TEACHER);
+    }
+    $this->linkTeacherInvitations($userId, $email, $inviteToken);
 
-    return ['id' => $userId, 'email' => $email, 'name' => $name];
+    return $this->currentUser() ?? [
+      'id' => $userId,
+      'email' => $email,
+      'name' => $name,
+      'roles' => $this->roles?->getRoles($userId) ?? [],
+    ];
   }
 
   /** @return array{id:int,email:string,name:string} */
-  public function login(string $email, string $password): array
+  public function login(string $email, string $password, string $inviteToken = ''): array
   {
     $email = strtolower(trim($email));
     $stmt = $this->db->prepare('SELECT id, email, name, password_hash FROM users WHERE email = :email');
@@ -114,11 +147,19 @@ final class AuthService
 
     $_SESSION['user_id'] = (int) $user['id'];
     $this->touchLastLogin((int) $user['id']);
+    $this->syncRoleFromEnv((int) $user['id'], (string) $user['email']);
+    $this->linkTeacherInvitations((int) $user['id'], (string) $user['email'], $inviteToken);
+
+    $current = $this->currentUser();
+    if ($current !== null) {
+      return $current;
+    }
 
     return [
       'id' => (int) $user['id'],
       'email' => (string) $user['email'],
       'name' => (string) $user['name'],
+      'roles' => $this->roles?->getRoles((int) $user['id']) ?? [],
     ];
   }
 
@@ -161,10 +202,13 @@ final class AuthService
     if ($existingOAuth !== false) {
       $_SESSION['user_id'] = (int) $existingOAuth['id'];
       $this->touchLastLogin((int) $existingOAuth['id']);
-      return [
+      $this->syncRoleFromEnv((int) $existingOAuth['id'], (string) $existingOAuth['email']);
+
+      return $this->currentUser() ?? [
         'id' => (int) $existingOAuth['id'],
         'email' => (string) $existingOAuth['email'],
         'name' => (string) $existingOAuth['name'],
+        'roles' => $this->roles?->getRoles((int) $existingOAuth['id']) ?? [],
       ];
     }
 
@@ -219,19 +263,17 @@ final class AuthService
 
     $_SESSION['user_id'] = $userId;
     $this->touchLastLogin($userId);
-
-    $stmt = $this->db->prepare('SELECT id, email, name FROM users WHERE id = :id');
-    $stmt->execute(['id' => $userId]);
-    $user = $stmt->fetch();
-    if ($user === false) {
-      throw new \RuntimeException('User not found after OAuth login');
+    $this->syncRoleFromEnv($userId, (string) ($email ?? ''));
+    if ($email !== null && $email !== '') {
+      $this->linkTeacherInvitations($userId, $email);
     }
 
-    return [
-      'id' => (int) $user['id'],
-      'email' => (string) $user['email'],
-      'name' => (string) $user['name'],
-    ];
+    $current = $this->currentUser();
+    if ($current !== null) {
+      return $current;
+    }
+
+    throw new \RuntimeException('User not found after OAuth login');
   }
 
   private function assertHoneypotEmpty(string $value): void
@@ -245,5 +287,27 @@ final class AuthService
   {
     $stmt = $this->db->prepare('UPDATE users SET last_login_at = datetime(\'now\') WHERE id = :id');
     $stmt->execute(['id' => $userId]);
+  }
+
+  private function syncRoleFromEnv(int $userId, string $email): void
+  {
+    $this->roles?->syncTeacherFromEnv($userId, $email);
+  }
+
+  private function linkTeacherInvitations(int $userId, string $email, string $inviteToken = ''): void
+  {
+    if ($this->teacher === null) {
+      return;
+    }
+
+    if ($inviteToken !== '') {
+      try {
+        $this->teacher->acceptInvitationToken($userId, $inviteToken);
+      } catch (\InvalidArgumentException) {
+        // ignore invalid token
+      }
+    }
+
+    $this->teacher->acceptPendingInvitationsForEmail($userId, $email);
   }
 }

@@ -84,6 +84,10 @@ final class Database
     self::migrateOAuthAccounts($pdo);
     self::migrateNullablePasswordHash($pdo);
     self::migrateLastLoginAt($pdo);
+    self::migrateUserRole($pdo);
+    self::migrateTeacherMode($pdo);
+    self::migrateTeacherStudents($pdo);
+    self::migrateUserRoles($pdo);
   }
 
   private static function migrateOAuthAccounts(PDO $pdo): void
@@ -155,6 +159,155 @@ final class Database
         WHERE dt IS NOT NULL
       )
       WHERE last_login_at IS NULL
+      SQL);
+  }
+
+  private static function migrateUserRole(PDO $pdo): void
+  {
+    $columns = $pdo->query('PRAGMA table_info(users)')->fetchAll();
+    foreach ($columns as $column) {
+      if (($column['name'] ?? '') === 'role') {
+        return;
+      }
+    }
+
+    $pdo->exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'student'");
+  }
+
+  private static function migrateTeacherMode(PDO $pdo): void
+  {
+    $pdo->exec(<<<'SQL'
+      CREATE TABLE IF NOT EXISTS teacher_classes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        invite_code TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS class_members (
+        class_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        joined_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (class_id, student_id),
+        FOREIGN KEY (class_id) REFERENCES teacher_classes(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_class_members_student ON class_members(student_id);
+
+      CREATE TABLE IF NOT EXISTS assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id INTEGER NOT NULL,
+        teacher_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        type TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        due_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (class_id) REFERENCES teacher_classes(id) ON DELETE CASCADE,
+        FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS assignment_submissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        assignment_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        session_id INTEGER,
+        result_json TEXT,
+        errors_json TEXT,
+        teacher_comment TEXT,
+        commented_at TEXT,
+        completed_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(assignment_id, student_id),
+        FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (session_id) REFERENCES training_sessions(id) ON DELETE SET NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_assignment_submissions_student
+        ON assignment_submissions(student_id, status);
+      SQL);
+  }
+
+  private static function migrateTeacherStudents(PDO $pdo): void
+  {
+    $pdo->exec(<<<'SQL'
+      CREATE TABLE IF NOT EXISTS teacher_students (
+        teacher_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        joined_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (teacher_id, student_id),
+        FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_teacher_students_student ON teacher_students(student_id);
+
+      CREATE TABLE IF NOT EXISTS teacher_invitations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id INTEGER NOT NULL,
+        email TEXT NOT NULL COLLATE NOCASE,
+        token TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        accepted_at TEXT,
+        student_id INTEGER,
+        FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE SET NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_teacher_invitations_email
+        ON teacher_invitations(email, status);
+
+      CREATE TABLE IF NOT EXISTS student_assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        type TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        due_at TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        result_json TEXT,
+        errors_json TEXT,
+        teacher_comment TEXT,
+        commented_at TEXT,
+        completed_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_student_assignments_student
+        ON student_assignments(student_id, status);
+      SQL);
+  }
+
+  private static function migrateUserRoles(PDO $pdo): void
+  {
+    $pdo->exec(<<<'SQL'
+      CREATE TABLE IF NOT EXISTS user_roles (
+        user_id INTEGER NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('teacher', 'student')),
+        granted_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (user_id, role),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role);
+      SQL);
+
+    $pdo->exec(<<<'SQL'
+      INSERT OR IGNORE INTO user_roles (user_id, role)
+      SELECT id, 'teacher' FROM users WHERE role = 'teacher';
+
+      INSERT OR IGNORE INTO user_roles (user_id, role)
+      SELECT DISTINCT student_id, 'student' FROM teacher_students;
       SQL);
   }
 }

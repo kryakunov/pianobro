@@ -24,6 +24,7 @@ final class PageRegistry
       $path === '/noty' => self::notes(),
       $path === '/melodii' => self::melodies(),
       $path === '/statistika' => self::stats(),
+      $path === '/domashka' => self::homework(),
       $path === '/trenirovka/noty' => self::practiceNotes(),
       preg_match('#^/melodii/([a-z0-9\-]+)$#', $path, $m) === 1 => self::melodyDetail($m[1], $lessons),
       preg_match('#^/trenirovka/melodiya/([a-z0-9\-]+)$#', $path, $m) === 1 => self::practiceMelody($m[1], $lessons),
@@ -180,6 +181,19 @@ final class PageRegistry
       title: 'Статистика прогресса по нотам | Piano Bro',
       description: 'Карта выученных нот на нотном стане, график занятий по дням и тренировка слабых мест.',
       keywords: 'статистика обучения пианино, прогресс нот',
+      robots: 'noindex, follow',
+    );
+  }
+
+  /** @return array<string, mixed> */
+  private static function homework(): array
+  {
+    return self::base(
+      screen: 'homework',
+      path: '/domashka',
+      title: 'Домашние задания | Piano Bro',
+      description: 'Задания от преподавателя: тренировка нот и мелодий с отчётом о выполнении.',
+      keywords: 'домашние задания пианино, задания от преподавателя',
       robots: 'noindex, follow',
     );
   }

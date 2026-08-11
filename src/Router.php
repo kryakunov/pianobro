@@ -14,6 +14,8 @@ final class Router
     private readonly OAuthService $oauth,
     private readonly RoadmapService $roadmap,
     private readonly AdminService $admin,
+    private readonly TeacherService $teacher,
+    private readonly RoleService $roles,
   ) {}
 
   public function dispatch(string $uri, string $method): void
@@ -36,6 +38,8 @@ final class Router
           (string) ($body['password'] ?? ''),
           (string) ($body['passwordConfirm'] ?? ''),
           (string) ($body['website'] ?? ''),
+          (string) ($body['inviteToken'] ?? ''),
+          (bool) ($body['isTeacher'] ?? false),
         );
         $this->json(['user' => $user]);
       } catch (\InvalidArgumentException $e) {
@@ -50,6 +54,7 @@ final class Router
         $user = $this->auth->login(
           (string) ($body['email'] ?? ''),
           (string) ($body['password'] ?? ''),
+          (string) ($body['inviteToken'] ?? ''),
         );
         $this->json(['user' => $user]);
       } catch (\InvalidArgumentException $e) {
@@ -247,6 +252,162 @@ final class Router
       return;
     }
 
+    if (preg_match('#^/api/admin/users/(\d+)/teacher$#', $path, $m) && $method === 'POST') {
+      $admin = $this->requireAdmin();
+      if ($admin === null) {
+        return;
+      }
+
+      $body = $this->readJsonBody();
+      $enabled = (bool) ($body['teacher'] ?? false);
+
+      try {
+        $result = $this->admin->setUserTeacherRole((int) $m[1], $enabled);
+        $this->json($result);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
+    if ($path === '/teacher' && $method === 'GET') {
+      $this->renderTeacher();
+      return;
+    }
+
+    if ($path === '/api/teacher/dashboard' && $method === 'GET') {
+      $user = $this->requireTeacher();
+      if ($user === null) {
+        return;
+      }
+      $this->json($this->teacher->getDashboard($user['id']));
+      return;
+    }
+
+    if ($path === '/api/teacher/invite' && $method === 'POST') {
+      $user = $this->requireTeacher();
+      if ($user === null) {
+        return;
+      }
+      try {
+        $body = $this->readJsonBody();
+        $result = $this->teacher->inviteStudent($user['id'], (string) ($body['email'] ?? ''));
+        $this->json($result);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      } catch (\RuntimeException $e) {
+        $this->json(['error' => $e->getMessage()], 500);
+      }
+      return;
+    }
+
+    if (preg_match('#^/api/teacher/students/(\d+)/stats$#', $path, $m) && $method === 'GET') {
+      $user = $this->requireTeacher();
+      if ($user === null) {
+        return;
+      }
+      try {
+        $this->json($this->teacher->getStudentStats($user['id'], (int) $m[1]));
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 404);
+      }
+      return;
+    }
+
+    if (preg_match('#^/api/teacher/students/(\d+)/assignments$#', $path, $m) && $method === 'POST') {
+      $user = $this->requireTeacher();
+      if ($user === null) {
+        return;
+      }
+      try {
+        $body = $this->readJsonBody();
+        $payload = is_array($body['payload'] ?? null) ? $body['payload'] : [];
+        $dueAt = isset($body['dueAt']) && $body['dueAt'] !== '' ? (string) $body['dueAt'] : null;
+        $assignment = $this->teacher->createStudentAssignment(
+          $user['id'],
+          (int) $m[1],
+          (string) ($body['title'] ?? ''),
+          (string) ($body['type'] ?? ''),
+          $payload,
+          $dueAt,
+        );
+        $this->json(['assignment' => $assignment]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
+    if (preg_match('#^/api/teacher/assignments/(\d+)/comment$#', $path, $m) && $method === 'POST') {
+      $user = $this->requireTeacher();
+      if ($user === null) {
+        return;
+      }
+      try {
+        $body = $this->readJsonBody();
+        $this->teacher->addAssignmentComment($user['id'], (int) $m[1], (string) ($body['comment'] ?? ''));
+        $this->json(['ok' => true]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
+    if (preg_match('#^/api/teacher/invite/([a-f0-9]+)$#', $path, $m) && $method === 'GET') {
+      $preview = $this->teacher->getInvitationPreview($m[1]);
+      if ($preview === null) {
+        $this->json(['error' => 'Приглашение не найдено или уже использовано'], 404);
+        return;
+      }
+      $this->json($preview);
+      return;
+    }
+
+    if ($path === '/api/invite/accept' && $method === 'POST') {
+      $user = $this->requireAuthUser();
+      if ($user === null) {
+        return;
+      }
+      try {
+        $body = $this->readJsonBody();
+        $token = (string) ($body['token'] ?? '');
+        if ($token !== '') {
+          $this->teacher->acceptInvitationToken($user['id'], $token);
+        }
+        $this->teacher->acceptPendingInvitationsForEmail($user['id'], (string) $user['email']);
+        $this->json(['ok' => true]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
+    if ($path === '/api/homework' && $method === 'GET') {
+      $user = $this->requireStudent();
+      if ($user === null) {
+        return;
+      }
+      $this->json(['items' => $this->teacher->listHomeworkForStudent($user['id'])]);
+      return;
+    }
+
+    if (preg_match('#^/api/homework/(\d+)/complete$#', $path, $m) && $method === 'POST') {
+      $user = $this->requireStudent();
+      if ($user === null) {
+        return;
+      }
+      try {
+        $body = $this->readJsonBody();
+        $result = is_array($body['result'] ?? null) ? $body['result'] : [];
+        $errors = is_array($body['errors'] ?? null) ? $body['errors'] : [];
+        $this->teacher->completeAssignment($user['id'], (int) $m[1], $result, $errors);
+        $this->json(['ok' => true]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
     if ($path === '/favicon.ico' && $method === 'GET') {
       $this->serveStatic('/assets/favicon.svg', 'image/svg+xml');
       return;
@@ -352,6 +513,78 @@ final class Router
     $adminConfigured = AdminService::adminEmails() !== [];
 
     include dirname(__DIR__) . '/templates/admin.php';
+  }
+
+  private function renderTeacher(): void
+  {
+    header('Content-Type: text/html; charset=utf-8');
+    header('X-Robots-Tag: noindex, nofollow');
+
+    $user = $this->auth->currentUser();
+    $isTeacher = $this->teacher->isTeacher($user);
+    $teacherConfigured = TeacherService::teacherEmails() !== [];
+
+    include dirname(__DIR__) . '/templates/teacher.php';
+  }
+
+  /** @return array{id:int,email:string,name:string,roles:list<string>}|null */
+  private function requireAdmin(): ?array
+  {
+    $user = $this->auth->currentUser();
+    if ($user === null) {
+      $this->json(['error' => 'Требуется вход'], 401);
+      return null;
+    }
+    if (!$this->admin->isAdmin($user)) {
+      $this->json(['error' => 'Нет доступа'], 403);
+      return null;
+    }
+
+    return $user;
+  }
+
+  /** @return array{id:int,email:string,name:string,roles:list<string>}|null */
+  private function requireTeacher(): ?array
+  {
+    $user = $this->auth->currentUser();
+    if ($user === null) {
+      $this->json(['error' => 'Требуется вход'], 401);
+      return null;
+    }
+    if (!$this->roles->isTeacher($user)) {
+      $this->json(['error' => 'Нет доступа'], 403);
+      return null;
+    }
+
+    return $user;
+  }
+
+  /** @return array{id:int,email:string,name:string,roles:list<string>}|null */
+  private function requireStudent(): ?array
+  {
+    $user = $this->auth->currentUser();
+    if ($user === null) {
+      $this->json(['error' => 'Требуется вход'], 401);
+      return null;
+    }
+    if (!$this->roles->isStudent($user)) {
+      $this->json(['error' => 'Раздел доступен только ученикам'], 403);
+      return null;
+    }
+
+    return $user;
+  }
+
+  /** @return array{id:int,email:string,name:string,roles:list<string>}|null */
+  private function requireAuthUser(): ?array
+  {
+    $user = $this->auth->currentUser();
+    if ($user === null) {
+      $this->json(['error' => 'Требуется вход'], 401);
+      return null;
+    }
+
+    return $user;
   }
 
   /** @param mixed $data */

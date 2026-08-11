@@ -16,6 +16,7 @@
     $publicDir = dirname(__DIR__) . '/public';
     $assetVersion = max(
       filemtime($publicDir . '/assets/js/app.js'),
+      filemtime($publicDir . '/assets/js/note-settings-form.js'),
       filemtime($publicDir . '/assets/js/routes.js'),
       filemtime($publicDir . '/assets/js/stats-staff.js'),
       filemtime($publicDir . '/assets/js/note-roadmap.js'),
@@ -64,10 +65,19 @@
         <div class="auth-user" id="auth-user" hidden>
           <span class="auth-user__name" id="auth-user-name"></span>
           <a href="/statistika" class="btn btn--secondary btn--sm" id="btn-go-stats">Статистика</a>
+          <a href="/domashka" class="btn btn--secondary btn--sm" id="btn-go-homework" hidden>Домашка</a>
+          <a href="/teacher" class="btn btn--secondary btn--sm" id="btn-go-teacher" hidden>Ученики</a>
           <button type="button" class="btn btn--secondary btn--sm" id="btn-logout" hidden>Выйти</button>
         </div>
       </div>
     </header>
+
+    <div class="invite-banner" id="invite-banner" hidden>
+      <div class="invite-banner__inner">
+        <p id="invite-banner-text">Преподаватель приглашает вас зарегистрироваться.</p>
+        <button type="button" class="btn btn--primary btn--sm" id="btn-invite-register">Зарегистрироваться</button>
+      </div>
+    </div>
 
     <?php if (!empty($page['lesson']) && is_array($page['lesson'])): ?>
     <article class="seo-intro seo-intro--compact seo-intro--crawler" id="seo-intro" aria-hidden="true">
@@ -337,6 +347,22 @@
       </div>
       <div class="pick-panel stats-panel" id="stats-panel">
         <p class="loading">Загрузка статистики…</p>
+      </div>
+    </section>
+
+    <!-- Домашние задания -->
+    <section class="screen<?= $screenActive('homework') ?>" id="screen-homework"<?= $screenHidden('homework') ?>>
+      <div class="screen-header">
+        <a href="/" class="btn-back" id="btn-back-homework">← Назад</a>
+        <h2 class="screen-header__title">
+          <span class="screen-header__icon icon-badge icon-badge--roadmap" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
+          </span>
+          Домашние задания
+        </h2>
+      </div>
+      <div class="pick-panel homework-panel" id="homework-panel">
+        <p class="loading">Загрузка…</p>
       </div>
     </section>
 
@@ -668,6 +694,15 @@
             <span class="auth-field__label">Подтверждение пароля</span>
             <input type="password" name="password_confirm" required autocomplete="new-password" minlength="6">
           </label>
+          <div class="auth-teacher-option">
+            <label class="auth-teacher-option__toggle">
+              <input type="checkbox" name="is_teacher" value="1">
+              <span class="auth-teacher-option__title">Вы педагог?</span>
+            </label>
+            <p class="auth-teacher-option__hint">
+              Откроется раздел «Ученики»: вы сможете приглашать учеников по email и назначать им задания.
+            </p>
+          </div>
           <p class="auth-error" id="auth-error-register" hidden></p>
           <button type="submit" class="btn btn--primary auth-form__submit">Зарегистрироваться</button>
         </form>

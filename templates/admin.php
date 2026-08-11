@@ -110,6 +110,7 @@ $stageStatusLabel = static function (array $stage): string {
         <thead>
           <tr>
             <th>Пользователь</th>
+            <th>Роли</th>
             <th>Регистрация</th>
             <th>Последний заход</th>
             <th>Путь новичка</th>
@@ -134,6 +135,17 @@ $stageStatusLabel = static function (array $stage): string {
               <strong><?= htmlspecialchars((string) $item['name'], ENT_QUOTES, 'UTF-8') ?></strong>
               <span class="admin-table__email"><?= htmlspecialchars((string) $item['email'], ENT_QUOTES, 'UTF-8') ?></span>
               <span class="admin-table__meta">ID <?= (int) $item['id'] ?> · <?= (int) $item['sessionsCount'] ?> сессий · <?= (int) $item['practicedNotesCount'] ?> нот в статистике</span>
+            </td>
+            <td class="admin-table__roles" data-admin-roles-cell="<?= (int) $item['id'] ?>">
+              <?php if (!empty($item['isTeacher'])): ?>
+              <span class="admin-role-badge admin-role-badge--teacher">Педагог</span>
+              <button type="button" class="btn btn--secondary btn--sm" data-admin-teacher-toggle data-user-id="<?= (int) $item['id'] ?>" data-teacher="0">Снять роль</button>
+              <?php else: ?>
+              <button type="button" class="btn btn--primary btn--sm" data-admin-teacher-toggle data-user-id="<?= (int) $item['id'] ?>" data-teacher="1">Назначить педагогом</button>
+              <?php endif; ?>
+              <?php if (in_array('student', $item['roles'] ?? [], true)): ?>
+              <span class="admin-role-badge admin-role-badge--student">Ученик</span>
+              <?php endif; ?>
             </td>
             <td><?= $formatDate($item['createdAt']) ?></td>
             <td><?= $formatDate($item['lastLoginAt']) ?></td>
@@ -182,5 +194,9 @@ $stageStatusLabel = static function (array $stage): string {
     <?php endif; ?>
     <?php endif; ?>
   </div>
+
+  <?php if (($isAdmin ?? false) && ($adminConfigured ?? false)): ?>
+  <script type="module" src="/assets/js/admin.js"></script>
+  <?php endif; ?>
 </body>
 </html>

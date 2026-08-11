@@ -16,12 +16,31 @@ async function fetchJson(url, options = {}) {
 
 let currentUser = null;
 
+const INVITE_TOKEN_KEY = 'piano-invite-token';
+
 export function getUser() {
   return currentUser;
 }
 
+export function hasRole(role) {
+  return currentUser?.roles?.includes(role) ?? false;
+}
+
 export function isLoggedIn() {
   return currentUser !== null;
+}
+
+export function getInviteToken() {
+  return sessionStorage.getItem(INVITE_TOKEN_KEY) ?? '';
+}
+
+export function setInviteToken(token) {
+  const value = String(token ?? '').trim();
+  if (value) {
+    sessionStorage.setItem(INVITE_TOKEN_KEY, value);
+  } else {
+    sessionStorage.removeItem(INVITE_TOKEN_KEY);
+  }
 }
 
 export async function initAuth() {
@@ -34,7 +53,7 @@ export async function initAuth() {
   return currentUser;
 }
 
-export async function register(name, email, password, passwordConfirm, honeypot = '') {
+export async function register(name, email, password, passwordConfirm, honeypot = '', isTeacher = false) {
   const data = await fetchJson('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify({
@@ -43,18 +62,26 @@ export async function register(name, email, password, passwordConfirm, honeypot 
       password,
       passwordConfirm,
       website: honeypot,
+      inviteToken: getInviteToken(),
+      isTeacher: Boolean(isTeacher),
     }),
   });
   currentUser = data.user;
+  setInviteToken('');
   return currentUser;
 }
 
 export async function login(email, password) {
   const data = await fetchJson('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      email,
+      password,
+      inviteToken: getInviteToken(),
+    }),
   });
   currentUser = data.user;
+  setInviteToken('');
   return currentUser;
 }
 

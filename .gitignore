@@ -1,4 +1,5 @@
 /vendor/
 composer.lock
 /data/app.sqlite
+/data/mail-log/
 .env

@@ -4,6 +4,7 @@ export const ROUTES = {
   notes: '/noty',
   melodies: '/melodii',
   stats: '/statistika',
+  homework: '/domashka',
   practiceNotes: '/trenirovka/noty',
   melody: (id) => `/melodii/${encodeURIComponent(id)}`,
   practiceMelody: (id) => `/trenirovka/melodiya/${encodeURIComponent(id)}`,
@@ -15,6 +16,7 @@ export const SCREEN_ROUTES = {
   'notes-pick': ROUTES.notes,
   'melody-pick': ROUTES.melodies,
   stats: ROUTES.stats,
+  homework: ROUTES.homework,
 };
 
 export function routeForScreen(screen) {

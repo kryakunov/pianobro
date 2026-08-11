@@ -2,12 +2,19 @@ import { PianoKeyboard } from './piano.js';
 import { MidiInput } from './midi.js';
 import { MicPitchInput } from './mic-pitch.js';
 import { MelodyTrainer } from './trainer.js';
-import { NoteTrainer, DEFAULT_NOTE_SETTINGS, DEFAULT_NOTE_SESSION_LIMIT, DEFAULT_TRAINER_OPTIONS, NOTE_SESSION_LIMITS, buildPoolFromSettings, describeNoteSettings, usesBothClefs } from './note-trainer.js';
+import { NoteTrainer, DEFAULT_NOTE_SETTINGS, DEFAULT_NOTE_SESSION_LIMIT, DEFAULT_TRAINER_OPTIONS, describeNoteSettings, usesBothClefs } from './note-trainer.js';
+import {
+  readNoteSettingsFromForm as readNoteSettingsFromFormElement,
+  applyNoteSettingsToForm as applyNoteSettingsToFormElement,
+  readSessionLimitFromForm as readSessionLimitFromFormElement,
+  applySessionLimitToForm as applySessionLimitToFormElement,
+  validateNoteSettings,
+} from './note-settings-form.js';
 import { StaffView } from './staff.js';
 import { normalizeLesson } from './lesson-utils.js';
 import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
-import { initAuth, getUser, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, mergeGuestNoteStats, loadOAuthProviders, redirectToOAuth } from './auth.js';
+import { initAuth, getUser, hasRole, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, mergeGuestNoteStats, loadOAuthProviders, redirectToOAuth, setInviteToken, getInviteToken } from './auth.js';
 import { icon, iconBadgeColored } from './icons.js';
 import { playTrainerNote, warmupTrainerSound, unlockTrainerSoundFromGesture } from './trainer-sounds.js';
 import {
@@ -43,6 +50,7 @@ import { initMetrikaPageview, trackGoal, trackPracticePageView } from './metrika
 const SESSION_LIMIT = 10;
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
 const PENDING_NOTES_PRACTICE_KEY = 'piano-pending-notes-practice';
+const PENDING_HOMEWORK_KEY = 'piano-pending-homework';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -54,6 +62,8 @@ const els = {
   screenNotesPick: $('#screen-notes-pick'),
   screenRoadmap: $('#screen-roadmap'),
   screenStats: $('#screen-stats'),
+  screenHomework: $('#screen-homework'),
+  homeworkPanel: $('#homework-panel'),
   screenPractice: $('#screen-practice'),
   btnGoMelodies: $('#btn-go-melodies'),
   btnGoNotes: $('#btn-go-notes'),
@@ -69,6 +79,8 @@ const els = {
   btnRoadmapLogin: $('#btn-roadmap-login'),
   btnGoStatsHome: $('#btn-go-stats-home'),
   btnGoStats: $('#btn-go-stats'),
+  btnGoHomework: $('#btn-go-homework'),
+  btnGoTeacher: $('#btn-go-teacher'),
   btnBackStats: $('#btn-back-stats'),
   statsPanel: $('#stats-panel'),
   authPanel: $('#auth-panel'),
@@ -154,6 +166,7 @@ let activeRoadmapCapstone = false;
 let lastRoadmapStageCompleted = false;
 let lastRoadmapCapstoneReady = false;
 let practiceReturnPath = ROUTES.home;
+let activeHomeworkSubmissionId = null;
 
 const piano = new PianoKeyboard(els.piano, PIANO_START, PIANO_END);
 const midi = new MidiInput();
@@ -207,6 +220,7 @@ function showScreen(name) {
     'notes-pick': els.screenNotesPick,
     roadmap: els.screenRoadmap,
     stats: els.screenStats,
+    homework: els.screenHomework,
     practice: els.screenPractice,
   };
 
@@ -343,7 +357,11 @@ async function restoreInputConnections() {
 }
 
 function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 async function fetchJson(url, options = {}) {
@@ -480,9 +498,7 @@ function pluralNotes(count) {
 }
 
 function readSessionLimitFromForm() {
-  const select = els.notesSettingsForm?.querySelector('[name="session-limit"]');
-  const value = parseInt(select?.value ?? String(DEFAULT_NOTE_SESSION_LIMIT), 10);
-  return NOTE_SESSION_LIMITS.includes(value) ? value : DEFAULT_NOTE_SESSION_LIMIT;
+  return readSessionLimitFromFormElement(els.notesSettingsForm);
 }
 
 function readTrainerOptionsFromPrefs() {
@@ -530,6 +546,10 @@ function syncPracticeSoundPanel() {
   syncSoundToggleUI();
 }
 
+function isHomeworkPractice() {
+  return activeHomeworkSubmissionId != null;
+}
+
 function syncPracticeControls() {
   if (!els.practiceControls) return;
 
@@ -544,7 +564,7 @@ function syncPracticeControls() {
   syncKeyboardToggleUI();
 
   if (els.keyboardHintsPanel) {
-    els.keyboardHintsPanel.hidden = false;
+    els.keyboardHintsPanel.hidden = isHomeworkPractice();
   }
 }
 
@@ -760,18 +780,22 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
   appMode = mode;
   currentPracticeTitle = title;
   els.practiceTitle.textContent = title;
+
+  const homeworkHints = isHomeworkPractice() ? false : undefined;
+  const resolvedHints = homeworkHints ?? hintsOverride;
+
   if (mode === 'notes') {
-    if (hintsOverride === undefined) {
+    if (resolvedHints === undefined) {
       setKeyboardHints(keyboardHints);
     } else {
-      setKeyboardHints(hintsOverride, { persist: false });
+      setKeyboardHints(resolvedHints, { persist: false });
     }
     syncPracticeControls();
     if (noteTrainer.soundEnabled) {
       void warmupTrainerSound();
     }
   } else {
-    setKeyboardHints(true);
+    setKeyboardHints(resolvedHints ?? true, { persist: false });
     syncPracticeControls();
     if (noteTrainer.soundEnabled) {
       void warmupTrainerSound();
@@ -813,6 +837,7 @@ function exitPractice() {
   noteTrainer.stop();
   activeRoadmapStageId = null;
   activeRoadmapCapstone = false;
+  activeHomeworkSubmissionId = null;
   staffView.clear();
   els.staffViewport.classList.remove('staff-viewport--grand');
   piano.clearStates();
@@ -888,6 +913,9 @@ async function onSessionComplete(stats) {
   saveSessionStats(payload).then(async (ok) => {
     if (!ok) return;
     cachedNoteStats = null;
+    if (activeHomeworkSubmissionId) {
+      await completeHomeworkSubmission(stats);
+    }
     if (payload.mode === 'notes') {
       try {
         const data = await loadNoteStats();
@@ -935,11 +963,15 @@ function updateRoadmapProgressFromSession(stats, noteStats = null) {
 function updateAuthUI() {
   const user = getUser();
   const loggedIn = Boolean(user);
+  const isTeacher = hasRole('teacher');
+  const isStudent = hasRole('student');
 
   if (els.btnOpenAuth) els.btnOpenAuth.hidden = loggedIn;
   if (els.authUser) els.authUser.hidden = !loggedIn;
   if (els.btnLogout) els.btnLogout.hidden = !loggedIn;
   if (els.authUserName) els.authUserName.textContent = user?.name ?? '';
+  if (els.btnGoHomework) els.btnGoHomework.hidden = !isStudent;
+  if (els.btnGoTeacher) els.btnGoTeacher.hidden = !isTeacher;
 }
 
 function openAuthModal(tab = 'login') {
@@ -1012,6 +1044,51 @@ function handleOAuthRedirect() {
   const query = params.toString();
   const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
   window.history.replaceState({}, '', nextUrl);
+}
+
+async function initInviteFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('invite');
+  if (!token) return;
+
+  setInviteToken(token);
+  params.delete('invite');
+  const query = params.toString();
+  const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+  window.history.replaceState({}, '', nextUrl);
+
+  const banner = document.getElementById('invite-banner');
+  const bannerText = document.getElementById('invite-banner-text');
+  const registerBtn = document.getElementById('btn-invite-register');
+
+  try {
+    const preview = await fetchJson(`/api/teacher/invite/${encodeURIComponent(token)}`);
+    if (bannerText) {
+      bannerText.textContent = `${preview.teacherName} приглашает вас зарегистрироваться и заниматься в Piano Bro.`;
+    }
+    if (banner) banner.hidden = false;
+    if (registerBtn) {
+      registerBtn.addEventListener('click', () => {
+        openAuthModal('register');
+        const emailInput = els.authFormRegister?.querySelector('[name="email"]');
+        if (emailInput && preview.email) {
+          emailInput.value = preview.email;
+        }
+      });
+    }
+    if (!isLoggedIn()) {
+      openAuthModal('register');
+      const emailInput = els.authFormRegister?.querySelector('[name="email"]');
+      if (emailInput && preview.email) {
+        emailInput.value = preview.email;
+      }
+    }
+  } catch {
+    if (bannerText) {
+      bannerText.textContent = 'Ссылка-приглашение недействительна или уже использована.';
+    }
+    if (banner) banner.hidden = false;
+  }
 }
 
 function setAuthTab(tab) {
@@ -1201,6 +1278,176 @@ async function afterAuthSuccess() {
   closeAuthModal();
   if (window.location.pathname === ROUTES.stats) {
     await openStatsScreen();
+  }
+  if (window.location.pathname === ROUTES.homework) {
+    await openHomeworkScreen();
+  }
+}
+
+const HOMEWORK_STATUS_LABELS = {
+  pending: 'Не выполнено',
+  submitted: 'На проверке',
+  completed: 'Выполнено',
+  reviewed: 'Проверено',
+};
+
+function formatHomeworkDate(value) {
+  if (!value) return '';
+  try {
+    return new Date(String(value).replace(' ', 'T') + 'Z').toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return String(value);
+  }
+}
+
+function renderHomeworkPanel(items) {
+  if (!els.homeworkPanel) return;
+
+  if (!isLoggedIn()) {
+    els.homeworkPanel.innerHTML = `
+      <div class="homework-guest">
+        <p>Войдите в аккаунт, чтобы видеть задания от преподавателя.</p>
+        <button type="button" class="btn btn--primary" id="btn-homework-login">Войти</button>
+      </div>
+    `;
+    els.homeworkPanel.querySelector('#btn-homework-login')?.addEventListener('click', () => openAuthModal('login'));
+    return;
+  }
+
+  if (!hasRole('student')) {
+    els.homeworkPanel.innerHTML = `
+      <p class="homework-empty">Раздел «Домашка» доступен ученикам, которых добавил преподаватель. Если вас пригласили — войдите по ссылке из письма или дождитесь добавления в список.</p>
+    `;
+    return;
+  }
+
+  if (!items.length) {
+    els.homeworkPanel.innerHTML = `
+      <p class="homework-empty">Пока нет заданий. Преподаватель назначит их после добавления вас в список учеников.</p>
+    `;
+    return;
+  }
+
+  const list = items.map((item) => {
+    const pending = item.status === 'pending';
+    const result = item.result ?? {};
+    const accuracy = result.accuracy != null ? `${result.accuracy}%` : '';
+    const noteCount = item.payload?.sessionLimit;
+    const typeLabel = item.type === 'melody'
+      ? 'Мелодия'
+      : `Ноты${noteCount ? ` (${noteCount})` : ''}`;
+    const due = item.dueAt ? `Срок: ${formatHomeworkDate(item.dueAt)}` : '';
+    const teacherLabel = item.teacherName ?? item.className ?? 'Преподаватель';
+
+    return `
+      <article class="homework-card homework-card--${item.status}">
+        <div class="homework-card__main">
+          <h3 class="homework-card__title">${escapeHtml(item.title)}</h3>
+          <p class="homework-card__meta">${escapeHtml(teacherLabel)} · ${typeLabel}${due ? ` · ${due}` : ''}</p>
+          <p class="homework-card__status">${HOMEWORK_STATUS_LABELS[item.status] ?? item.status}${accuracy ? ` · ${accuracy}` : ''}</p>
+          ${item.teacherComment ? `<p class="homework-card__comment">${escapeHtml(item.teacherComment)}</p>` : ''}
+        </div>
+        <div class="homework-card__actions">
+          ${pending
+    ? `<button type="button" class="btn btn--primary btn--sm" data-start-homework="${item.submissionId}">Выполнить</button>`
+    : `<button type="button" class="btn btn--secondary btn--sm" data-start-homework="${item.submissionId}">Повторить</button>`}
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  els.homeworkPanel.innerHTML = `<div class="homework-list">${list}</div>`;
+  els.homeworkPanel.querySelectorAll('[data-start-homework]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const submissionId = Number(btn.dataset.startHomework);
+      const item = items.find((entry) => entry.submissionId === submissionId);
+      if (item) startHomework(item);
+    });
+  });
+}
+
+function startHomework(item) {
+  const payload = item.payload ?? {};
+  activeHomeworkSubmissionId = item.submissionId;
+  const config = {
+    submissionId: item.submissionId,
+    type: item.type,
+    returnPath: ROUTES.homework,
+  };
+
+  if (item.type === 'melody' && payload.lessonId) {
+    sessionStorage.setItem(PENDING_HOMEWORK_KEY, JSON.stringify({
+      ...config,
+      lessonId: payload.lessonId,
+    }));
+    navigateTo(ROUTES.practiceMelody(payload.lessonId));
+    return;
+  }
+
+  sessionStorage.setItem(PENDING_HOMEWORK_KEY, JSON.stringify({
+    ...config,
+    settings: payload.settings ?? structuredClone(DEFAULT_NOTE_SETTINGS),
+    sessionLimit: payload.sessionLimit ?? DEFAULT_NOTE_SESSION_LIMIT,
+    options: payload.options ?? readTrainerOptionsFromPrefs(),
+  }));
+  navigateTo(ROUTES.practiceNotes);
+}
+
+async function openHomeworkScreen() {
+  showScreen('homework');
+  if (!isLoggedIn()) {
+    renderHomeworkPanel([]);
+    return;
+  }
+
+  if (!hasRole('student')) {
+    renderHomeworkPanel([]);
+    return;
+  }
+
+  els.homeworkPanel.innerHTML = '<p class="loading">Загрузка…</p>';
+  try {
+    const data = await fetchJson('/api/homework');
+    renderHomeworkPanel(data.items ?? []);
+  } catch {
+    els.homeworkPanel.innerHTML = '<p class="loading">Не удалось загрузить задания</p>';
+  }
+}
+
+async function completeHomeworkSubmission(stats) {
+  if (!activeHomeworkSubmissionId || !isLoggedIn()) return;
+
+  const errors = (stats.attempts ?? [])
+    .filter((attempt) => !attempt.correct)
+    .map((attempt) => ({
+      midi: attempt.midi,
+      name: midiToName(attempt.midi),
+      expected: attempt.expectedMidi != null ? midiToName(attempt.expectedMidi) : null,
+    }));
+
+  try {
+    await fetchJson(`/api/homework/${activeHomeworkSubmissionId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({
+        result: {
+          correct: stats.correct,
+          wrong: stats.wrong,
+          accuracy: stats.accuracy,
+          total: stats.total,
+          mode: stats.mode ?? appMode,
+        },
+        errors,
+      }),
+    });
+  } catch {
+    /* ignore */
+  } finally {
+    activeHomeworkSubmissionId = null;
   }
 }
 
@@ -1464,68 +1711,15 @@ async function loadUploadedMidi(file) {
 }
 
 function readNoteSettingsFromForm() {
-  const form = els.notesSettingsForm;
-  if (!form) return structuredClone(DEFAULT_NOTE_SETTINGS);
-
-  const checked = (name) => form.querySelector(`[name="${name}"]`)?.checked ?? false;
-  const trebleFirst = checked('treble-first');
-  const trebleSecond = checked('treble-second');
-  const bassSmall = checked('bass-small');
-  const bassGreat = checked('bass-great');
-
-  return {
-    treble: {
-      enabled: trebleFirst || trebleSecond,
-      first: trebleFirst,
-      second: trebleSecond,
-    },
-    bass: {
-      enabled: bassSmall || bassGreat,
-      small: bassSmall,
-      great: bassGreat,
-    },
-    alteration: {
-      sharp: checked('alt-sharp'),
-      flat: checked('alt-flat'),
-    },
-  };
+  return readNoteSettingsFromFormElement(els.notesSettingsForm);
 }
 
 function applyNoteSettingsToForm(settings) {
-  const form = els.notesSettingsForm;
-  if (!form) return;
-
-  const set = (name, value) => {
-    const input = form.querySelector(`[name="${name}"]`);
-    if (input) input.checked = value;
-  };
-
-  set('treble-first', settings.treble.first);
-  set('treble-second', settings.treble.second);
-  set('bass-small', settings.bass.small);
-  set('bass-great', settings.bass.great);
-  set('alt-sharp', settings.alteration.sharp);
-  set('alt-flat', settings.alteration.flat);
+  applyNoteSettingsToFormElement(els.notesSettingsForm, settings);
 }
 
 function applySessionLimitToForm(limit = DEFAULT_NOTE_SESSION_LIMIT) {
-  const select = els.notesSettingsForm?.querySelector('[name="session-limit"]');
-  if (select) select.value = String(limit);
-}
-
-function hasSelectedOctaves(settings) {
-  return settings.treble.first || settings.treble.second
-    || settings.bass.small || settings.bass.great;
-}
-
-function validateNoteSettings(settings) {
-  if (!hasSelectedOctaves(settings)) {
-    return 'Выберите хотя бы одну октаву';
-  }
-  if (!buildPoolFromSettings(settings).length) {
-    return 'Нет нот для выбранных настроек — включите диезы/бемоли или измените октавы';
-  }
-  return null;
+  applySessionLimitToFormElement(els.notesSettingsForm, limit);
 }
 
 async function refreshRoadmapData(noteStats = null) {
@@ -1790,29 +1984,48 @@ function startNotesTraining() {
   navigateTo(ROUTES.practiceNotes);
 }
 
-function bootNotesPractice() {
+function readPendingHomework() {
+  try {
+    const homeworkRaw = sessionStorage.getItem(PENDING_HOMEWORK_KEY);
+    if (!homeworkRaw) return null;
+    sessionStorage.removeItem(PENDING_HOMEWORK_KEY);
+    return JSON.parse(homeworkRaw);
+  } catch {
+    return null;
+  }
+}
+
+function bootNotesPractice(homework = null) {
   activeRoadmapStageId = null;
   let config = null;
-  try {
-    const raw = sessionStorage.getItem(PENDING_NOTES_PRACTICE_KEY);
-    if (raw) {
-      config = JSON.parse(raw);
-      sessionStorage.removeItem(PENDING_NOTES_PRACTICE_KEY);
+
+  if (!homework) {
+    try {
+      const raw = sessionStorage.getItem(PENDING_NOTES_PRACTICE_KEY);
+      if (raw) {
+        config = JSON.parse(raw);
+        sessionStorage.removeItem(PENDING_NOTES_PRACTICE_KEY);
+      }
+    } catch {
+      config = null;
     }
-  } catch {
-    config = null;
   }
 
-  const settings = config?.settings ?? structuredClone(DEFAULT_NOTE_SETTINGS);
-  const options = config?.options ?? readTrainerOptionsFromPrefs();
-  const sessionLimit = config?.sessionLimit ?? DEFAULT_NOTE_SESSION_LIMIT;
+  if (homework?.submissionId) {
+    activeHomeworkSubmissionId = homework.submissionId;
+  }
+
+  const settings = homework?.settings ?? config?.settings ?? structuredClone(DEFAULT_NOTE_SETTINGS);
+  const options = homework?.options ?? config?.options ?? readTrainerOptionsFromPrefs();
+  const sessionLimit = homework?.sessionLimit ?? config?.sessionLimit ?? DEFAULT_NOTE_SESSION_LIMIT;
+  const returnPath = homework?.returnPath ?? config?.returnPath ?? ROUTES.notes;
 
   saveTrainerPrefs(options);
   noteSettings = settings;
   noteTrainer.setConfig(settings);
   noteTrainer.setOptions(options);
   noteTrainer.sessionLimit = sessionLimit;
-  enterPractice('notes', describeNoteSettings(settings, options), { returnPath: ROUTES.notes });
+  enterPractice('notes', describeNoteSettings(settings, options), { returnPath });
 }
 
 async function selectLesson(id, { returnPath } = {}) {
@@ -1828,14 +2041,20 @@ async function selectLesson(id, { returnPath } = {}) {
 }
 
 async function bootPractice(boot) {
+  const homework = readPendingHomework();
+
+  if (homework?.submissionId) {
+    activeHomeworkSubmissionId = homework.submissionId;
+  }
+
   if (boot.mode === 'melody' && boot.lessonId) {
-    practiceReturnPath = boot.returnPath ?? ROUTES.melodies;
+    practiceReturnPath = homework?.returnPath ?? boot.returnPath ?? ROUTES.melodies;
     await selectLesson(boot.lessonId, { returnPath: practiceReturnPath });
     return;
   }
   if (boot.mode === 'notes') {
-    practiceReturnPath = boot.returnPath ?? ROUTES.notes;
-    bootNotesPractice();
+    practiceReturnPath = homework?.returnPath ?? boot.returnPath ?? ROUTES.notes;
+    bootNotesPractice(homework);
   }
 }
 
@@ -1848,6 +2067,9 @@ async function bootApp() {
       break;
     case 'stats':
       await openStatsScreen();
+      break;
+    case 'homework':
+      await openHomeworkScreen();
       break;
     case 'melody-pick':
       if (boot.redirectToPractice && boot.focusLessonId) {
@@ -1991,6 +2213,7 @@ els.keyboardToggleTabs?.forEach((tab) => {
 
 els.keyboardHintTabs?.forEach((tab) => {
   tab.addEventListener('click', () => {
+    if (isHomeworkPractice()) return;
     setKeyboardHints(tab.dataset.hints === 'on');
   });
 });
@@ -2092,6 +2315,7 @@ els.authFormRegister?.addEventListener('submit', async (e) => {
       password,
       passwordConfirm,
       form.get('website'),
+      form.get('is_teacher') === '1',
     );
     await afterAuthSuccess();
   } catch (err) {
@@ -2259,8 +2483,23 @@ loadLessons();
 setupOAuthProviders();
 handleOAuthRedirect();
 initMetrikaPageview();
+void initInviteFromUrl();
 initAuth().then(async () => {
   updateAuthUI();
+  const inviteToken = getInviteToken();
+  if (inviteToken && isLoggedIn()) {
+    try {
+      await fetchJson('/api/invite/accept', {
+        method: 'POST',
+        body: JSON.stringify({ token: inviteToken }),
+      });
+      setInviteToken('');
+      const banner = document.getElementById('invite-banner');
+      if (banner) banner.hidden = true;
+    } catch {
+      /* ignore */
+    }
+  }
   await syncGuestProgressAfterAuth();
   await bootApp();
 });
