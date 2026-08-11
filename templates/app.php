@@ -150,6 +150,10 @@
                 <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-chart"/></svg>
                 Прогресс по каждой ноте
               </li>
+              <li class="landing-pill">
+                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-user"/></svg>
+                Для педагогов — домашка и ученики
+              </li>
             </ul>
           </div>
 
@@ -178,47 +182,32 @@
           </div>
         </div>
 
-        <section class="landing-section landing-section--modes" aria-labelledby="landing-modes-title">
-          <h3 class="landing-section__title" id="landing-modes-title">С чего начать</h3>
-          <div class="landing-modes">
-            <a href="/put-novichka" class="home-card home-card--roadmap landing-mode" id="btn-go-roadmap-card">
-              <span class="home-card__icon icon-badge icon-badge--roadmap" aria-hidden="true">
-                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
-              </span>
-              <span class="home-card__title">Путь новичка</span>
-              <span class="home-card__desc">8 уровней с мелодиями-закреплением</span>
-              <span class="landing-mode__cta">Открыть →</span>
-            </a>
-            <a href="/noty" class="home-card home-card--notes landing-mode">
-              <span class="home-card__icon icon-badge icon-badge--notes" aria-hidden="true">
-                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-notes"/></svg>
-              </span>
-              <span class="home-card__title">Тренажёр нот</span>
-              <span class="home-card__desc">Свободная тренировка по выбранным нотам</span>
-              <span class="landing-mode__cta">Начать →</span>
-            </a>
-            <a href="/melodii" class="home-card home-card--melody landing-mode">
-              <span class="home-card__icon icon-badge icon-badge--melody" aria-hidden="true">
-                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-melody"/></svg>
-              </span>
-              <span class="home-card__title">Мелодии</span>
-              <span class="home-card__desc">Популярные песни и классика</span>
-              <span class="landing-mode__cta">Каталог →</span>
-            </a>
-            <a href="/statistika" class="home-card home-card--stats landing-mode" id="btn-go-stats-home">
-              <span class="home-card__icon icon-badge icon-badge--stats" aria-hidden="true">
-                <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-stats"/></svg>
-              </span>
-              <span class="home-card__title">Статистика</span>
-              <span class="home-card__desc">Карта нот и график занятий</span>
-              <span class="landing-mode__cta">Открыть →</span>
-            </a>
+        <section class="landing-showcase" aria-labelledby="landing-show-roadmap">
+          <div class="landing-showcase__art" aria-hidden="true">
+            <div class="landing-art landing-art--roadmap">
+              <div class="landing-art__glow landing-art__glow--roadmap"></div>
+              <div class="landing-art__roadmap-steps">
+                <span class="is-done">1</span>
+                <span class="is-done">2</span>
+                <span class="is-active">3</span>
+                <span>4</span>
+                <span>5</span>
+                <span>6</span>
+                <span>7</span>
+                <span>8</span>
+              </div>
+              <p class="landing-art__roadmap-caption">Уровни с мелодиями-закреплением</p>
+            </div>
+          </div>
+          <div class="landing-showcase__content">
+            <span class="landing-showcase__tag landing-showcase__tag--roadmap">Путь новичка</span>
+            <h3 class="landing-showcase__title" id="landing-show-roadmap">От первой ноты до уверенного чтения</h3>
+            <p class="landing-showcase__text">8 уровней с постепенным усложнением — ноты, ключи и короткие мелодии для закрепления.</p>
+            <a href="/put-novichka" class="landing-showcase__link" id="btn-go-roadmap-card">Начать путь →</a>
           </div>
         </section>
 
-        <div class="landing-divider" aria-hidden="true"></div>
-
-        <section class="landing-showcase" aria-labelledby="landing-show-notes">
+        <section class="landing-showcase landing-showcase--reverse" aria-labelledby="landing-show-notes">
           <div class="landing-showcase__art" aria-hidden="true">
             <div class="landing-art landing-art--notes">
               <div class="landing-art__glow"></div>
@@ -238,10 +227,11 @@
             <span class="landing-showcase__tag">Тренажёр</span>
             <h3 class="landing-showcase__title" id="landing-show-notes">Тренажёр нот на нотном стане</h3>
             <p class="landing-showcase__text">Угадай ноту, тренируй попадание в клавиши и запоминание — скрипичный и басовый ключ, чтение нот с листа.</p>
+            <a href="/noty" class="landing-showcase__link">Открыть тренажёр →</a>
           </div>
         </section>
 
-        <section class="landing-showcase landing-showcase--reverse" aria-labelledby="landing-show-melody">
+        <section class="landing-showcase" aria-labelledby="landing-show-melody">
           <div class="landing-showcase__art" aria-hidden="true">
             <div class="landing-art landing-art--melody">
               <div class="landing-art__glow landing-art__glow--violet"></div>
@@ -263,10 +253,11 @@
             <span class="landing-showcase__tag">Мелодии</span>
             <h3 class="landing-showcase__title" id="landing-show-melody">Играйте любимые песни</h3>
             <p class="landing-showcase__text">Twinkle, Mario, «К Элизе» и десятки других — с прослушиванием и подсветкой клавиш.</p>
+            <a href="/melodii" class="landing-showcase__link">Выбрать мелодию →</a>
           </div>
         </section>
 
-        <section class="landing-showcase" aria-labelledby="landing-show-stats">
+        <section class="landing-showcase landing-showcase--reverse" aria-labelledby="landing-show-stats">
           <div class="landing-showcase__art" aria-hidden="true">
             <div class="landing-art landing-art--stats">
               <div class="landing-art__glow landing-art__glow--green"></div>
@@ -290,6 +281,46 @@
             <span class="landing-showcase__tag">Прогресс</span>
             <h3 class="landing-showcase__title" id="landing-show-stats">Видно, что уже получается</h3>
             <p class="landing-showcase__text">Карта нот на стане и график занятий — сразу понятно, что повторить сегодня.</p>
+            <a href="/statistika" class="landing-showcase__link" id="btn-go-stats-home">Смотреть статистику →</a>
+          </div>
+        </section>
+
+        <section class="landing-showcase" aria-labelledby="landing-show-teacher">
+          <div class="landing-showcase__art" aria-hidden="true">
+            <div class="landing-art landing-art--teacher">
+              <div class="landing-art__glow landing-art__glow--teacher"></div>
+              <ul class="landing-art__students">
+                <li><span class="landing-art__student-avatar">А</span> Анна · 12/20 нот</li>
+                <li><span class="landing-art__student-avatar">М</span> Максим · домашка</li>
+                <li><span class="landing-art__student-avatar">С</span> София · 85% точность</li>
+              </ul>
+              <div class="landing-art__assignment">
+                <span class="landing-art__assignment-tag">Задание</span>
+                <strong>До–Ре–Ми, скрипичный ключ</strong>
+                <span>20 нот · мин. 70%</span>
+              </div>
+              <div class="landing-art__chart landing-art__chart--compact">
+                <span style="--h:40%"></span>
+                <span style="--h:55%"></span>
+                <span style="--h:48%"></span>
+                <span style="--h:72%"></span>
+                <span style="--h:68%"></span>
+              </div>
+            </div>
+          </div>
+          <div class="landing-showcase__content">
+            <span class="landing-showcase__tag landing-showcase__tag--teacher">Педагогам</span>
+            <h3 class="landing-showcase__title" id="landing-show-teacher">Домашка и прогресс учеников</h3>
+            <p class="landing-showcase__text">
+              Приглашайте учеников по email, назначайте тренировки по нотам и следите за их результатами —
+              карта освоенных нот, статистика сессий и выполненные задания в одном кабинете.
+            </p>
+            <ul class="landing-showcase__list">
+              <li>Приглашение учеников и список класса</li>
+              <li>Индивидуальные задания с требованиями к точности</li>
+              <li>Прогресс каждого ученика, как в его личной статистике</li>
+            </ul>
+            <a href="/teacher" class="landing-showcase__link">В кабинет педагога →</a>
           </div>
         </section>
 
