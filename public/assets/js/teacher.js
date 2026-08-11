@@ -1,3 +1,4 @@
+import { initAnalytics } from './analytics.js';
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 import { enrichNotesForRoadmapDisplay } from './note-roadmap.js';
 import { describeNoteSettings } from './note-trainer.js';
@@ -407,4 +408,5 @@ els.inviteForm?.addEventListener('submit', async (event) => {
 });
 
 bindAssignmentModalControls();
+initAnalytics();
 await loadDashboard();

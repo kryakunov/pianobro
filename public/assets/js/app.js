@@ -46,6 +46,7 @@ import {
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 import { ROUTES, routeForScreen, navigateTo } from './routes.js';
 import { initMetrikaPageview, trackGoal, trackPracticePageView } from './metrika.js';
+import { initAnalytics } from './analytics.js';
 
 const SESSION_LIMIT = 10;
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
@@ -2483,6 +2484,7 @@ loadLessons();
 setupOAuthProviders();
 handleOAuthRedirect();
 initMetrikaPageview();
+initAnalytics();
 void initInviteFromUrl();
 initAuth().then(async () => {
   updateAuthUI();

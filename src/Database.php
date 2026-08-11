@@ -88,6 +88,8 @@ final class Database
     self::migrateTeacherMode($pdo);
     self::migrateTeacherStudents($pdo);
     self::migrateUserRoles($pdo);
+    self::migrateAnalytics($pdo);
+    self::migrateAnalyticsSearchReferral($pdo);
   }
 
   private static function migrateOAuthAccounts(PDO $pdo): void
@@ -309,5 +311,87 @@ final class Database
       INSERT OR IGNORE INTO user_roles (user_id, role)
       SELECT DISTINCT student_id, 'student' FROM teacher_students;
       SQL);
+  }
+
+  private static function migrateAnalytics(PDO $pdo): void
+  {
+    $pdo->exec(<<<'SQL'
+      CREATE TABLE IF NOT EXISTS analytics_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        session_id TEXT NOT NULL,
+        event_type TEXT NOT NULL CHECK(event_type IN ('click', 'page_view', 'page_time', 'search_referral')),
+        page_path TEXT NOT NULL,
+        target TEXT,
+        duration_ms INTEGER,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_created
+        ON analytics_events(created_at);
+
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_type_created
+        ON analytics_events(event_type, created_at);
+
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_page_created
+        ON analytics_events(page_path, created_at);
+
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_target_created
+        ON analytics_events(target, created_at);
+      SQL);
+  }
+
+  private static function migrateAnalyticsSearchReferral(PDO $pdo): void
+  {
+    $sql = $pdo->query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'analytics_events'")->fetchColumn();
+    if ($sql === false || str_contains((string) $sql, 'search_referral')) {
+      return;
+    }
+
+    $pdo->exec('PRAGMA foreign_keys = OFF');
+    $pdo->beginTransaction();
+
+    try {
+      $pdo->exec(<<<'SQL'
+        CREATE TABLE analytics_events_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER,
+          session_id TEXT NOT NULL,
+          event_type TEXT NOT NULL CHECK(event_type IN ('click', 'page_view', 'page_time', 'search_referral')),
+          page_path TEXT NOT NULL,
+          target TEXT,
+          duration_ms INTEGER,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+        );
+
+        INSERT INTO analytics_events_new
+          (id, user_id, session_id, event_type, page_path, target, duration_ms, created_at)
+        SELECT id, user_id, session_id, event_type, page_path, target, duration_ms, created_at
+        FROM analytics_events;
+
+        DROP TABLE analytics_events;
+        ALTER TABLE analytics_events_new RENAME TO analytics_events;
+
+        CREATE INDEX IF NOT EXISTS idx_analytics_events_created
+          ON analytics_events(created_at);
+
+        CREATE INDEX IF NOT EXISTS idx_analytics_events_type_created
+          ON analytics_events(event_type, created_at);
+
+        CREATE INDEX IF NOT EXISTS idx_analytics_events_page_created
+          ON analytics_events(page_path, created_at);
+
+        CREATE INDEX IF NOT EXISTS idx_analytics_events_target_created
+          ON analytics_events(target, created_at);
+        SQL);
+      $pdo->commit();
+    } catch (\Throwable $e) {
+      $pdo->rollBack();
+      throw $e;
+    }
+
+    $pdo->exec('PRAGMA foreign_keys = ON');
   }
 }

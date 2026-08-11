@@ -16,6 +16,7 @@ final class Router
     private readonly AdminService $admin,
     private readonly TeacherService $teacher,
     private readonly RoleService $roles,
+    private readonly AnalyticsService $analytics,
   ) {}
 
   public function dispatch(string $uri, string $method): void
@@ -249,6 +250,21 @@ final class Router
 
     if ($path === '/admin' && $method === 'GET') {
       $this->renderAdmin();
+      return;
+    }
+
+    if ($path === '/api/analytics/events' && $method === 'POST') {
+      try {
+        $body = $this->readJsonBody();
+        $sessionId = (string) ($body['sessionId'] ?? '');
+        $events = is_array($body['events'] ?? null) ? $body['events'] : [];
+        $user = $this->auth->currentUser();
+        $userId = $user !== null ? (int) $user['id'] : null;
+        $inserted = $this->analytics->recordEvents($userId, $sessionId, $events);
+        $this->json(['ok' => true, 'inserted' => $inserted]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
       return;
     }
 
@@ -510,6 +526,7 @@ final class Router
     $isAdmin = $this->admin->isAdmin($user);
     $users = $isAdmin ? $this->admin->listUsersWithRoadmap() : [];
     $onlineStats = $isAdmin ? $this->admin->getDailyOnlineCounts() : ['today' => 0, 'yesterday' => 0];
+    $analyticsStats = $isAdmin ? $this->analytics->getDashboard(30) : null;
     $adminConfigured = AdminService::adminEmails() !== [];
 
     include dirname(__DIR__) . '/templates/admin.php';

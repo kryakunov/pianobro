@@ -1,3 +1,5 @@
+import { initAnalytics } from './analytics.js';
+
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, {
     credentials: 'same-origin',
@@ -84,3 +86,4 @@ function bindTeacherToggle(root = document) {
 }
 
 bindTeacherToggle();
+initAnalytics();
