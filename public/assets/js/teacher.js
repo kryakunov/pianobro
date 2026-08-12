@@ -72,11 +72,36 @@ function statusLabel(status) {
   }[status] ?? status;
 }
 
-function showInviteMessage(text, isError = false) {
+function showInviteMessage(text, isError = false, inviteUrl = '') {
   if (!els.inviteMessage) return;
-  els.inviteMessage.textContent = text;
-  els.inviteMessage.hidden = !text;
+  els.inviteMessage.innerHTML = '';
+  els.inviteMessage.hidden = !text && !inviteUrl;
   els.inviteMessage.classList.toggle('teacher-invite-message--error', isError);
+
+  if (text) {
+    const paragraph = document.createElement('p');
+    paragraph.textContent = text;
+    els.inviteMessage.appendChild(paragraph);
+  }
+
+  if (inviteUrl) {
+    const linkWrap = document.createElement('div');
+    linkWrap.className = 'teacher-invite-link';
+    linkWrap.innerHTML = `
+      <span class="teacher-invite-link__label">Ссылка для ученика:</span>
+      <a href="${escapeHtml(inviteUrl)}" target="_blank" rel="noopener">${escapeHtml(inviteUrl)}</a>
+      <button type="button" class="btn btn--secondary btn--sm" data-copy-invite-link>Скопировать</button>
+    `;
+    linkWrap.querySelector('[data-copy-invite-link]')?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(inviteUrl);
+        showInviteMessage('Ссылка скопирована', false, inviteUrl);
+      } catch {
+        showInviteMessage('Не удалось скопировать ссылку', true, inviteUrl);
+      }
+    });
+    els.inviteMessage.appendChild(linkWrap);
+  }
 }
 
 function renderPendingInvites(invitations) {
@@ -88,7 +113,12 @@ function renderPendingInvites(invitations) {
   els.pendingInvites.innerHTML = `
     <p class="teacher-pending-title">Ожидают регистрации:</p>
     <ul class="teacher-pending-list">
-      ${invitations.map((item) => `<li>${escapeHtml(item.email)} <span class="teacher-pending-date">${formatDate(item.createdAt)}</span></li>`).join('')}
+      ${invitations.map((item) => `
+        <li>
+          <span>${escapeHtml(item.email)} <span class="teacher-pending-date">${formatDate(item.createdAt)}</span></span>
+          ${item.inviteUrl ? `<a class="teacher-pending-link" href="${escapeHtml(item.inviteUrl)}" target="_blank" rel="noopener">Ссылка</a>` : ''}
+        </li>
+      `).join('')}
     </ul>
   `;
 }
@@ -399,7 +429,11 @@ els.inviteForm?.addEventListener('submit', async (event) => {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
-    showInviteMessage(result.message ?? 'Готово');
+    showInviteMessage(
+      [result.message, result.mailError].filter(Boolean).join(' '),
+      Boolean(result.mailError),
+      result.inviteUrl ?? '',
+    );
     event.target.reset();
     await loadDashboard();
   } catch (error) {

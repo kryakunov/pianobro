@@ -6,14 +6,19 @@ namespace PianoTrainer;
 
 final class MailService
 {
+  private ?string $lastError = null;
+
   public function send(string $to, string $subject, string $bodyText, ?string $bodyHtml = null): bool
   {
+    $this->lastError = null;
     $to = trim($to);
     if ($to === '') {
+      $this->lastError = 'Пустой адрес получателя';
+
       return false;
     }
 
-    $driver = strtolower(Env::get('MAIL_DRIVER', 'mail'));
+    $driver = strtolower(Env::get('MAIL_DRIVER', 'log'));
     if ($driver === 'log') {
       $this->logMessage($to, $subject, $bodyText);
 
@@ -24,7 +29,6 @@ final class MailService
     $encodedSubject = $this->encodeHeader($subject);
     $headers = [
       'MIME-Version: 1.0',
-      'From: ' . $from,
       'Reply-To: ' . $from,
       'X-Mailer: PianoBro',
     ];
@@ -44,7 +48,44 @@ final class MailService
       $body = $bodyText;
     }
 
-    return @mail($to, $encodedSubject, $body, implode("\r\n", $headers));
+    if ($driver === 'smtp') {
+      try {
+        $this->sendViaSmtp($from, $to, $encodedSubject, $body, $headers);
+
+        return true;
+      } catch (\Throwable $e) {
+        $this->lastError = $e->getMessage();
+
+        return false;
+      }
+    }
+
+    $headers[] = 'From: ' . $from;
+    $sent = @mail($to, $encodedSubject, $body, implode("\r\n", $headers));
+    if (!$sent) {
+      $this->lastError = 'PHP mail() не смог отправить письмо. Настройте SMTP (MAIL_DRIVER=smtp).';
+    }
+
+    return $sent;
+  }
+
+  public function getLastError(): ?string
+  {
+    return $this->lastError;
+  }
+
+  /** @param list<string> $headers */
+  private function sendViaSmtp(string $from, string $to, string $subject, string $body, array $headers): void
+  {
+    $mailer = new SmtpMailer(
+      Env::get('SMTP_HOST'),
+      (int) Env::get('SMTP_PORT', '587'),
+      Env::get('SMTP_USER'),
+      Env::get('SMTP_PASS'),
+      strtolower(Env::get('SMTP_ENCRYPTION', 'tls')),
+    );
+
+    $mailer->send($from, $to, $subject, $body, $headers);
   }
 
   private function logMessage(string $to, string $subject, string $bodyText): void

@@ -151,15 +151,32 @@ TEXT;
       . '<p>После регистрации вы появитесь в кабинете преподавателя.</p>';
 
     $sent = $this->mail->send($email, $subject, $bodyText, $bodyHtml);
-    if (!$sent && strtolower(Env::get('MAIL_DRIVER', 'mail')) !== 'log') {
-      throw new \RuntimeException('Не удалось отправить письмо. Проверьте настройки почты.');
+    if (!$sent && strtolower(Env::get('MAIL_DRIVER', 'log')) === 'log') {
+      return [
+        'status' => 'invited',
+        'email' => $email,
+        'inviteUrl' => $inviteUrl,
+        'message' => 'Приглашение создано (письмо записано в data/mail-log/)',
+      ];
+    }
+
+    if (!$sent) {
+      $details = $this->mail->getLastError();
+
+      return [
+        'status' => 'invited',
+        'email' => $email,
+        'inviteUrl' => $inviteUrl,
+        'message' => 'Приглашение создано, но письмо не отправилось. Скопируйте ссылку и отправьте ученику вручную.',
+        'mailError' => $details,
+      ];
     }
 
     return [
       'status' => 'invited',
       'email' => $email,
       'inviteUrl' => $inviteUrl,
-      'message' => $sent ? 'Приглашение отправлено' : 'Приглашение создано (письмо записано в лог)',
+      'message' => 'Приглашение отправлено на почту',
     ];
   }
 
@@ -279,7 +296,7 @@ TEXT;
   private function listPendingInvitations(int $teacherId): array
   {
     $stmt = $this->db->prepare(
-      'SELECT email, created_at FROM teacher_invitations
+      'SELECT email, token, created_at FROM teacher_invitations
        WHERE teacher_id = :teacher_id AND status = \'pending\'
        ORDER BY datetime(created_at) DESC',
     );
@@ -287,9 +304,11 @@ TEXT;
 
     $items = [];
     foreach ($stmt->fetchAll() as $row) {
+      $token = (string) $row['token'];
       $items[] = [
         'email' => (string) $row['email'],
         'createdAt' => (string) $row['created_at'],
+        'inviteUrl' => AppUrl::canonical('/?invite=' . urlencode($token)),
       ];
     }
 
