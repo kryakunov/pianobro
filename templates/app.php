@@ -725,7 +725,7 @@
             <span class="auth-field__label">Подтверждение пароля</span>
             <input type="password" name="password_confirm" required autocomplete="new-password" minlength="6">
           </label>
-          <div class="auth-teacher-option">
+          <div class="auth-teacher-option" id="auth-teacher-option">
             <label class="auth-teacher-option__toggle">
               <input type="checkbox" name="is_teacher" value="1">
               <span class="auth-teacher-option__title">Вы педагог?</span>

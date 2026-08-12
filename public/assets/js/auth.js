@@ -63,7 +63,7 @@ export async function register(name, email, password, passwordConfirm, honeypot 
       passwordConfirm,
       website: honeypot,
       inviteToken: getInviteToken(),
-      isTeacher: Boolean(isTeacher),
+      isTeacher: getInviteToken() ? false : Boolean(isTeacher),
     }),
   });
   currentUser = data.user;

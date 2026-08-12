@@ -114,7 +114,7 @@ final class AuthService
     $_SESSION['user_id'] = $userId;
     $this->touchLastLogin($userId);
     $this->syncRoleFromEnv($userId, $email);
-    if ($isTeacher) {
+    if ($isTeacher && trim($inviteToken) === '') {
       $this->roles?->grantRole($userId, RoleService::ROLE_TEACHER);
     }
     $this->linkTeacherInvitations($userId, $email, $inviteToken);

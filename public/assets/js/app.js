@@ -95,6 +95,7 @@ const els = {
   authFormRegister: $('#auth-form-register'),
   authErrorLogin: $('#auth-error-login'),
   authErrorRegister: $('#auth-error-register'),
+  authTeacherOption: $('#auth-teacher-option'),
   authSocial: $('#auth-social'),
   authSocialButtons: $('#auth-social-buttons'),
   btnBackMelody: $('#btn-back-melody'),
@@ -975,9 +976,23 @@ function updateAuthUI() {
   if (els.btnGoTeacher) els.btnGoTeacher.hidden = !isTeacher;
 }
 
+function updateRegisterTeacherOptionVisibility() {
+  const hasInvite = Boolean(getInviteToken());
+  if (els.authTeacherOption) {
+    els.authTeacherOption.hidden = hasInvite;
+  }
+  const checkbox = els.authFormRegister?.querySelector('[name="is_teacher"]');
+  if (checkbox) {
+    if (hasInvite) {
+      checkbox.checked = false;
+    }
+  }
+}
+
 function openAuthModal(tab = 'login') {
   els.authModal.hidden = false;
   setAuthTab(tab);
+  updateRegisterTeacherOptionVisibility();
   els.authErrorLogin.hidden = true;
   els.authErrorRegister.hidden = true;
 }
@@ -1053,6 +1068,7 @@ async function initInviteFromUrl() {
   if (!token) return;
 
   setInviteToken(token);
+  updateRegisterTeacherOptionVisibility();
   params.delete('invite');
   const query = params.toString();
   const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
@@ -1100,6 +1116,9 @@ function setAuthTab(tab) {
   });
   els.authFormLogin.hidden = tab !== 'login';
   els.authFormRegister.hidden = tab !== 'register';
+  if (tab === 'register') {
+    updateRegisterTeacherOptionVisibility();
+  }
   const title = tab === 'login' ? 'Вход' : 'Регистрация';
   const titleEl = $('#auth-modal-title');
   if (titleEl) titleEl.textContent = title;
