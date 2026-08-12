@@ -146,6 +146,33 @@ const els = {
   btnModalHome: $('#btn-modal-home'),
 };
 
+bindCriticalUi();
+
+let practiceWidgetsReady = true;
+
+/** @type {PianoKeyboard} */
+let piano;
+/** @type {MelodyTrainer} */
+let melodyTrainer;
+/** @type {NoteTrainer} */
+let noteTrainer;
+/** @type {StaffView} */
+let staffView;
+
+try {
+  piano = new PianoKeyboard(els.piano, PIANO_START, PIANO_END);
+  melodyTrainer = new MelodyTrainer(piano);
+  noteTrainer = new NoteTrainer(piano);
+  staffView = new StaffView(els.staffViewport);
+} catch (error) {
+  practiceWidgetsReady = false;
+  reportBootError('Не удалось инициализировать тренажёр. Вход и навигация должны работать, но практика может быть недоступна.', error);
+  piano = new PianoKeyboard(null, PIANO_START, PIANO_END);
+  melodyTrainer = new MelodyTrainer(piano);
+  noteTrainer = new NoteTrainer(piano);
+  staffView = new StaffView(null);
+}
+
 let currentScreen = 'home';
 let appMode = 'melody';
 let selectedLessonId = null;
@@ -170,12 +197,8 @@ let lastRoadmapCapstoneReady = false;
 let practiceReturnPath = ROUTES.home;
 let activeHomeworkSubmissionId = null;
 
-const piano = new PianoKeyboard(els.piano, PIANO_START, PIANO_END);
 const midi = new MidiInput();
 const micPitch = new MicPitchInput();
-const melodyTrainer = new MelodyTrainer(piano);
-const noteTrainer = new NoteTrainer(piano);
-const staffView = new StaffView(els.staffViewport);
 
 const PIANO_INPUT_SCREENS = new Set(['practice']);
 const MIDI_DEVICE_KEY = 'piano-midi-device-id';
@@ -235,9 +258,9 @@ function showScreen(name) {
 
   const isPractice = name === 'practice';
   const isHome = name === 'home';
-  els.app.classList.toggle('app--practice', isPractice);
-  els.app.classList.toggle('app--home', isHome);
-  els.mainHeader.hidden = isPractice;
+  els.app?.classList.toggle('app--practice', isPractice);
+  els.app?.classList.toggle('app--home', isHome);
+  if (els.mainHeader) els.mainHeader.hidden = isPractice;
   document.body.classList.toggle('body--practice', isPractice);
 
   if (name === 'roadmap') {
@@ -990,15 +1013,129 @@ function updateRegisterTeacherOptionVisibility() {
 }
 
 function openAuthModal(tab = 'login') {
+  if (!els.authModal) return;
   els.authModal.hidden = false;
   setAuthTab(tab);
   updateRegisterTeacherOptionVisibility();
-  els.authErrorLogin.hidden = true;
-  els.authErrorRegister.hidden = true;
+  if (els.authErrorLogin) els.authErrorLogin.hidden = true;
+  if (els.authErrorRegister) els.authErrorRegister.hidden = true;
 }
 
 function closeAuthModal() {
+  if (!els.authModal) return;
   els.authModal.hidden = true;
+}
+
+function reportBootError(message, error = null) {
+  console.error(message, error);
+  const banner = document.getElementById('js-boot-error');
+  if (!banner || banner.dataset.reported === '1') return;
+  banner.dataset.reported = '1';
+  banner.hidden = false;
+  banner.textContent = `${message} Обновите страницу с полным сбросом кэша (Cmd+Shift+R).`;
+}
+
+function bindCriticalUi() {
+  function handleStatsNavClick(event) {
+    if (!isLoggedIn()) {
+      event.preventDefault();
+      openAuthModal('login');
+    }
+  }
+
+  els.btnGoMelodies?.addEventListener('click', (event) => {
+    event.preventDefault();
+    navigateTo(ROUTES.melodies);
+  });
+
+  els.btnGoNotes?.addEventListener('click', (event) => {
+    event.preventDefault();
+    navigateTo(ROUTES.notes);
+  });
+
+  els.btnGoRoadmap?.addEventListener('click', (event) => {
+    event.preventDefault();
+    navigateTo(ROUTES.roadmap);
+  });
+
+  els.btnGoRoadmapCard?.addEventListener('click', (event) => {
+    event.preventDefault();
+    navigateTo(ROUTES.roadmap);
+  });
+
+  els.btnRoadmapLogin?.addEventListener('click', () => openAuthModal('login'));
+
+  document.querySelectorAll('a[href="/statistika"]').forEach((link) => {
+    link.addEventListener('click', handleStatsNavClick);
+  });
+
+  els.btnOpenAuth?.addEventListener('click', () => openAuthModal('login'));
+  els.btnLogout?.addEventListener('click', async () => {
+    await logout();
+    cachedNoteStats = null;
+    updateAuthUI();
+  });
+
+  els.authTabs.forEach((tab) => {
+    tab.addEventListener('click', () => setAuthTab(tab.dataset.authTab));
+  });
+
+  els.authModal?.querySelectorAll('[data-close-auth]').forEach((el) => {
+    el.addEventListener('click', closeAuthModal);
+  });
+
+  els.authFormLogin?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    if (els.authErrorLogin) els.authErrorLogin.hidden = true;
+
+    try {
+      await login(form.get('email'), form.get('password'));
+      await afterAuthSuccess();
+    } catch (err) {
+      if (els.authErrorLogin) {
+        els.authErrorLogin.textContent = err.message;
+        els.authErrorLogin.hidden = false;
+      }
+    }
+  });
+
+  els.authFormRegister?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    if (els.authErrorRegister) els.authErrorRegister.hidden = true;
+
+    if (form.get('website')) {
+      return;
+    }
+
+    const password = String(form.get('password') ?? '');
+    const passwordConfirm = String(form.get('password_confirm') ?? '');
+    if (password !== passwordConfirm) {
+      if (els.authErrorRegister) {
+        els.authErrorRegister.textContent = 'Пароли не совпадают';
+        els.authErrorRegister.hidden = false;
+      }
+      return;
+    }
+
+    try {
+      await register(
+        form.get('name'),
+        form.get('email'),
+        password,
+        passwordConfirm,
+        form.get('website'),
+        form.get('is_teacher') === '1',
+      );
+      await afterAuthSuccess();
+    } catch (err) {
+      if (els.authErrorRegister) {
+        els.authErrorRegister.textContent = err.message;
+        els.authErrorRegister.hidden = false;
+      }
+    }
+  });
 }
 
 const OAUTH_PROVIDER_ICONS = {
@@ -1114,8 +1251,8 @@ function setAuthTab(tab) {
     btn.classList.toggle('auth-tab--active', active);
     btn.setAttribute('aria-selected', String(active));
   });
-  els.authFormLogin.hidden = tab !== 'login';
-  els.authFormRegister.hidden = tab !== 'register';
+  els.authFormLogin && (els.authFormLogin.hidden = tab !== 'login');
+  els.authFormRegister && (els.authFormRegister.hidden = tab !== 'register');
   if (tab === 'register') {
     updateRegisterTeacherOptionVisibility();
   }
@@ -2250,100 +2387,6 @@ els.screenPractice?.addEventListener('touchstart', () => {
   }
 }, { passive: true });
 
-function handleStatsNavClick(event) {
-  if (!isLoggedIn()) {
-    event.preventDefault();
-    openAuthModal('login');
-  }
-}
-
-els.btnGoMelodies?.addEventListener('click', (event) => {
-  event.preventDefault();
-  navigateTo(ROUTES.melodies);
-});
-
-els.btnGoNotes?.addEventListener('click', (event) => {
-  event.preventDefault();
-  navigateTo(ROUTES.notes);
-});
-
-els.btnGoRoadmap?.addEventListener('click', (event) => {
-  event.preventDefault();
-  navigateTo(ROUTES.roadmap);
-});
-
-els.btnGoRoadmapCard?.addEventListener('click', (event) => {
-  event.preventDefault();
-  navigateTo(ROUTES.roadmap);
-});
-
-els.btnRoadmapLogin?.addEventListener('click', () => openAuthModal('login'));
-
-document.querySelectorAll('a[href="/statistika"]').forEach((link) => {
-  link.addEventListener('click', handleStatsNavClick);
-});
-
-els.btnOpenAuth?.addEventListener('click', () => openAuthModal('login'));
-els.btnLogout?.addEventListener('click', async () => {
-  await logout();
-  cachedNoteStats = null;
-  updateAuthUI();
-});
-
-els.authTabs.forEach((tab) => {
-  tab.addEventListener('click', () => setAuthTab(tab.dataset.authTab));
-});
-
-els.authModal?.querySelectorAll('[data-close-auth]').forEach((el) => {
-  el.addEventListener('click', closeAuthModal);
-});
-
-els.authFormLogin?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form = new FormData(e.target);
-  els.authErrorLogin.hidden = true;
-  try {
-    await login(form.get('email'), form.get('password'));
-    await afterAuthSuccess();
-  } catch (err) {
-    els.authErrorLogin.textContent = err.message;
-    els.authErrorLogin.hidden = false;
-  }
-});
-
-els.authFormRegister?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form = new FormData(e.target);
-  els.authErrorRegister.hidden = true;
-
-  if (form.get('website')) {
-    return;
-  }
-
-  const password = String(form.get('password') ?? '');
-  const passwordConfirm = String(form.get('password_confirm') ?? '');
-  if (password !== passwordConfirm) {
-    els.authErrorRegister.textContent = 'Пароли не совпадают';
-    els.authErrorRegister.hidden = false;
-    return;
-  }
-
-  try {
-    await register(
-      form.get('name'),
-      form.get('email'),
-      password,
-      passwordConfirm,
-      form.get('website'),
-      form.get('is_teacher') === '1',
-    );
-    await afterAuthSuccess();
-  } catch (err) {
-    els.authErrorRegister.textContent = err.message;
-    els.authErrorRegister.hidden = false;
-  }
-});
-
 els.btnBackMelody?.addEventListener('click', (event) => {
   event.preventDefault();
   navigateTo(ROUTES.home);
@@ -2401,7 +2444,7 @@ els.btnMidiUpload?.addEventListener('click', () => {
   els.midiUpload?.click();
 });
 
-els.btnModalRetry.addEventListener('click', () => {
+els.btnModalRetry?.addEventListener('click', () => {
   hideSessionModal();
   if (appMode === 'melody' && melodyTrainer.lesson) {
     melodyTrainer.reset();
@@ -2414,7 +2457,7 @@ els.btnModalRetry.addEventListener('click', () => {
   }
 });
 
-els.btnModalPick.addEventListener('click', () => {
+els.btnModalPick?.addEventListener('click', () => {
   leavePractice();
 });
 
@@ -2441,12 +2484,12 @@ els.btnModalRoadmapCapstone?.addEventListener('click', () => {
   if (stageId) void startRoadmapMelody(stageId);
 });
 
-els.btnModalHome.addEventListener('click', () => {
+els.btnModalHome?.addEventListener('click', () => {
   exitPractice();
   navigateTo(ROUTES.home);
 });
 
-els.sessionModal.querySelector('.modal__backdrop').addEventListener('click', () => {
+els.sessionModal?.querySelector('.modal__backdrop')?.addEventListener('click', () => {
   hideSessionModal();
 });
 
@@ -2557,4 +2600,12 @@ window.visualViewport?.addEventListener('resize', () => {
   if (currentScreen === 'practice' && !els.practiceKeyboardArea.hidden) {
     piano.relayout();
   }
+});
+
+window.addEventListener('error', (event) => {
+  reportBootError('На странице произошла ошибка JavaScript.', event.error ?? event.message);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  reportBootError('На странице произошла ошибка приложения.', event.reason);
 });

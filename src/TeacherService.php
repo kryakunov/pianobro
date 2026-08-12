@@ -108,6 +108,15 @@ final class TeacherService
 
     $existingUser = $this->findUserIdByEmail($email);
     if ($existingUser !== null) {
+      if ($this->hasStudent($teacherId, $existingUser)) {
+        return [
+          'status' => 'linked',
+          'email' => $email,
+          'message' => 'Ученик уже в вашем списке',
+        ];
+      }
+
+      $this->assertCanBecomeStudent($existingUser, $teacherId);
       $this->linkStudent($teacherId, $existingUser);
       $this->markInvitationsAccepted($teacherId, $email, $existingUser);
 
@@ -228,23 +237,43 @@ TEXT;
     }
 
     $teacherId = (int) $invite['teacher_id'];
+    $this->assertCanBecomeStudent($studentId, $teacherId);
     $this->linkStudent($teacherId, $studentId);
     $this->markInvitationAccepted((int) $invite['id'], $studentId);
   }
 
   public function acceptPendingInvitationsForEmail(int $studentId, string $email): void
   {
+    if ($this->findTeacherIdForStudent($studentId) !== null) {
+      return;
+    }
+
+    if ($this->roles !== null && $this->roles->hasRole($studentId, RoleService::ROLE_TEACHER)) {
+      return;
+    }
+
     $email = strtolower(trim($email));
     $stmt = $this->db->prepare(
       'SELECT id, teacher_id FROM teacher_invitations
-       WHERE email = :email AND status = \'pending\'',
+       WHERE email = :email AND status = \'pending\'
+       ORDER BY datetime(created_at) ASC
+       LIMIT 1',
     );
     $stmt->execute(['email' => $email]);
-
-    foreach ($stmt->fetchAll() as $row) {
-      $this->linkStudent((int) $row['teacher_id'], $studentId);
-      $this->markInvitationAccepted((int) $row['id'], $studentId);
+    $row = $stmt->fetch();
+    if ($row === false) {
+      return;
     }
+
+    $teacherId = (int) $row['teacher_id'];
+    try {
+      $this->assertCanBecomeStudent($studentId, $teacherId);
+    } catch (\InvalidArgumentException) {
+      return;
+    }
+
+    $this->linkStudent($teacherId, $studentId);
+    $this->markInvitationAccepted((int) $row['id'], $studentId);
   }
 
   /** @return list<array<string, mixed>> */
@@ -534,14 +563,53 @@ TEXT;
   private function linkStudent(int $teacherId, int $studentId): void
   {
     if ($teacherId === $studentId) {
+      throw new \InvalidArgumentException('Нельзя добавить самого себя');
+    }
+
+    if ($this->hasStudent($teacherId, $studentId)) {
       return;
     }
 
+    $this->assertCanBecomeStudent($studentId, $teacherId);
+
     $stmt = $this->db->prepare(
-      'INSERT OR IGNORE INTO teacher_students (teacher_id, student_id) VALUES (:teacher_id, :student_id)',
+      'INSERT INTO teacher_students (teacher_id, student_id) VALUES (:teacher_id, :student_id)',
     );
     $stmt->execute(['teacher_id' => $teacherId, 'student_id' => $studentId]);
     $this->roles?->grantRole($studentId, RoleService::ROLE_STUDENT);
+  }
+
+  private function assertCanBecomeStudent(int $studentId, int $teacherId): void
+  {
+    if ($this->roles !== null && $this->roles->hasRole($studentId, RoleService::ROLE_TEACHER)) {
+      throw new \InvalidArgumentException('Педагог не может быть учеником');
+    }
+
+    $currentTeacherId = $this->findTeacherIdForStudent($studentId);
+    if ($currentTeacherId !== null && $currentTeacherId !== $teacherId) {
+      throw new \InvalidArgumentException('У этого пользователя уже есть преподаватель');
+    }
+  }
+
+  private function hasStudent(int $teacherId, int $studentId): bool
+  {
+    $stmt = $this->db->prepare(
+      'SELECT 1 FROM teacher_students WHERE teacher_id = :teacher_id AND student_id = :student_id LIMIT 1',
+    );
+    $stmt->execute(['teacher_id' => $teacherId, 'student_id' => $studentId]);
+
+    return $stmt->fetch() !== false;
+  }
+
+  private function findTeacherIdForStudent(int $studentId): ?int
+  {
+    $stmt = $this->db->prepare(
+      'SELECT teacher_id FROM teacher_students WHERE student_id = :student_id LIMIT 1',
+    );
+    $stmt->execute(['student_id' => $studentId]);
+    $teacherId = $stmt->fetchColumn();
+
+    return $teacherId !== false ? (int) $teacherId : null;
   }
 
   private function createInvitation(int $teacherId, string $email): string

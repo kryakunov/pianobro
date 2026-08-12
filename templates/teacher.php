@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 /** @var array{id:int,email:string,name:string,role?:string}|null $user */
 /** @var bool $isTeacher */
+/** @var int $assetVersion */
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -12,7 +13,7 @@ declare(strict_types=1);
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Кабинет преподавателя | Piano Bro</title>
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/style.css?v=<?= (int) $assetVersion ?>">
 </head>
 <body class="admin-page teacher-page">
   <div class="admin teacher">
@@ -68,7 +69,7 @@ declare(strict_types=1);
       <main class="teacher-main" id="teacher-main">
         <section class="admin-card teacher-empty-state">
           <h2 class="admin-card__title">Выберите ученика</h2>
-          <p>Отправьте приглашение на email или выберите ученика из списка слева, чтобы увидеть статистику по нотам и назначить задание.</p>
+          <p>Выберите ученика слева — откроются вкладки с обзором, нотами, занятиями и домашкой.</p>
         </section>
       </main>
     </div>
@@ -90,7 +91,7 @@ declare(strict_types=1);
   </div>
 
   <?php if ($isTeacher ?? false): ?>
-  <script type="module" src="/assets/js/teacher.js"></script>
+  <script type="module" src="/assets/js/teacher.js?v=<?= (int) $assetVersion ?>"></script>
   <?php endif; ?>
 </body>
 </html>

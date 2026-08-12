@@ -23,7 +23,7 @@
 ```bash
 cd piano
 composer install
-php -S localhost:8080 -t public
+php -S localhost:8080 -t public public/router.php
 ```
 
 Откройте в браузере: http://localhost:8080

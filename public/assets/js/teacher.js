@@ -1,4 +1,5 @@
 import { initAnalytics } from './analytics.js';
+import { iconBadgeColored } from './icons.js';
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 import { enrichNotesForRoadmapDisplay } from './note-roadmap.js';
 import { describeNoteSettings } from './note-trainer.js';
@@ -39,6 +40,15 @@ const els = {
 let dashboard = { students: [], invitations: [], summary: {} };
 let selectedStudentId = null;
 let assignmentStudentId = null;
+let currentStudentDetail = null;
+let activeStudentTab = 'overview';
+
+const STUDENT_TABS = [
+  { id: 'overview', label: 'Обзор' },
+  { id: 'notes', label: 'Ноты' },
+  { id: 'activity', label: 'Занятия' },
+  { id: 'homework', label: 'Домашка' },
+];
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -106,7 +116,7 @@ function renderStudentsList() {
       <span class="teacher-student-item__name">${escapeHtml(student.name)}</span>
       <span class="teacher-student-item__email">${escapeHtml(student.email)}</span>
       <span class="teacher-student-item__meta">
-        ${student.masteredNotes} нот · ${student.roadmap.rank?.title ?? '—'}
+        ${student.masteredNotes} нот
         ${student.pendingAssignments ? ` · <strong>${student.pendingAssignments} ДЗ</strong>` : ''}
       </span>
     </button>
@@ -117,32 +127,148 @@ function renderStudentsList() {
   });
 }
 
+function studentInitials(name) {
+  return String(name ?? '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || '?';
+}
+
+function formatChartDay(isoDate) {
+  if (!isoDate) return '';
+  const date = new Date(`${isoDate}T12:00:00`);
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
+function countActiveDays(dailyProgress) {
+  return (dailyProgress ?? []).filter((day) => (day.learned ?? 0) > 0 || (day.repeated ?? 0) > 0).length;
+}
+
+function sumDailyField(dailyProgress, field) {
+  return (dailyProgress ?? []).reduce((sum, day) => sum + (day[field] ?? 0), 0);
+}
+
 function renderStatsChart(dailyProgress) {
-  const items = dailyProgress ?? [];
-  const maxValue = Math.max(1, ...items.flatMap((d) => [d.learned ?? 0, d.repeated ?? 0]));
-  const columns = items.map((day) => {
+  if (!Array.isArray(dailyProgress) || dailyProgress.length === 0) {
+    return `
+      <section class="stats-chart teacher-stats-chart">
+        <p class="teacher-panel-empty">Пока нет данных о занятиях — ученик ещё не тренировал ноты.</p>
+      </section>
+    `;
+  }
+
+  const maxValue = Math.max(
+    1,
+    ...dailyProgress.map((day) => Math.max(day.learned ?? 0, day.repeated ?? 0)),
+  );
+  const hasActivity = dailyProgress.some((day) => (day.learned ?? 0) > 0 || (day.repeated ?? 0) > 0);
+
+  const columns = dailyProgress.map((day, index) => {
     const learned = day.learned ?? 0;
     const repeated = day.repeated ?? 0;
     const learnedHeight = Math.round((learned / maxValue) * 100);
     const repeatedHeight = Math.round((repeated / maxValue) * 100);
-    const label = day.date?.slice(5).replace('-', '.') ?? '';
+    const label = formatChartDay(day.date);
+    const title = `${label}: выучено ${learned}, повторено ${repeated}`;
+    const showLabel = dailyProgress.length <= 10 || index % 2 === 0;
+
     return `
-      <div class="stats-chart__col" title="${label}: выучено ${learned}, повторено ${repeated}">
-        <div class="stats-chart__bars">
-          <div class="stats-chart__bar stats-chart__bar--learned" style="height:${learnedHeight}%"></div>
-          <div class="stats-chart__bar stats-chart__bar--repeated" style="height:${repeatedHeight}%"></div>
+      <div class="stats-chart__column" title="${escapeHtml(title)}">
+        <div class="stats-chart__bars" aria-hidden="true">
+          <div class="stats-chart__bar stats-chart__bar--learned" style="height: ${learnedHeight}%"></div>
+          <div class="stats-chart__bar stats-chart__bar--repeated" style="height: ${repeatedHeight}%"></div>
         </div>
-        <span class="stats-chart__label">${label}</span>
+        <span class="stats-chart__label${showLabel ? '' : ' stats-chart__label--short'}">${escapeHtml(showLabel ? label : label.replace(/\s.*/, ''))}</span>
       </div>
     `;
   }).join('');
 
   return `
     <section class="stats-chart teacher-stats-chart">
-      <h3 class="teacher-section-title">Занятия по дням</h3>
-      <div class="stats-chart__plot" role="img">${columns}</div>
+      <div class="stats-chart__header">
+        <div class="stats-chart__title-wrap">
+          ${iconBadgeColored('chart', 'primary')}
+          <h3 class="stats-chart__title">Прогресс по дням</h3>
+        </div>
+        <div class="stats-chart__legend">
+          <span class="stats-chart__legend-item stats-chart__legend-item--learned">Выучено</span>
+          <span class="stats-chart__legend-item stats-chart__legend-item--repeated">Повторено</span>
+        </div>
+      </div>
+      <p class="stats-chart__hint">
+        Выучено — ноты, которые в этот день впервые дошли до 2 верных подряд. Повторено — уже освоенные ранее.
+      </p>
+      <div class="stats-chart__plot${hasActivity ? '' : ' stats-chart__plot--empty'}" role="img" aria-label="График прогресса по дням">
+        ${columns}
+      </div>
+      ${hasActivity ? '' : '<p class="stats-chart__empty">Пройдите тренировку нот — график заполнится по дням.</p>'}
     </section>
   `;
+}
+
+function renderOverviewPanel(data) {
+  const { noteStats, assignments } = data;
+  const summary = noteStats.summary ?? {};
+  const dailyProgress = noteStats.dailyProgress ?? [];
+  const pendingCount = assignments.filter((item) => item.status === 'pending').length;
+  const recentAssignments = assignments.slice(0, 3);
+
+  return `
+    <div class="teacher-overview-grid">
+      <div class="teacher-overview-card">
+        <h3 class="teacher-panel-title">Кратко</h3>
+        <ul class="teacher-overview-metrics">
+          <li><span>Освоено нот</span><strong>${summary.mastered ?? 0}</strong></li>
+          <li><span>Сессий</span><strong>${summary.sessions ?? 0}</strong></li>
+          <li><span>Дней с занятиями</span><strong>${countActiveDays(dailyProgress)}</strong></li>
+          <li><span>Домашка</span><strong>${pendingCount ? `${pendingCount} не сдано` : 'всё сдано'}</strong></li>
+        </ul>
+      </div>
+      <div class="teacher-overview-card teacher-overview-card--wide">
+        <h3 class="teacher-panel-title">Последние задания</h3>
+        ${recentAssignments.length
+    ? `<div class="teacher-assignments teacher-assignments--compact">${recentAssignments.map(renderAssignmentRow).join('')}</div>`
+    : '<p class="teacher-panel-empty">Заданий пока нет. Назначьте первую тренировку на вкладке «Домашка».</p>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderHomeworkPanel(assignments) {
+  return `
+    <div class="teacher-homework-panel">
+      <p class="teacher-panel-lead">Назначайте тренировки нот с нужными октавами, длиной сессии и минимальной точностью.</p>
+      <div class="teacher-assignments">
+        ${assignments.length
+    ? assignments.map(renderAssignmentRow).join('')
+    : '<p class="teacher-panel-empty">Заданий пока нет. Нажмите «Назначить задание» в шапке профиля.</p>'}
+      </div>
+    </div>
+  `;
+}
+
+function setStudentTab(tabId) {
+  if (!STUDENT_TABS.some((tab) => tab.id === tabId)) return;
+  activeStudentTab = tabId;
+
+  document.querySelectorAll('[data-student-tab]').forEach((button) => {
+    const active = button.dataset.studentTab === tabId;
+    button.classList.toggle('teacher-student-tab--active', active);
+    button.setAttribute('aria-selected', String(active));
+  });
+
+  document.querySelectorAll('[data-student-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.studentPanel !== tabId;
+  });
+}
+
+function bindStudentTabs() {
+  document.querySelectorAll('[data-student-tab]').forEach((button) => {
+    button.addEventListener('click', () => setStudentTab(button.dataset.studentTab));
+  });
 }
 
 function renderAssignmentRow(assignment) {
@@ -258,48 +384,72 @@ function bindAssignmentModalControls() {
 }
 
 function renderStudentDetail(data) {
-  const { user, noteStats, roadmap, assignments } = data;
-  const summary = noteStats.summary ?? {};
-  const displayNotes = enrichNotesForRoadmapDisplay(noteStats.notes ?? [], roadmap);
+  currentStudentDetail = data;
+  const { user, noteStats, assignments } = data;
+  const displayNotes = enrichNotesForRoadmapDisplay(noteStats.notes ?? [], data.roadmap);
   const staffHtml = renderStatsStaffInfographic(displayNotes);
   const chartHtml = renderStatsChart(noteStats.dailyProgress);
+  const dailyProgress = noteStats.dailyProgress ?? [];
+  const pendingCount = assignments.filter((item) => item.status === 'pending').length;
+
+  const tabsHtml = STUDENT_TABS.map((tab) => {
+    const badge = tab.id === 'homework' && pendingCount
+      ? `<span class="teacher-student-tab__badge">${pendingCount}</span>`
+      : '';
+    return `
+      <button
+        type="button"
+        class="teacher-student-tab${tab.id === activeStudentTab ? ' teacher-student-tab--active' : ''}"
+        data-student-tab="${tab.id}"
+        role="tab"
+        aria-selected="${tab.id === activeStudentTab}"
+      >${tab.label}${badge}</button>
+    `;
+  }).join('');
 
   els.main.innerHTML = `
-    <section class="admin-card teacher-student-header">
-      <div>
-        <h2 class="admin-card__title">${escapeHtml(user.name)}</h2>
-        <p class="teacher-student-header__meta">${escapeHtml(user.email)} · был онлайн ${formatDate(user.lastLoginAt)}</p>
-      </div>
-      <div class="teacher-report__grid">
-        <div class="admin-stat"><span class="admin-stat__value">${summary.mastered ?? 0}</span><span class="admin-stat__label">Освоено нот</span></div>
-        <div class="admin-stat"><span class="admin-stat__value">${summary.sessions ?? 0}</span><span class="admin-stat__label">Сессий</span></div>
-        <div class="admin-stat"><span class="admin-stat__value">${roadmap.progress?.completedCount ?? 0}/${roadmap.progress?.totalStages ?? 8}</span><span class="admin-stat__label">Путь новичка</span></div>
-        <div class="admin-stat"><span class="admin-stat__value">${roadmap.progress?.totalXp ?? 0}</span><span class="admin-stat__label">XP</span></div>
-      </div>
-    </section>
+    <div class="teacher-student-view">
+      <header class="admin-card teacher-student-profile">
+        <div class="teacher-student-profile__top">
+          <div class="teacher-student-profile__identity">
+            <div class="teacher-student-profile__avatar" aria-hidden="true">${escapeHtml(studentInitials(user.name))}</div>
+            <div>
+              <h2 class="teacher-student-profile__name">${escapeHtml(user.name)}</h2>
+              <p class="teacher-student-profile__meta">${escapeHtml(user.email)} · был онлайн ${formatDate(user.lastLoginAt)}</p>
+            </div>
+          </div>
+          <button type="button" class="btn btn--primary btn--sm" id="btn-open-assignment">Назначить задание</button>
+        </div>
+      </header>
 
-    <section class="admin-card teacher-stats-panel">
-      <h3 class="teacher-section-title">Карта нот (как у ученика в статистике)</h3>
-      <div class="teacher-stats-staff">${staffHtml}</div>
-      ${chartHtml}
-    </section>
+      <nav class="teacher-student-tabs" role="tablist" aria-label="Разделы ученика">${tabsHtml}</nav>
 
-    <section class="admin-card">
-      <div class="teacher-assignments-header">
-        <h3 class="teacher-section-title">Задания ученика</h3>
-        <button type="button" class="btn btn--primary btn--sm" id="btn-open-assignment">
-          Назначить тренировку
-        </button>
+      <div class="teacher-student-panels">
+        <section class="admin-card teacher-student-panel" data-student-panel="overview" role="tabpanel"${activeStudentTab !== 'overview' ? ' hidden' : ''}>
+          ${renderOverviewPanel(data)}
+        </section>
+        <section class="admin-card teacher-student-panel" data-student-panel="notes" role="tabpanel"${activeStudentTab !== 'notes' ? ' hidden' : ''}>
+          <h3 class="teacher-panel-title">Карта освоенных нот</h3>
+          <p class="teacher-panel-lead">Как в личной статистике ученика: зелёные — освоены, жёлтые — в процессе.</p>
+          <div class="teacher-stats-staff">${staffHtml}</div>
+        </section>
+        <section class="admin-card teacher-student-panel" data-student-panel="activity" role="tabpanel"${activeStudentTab !== 'activity' ? ' hidden' : ''}>
+          <div class="teacher-activity-summary">
+            <div class="teacher-kpi teacher-kpi--inline"><span class="teacher-kpi__value">${countActiveDays(dailyProgress)}</span><span class="teacher-kpi__label">дней с занятиями</span></div>
+            <div class="teacher-kpi teacher-kpi--inline"><span class="teacher-kpi__value">${sumDailyField(dailyProgress, 'learned')}</span><span class="teacher-kpi__label">выучено за период</span></div>
+            <div class="teacher-kpi teacher-kpi--inline"><span class="teacher-kpi__value">${sumDailyField(dailyProgress, 'repeated')}</span><span class="teacher-kpi__label">повторено за период</span></div>
+          </div>
+          ${chartHtml}
+        </section>
+        <section class="admin-card teacher-student-panel" data-student-panel="homework" role="tabpanel"${activeStudentTab !== 'homework' ? ' hidden' : ''}>
+          ${renderHomeworkPanel(assignments)}
+        </section>
       </div>
-      <div class="teacher-assignments">
-        ${assignments.length
-    ? assignments.map(renderAssignmentRow).join('')
-    : '<p class="admin-footnote">Заданий пока нет — нажмите «Назначить тренировку».</p>'}
-      </div>
-    </section>
+    </div>
   `;
 
   mountStatsStaffChart(els.main.querySelector('.teacher-stats-staff'), displayNotes);
+  bindStudentTabs();
   bindCommentForms();
   document.getElementById('btn-open-assignment')?.addEventListener('click', () => {
     openAssignmentModal(user.id, user.name);
@@ -353,6 +503,7 @@ function bindAssignmentForm() {
         body: JSON.stringify({ title, type: 'notes', payload, dueAt }),
       });
       closeAssignmentModal();
+      activeStudentTab = 'homework';
       await loadDashboard();
       await selectStudent(studentId);
     } catch (err) {

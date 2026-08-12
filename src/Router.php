@@ -488,6 +488,7 @@ final class Router
 
   private function serveStatic(string $path, ?string $contentType = null): void
   {
+    $path = parse_url($path, PHP_URL_PATH) ?: $path;
     $file = dirname(__DIR__) . '/public' . $path;
     if (!is_file($file)) {
       http_response_code(404);
@@ -504,16 +505,26 @@ final class Router
       'ico' => 'image/x-icon',
     ];
 
-    header('Content-Type: ' . ($contentType ?? $types[$ext] ?? 'application/octet-stream'));
     if ($ext === 'js' || $ext === 'css') {
-      header('Cache-Control: no-cache, must-revalidate');
+      $mtime = (int) filemtime($file);
+      $requestedVersion = isset($_GET['v']) ? (int) $_GET['v'] : null;
+      if ($requestedVersion !== $mtime) {
+        header('Location: ' . $path . '?v=' . $mtime, true, 302);
+        return;
+      }
+
+      header('Cache-Control: public, max-age=31536000, immutable');
+      header('ETag: "' . $mtime . '"');
     }
+
+    header('Content-Type: ' . ($contentType ?? $types[$ext] ?? 'application/octet-stream'));
     readfile($file);
   }
 
   private function renderApp(array $page): void
   {
     header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
     include dirname(__DIR__) . '/templates/app.php';
   }
 
@@ -521,6 +532,7 @@ final class Router
   {
     header('Content-Type: text/html; charset=utf-8');
     header('X-Robots-Tag: noindex, nofollow');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
 
     $user = $this->auth->currentUser();
     $isAdmin = $this->admin->isAdmin($user);
@@ -528,6 +540,7 @@ final class Router
     $onlineStats = $isAdmin ? $this->admin->getDailyOnlineCounts() : ['today' => 0, 'yesterday' => 0];
     $analyticsStats = $isAdmin ? $this->analytics->getDashboard(30) : null;
     $adminConfigured = AdminService::adminEmails() !== [];
+    $assetVersion = AssetVersion::compute();
 
     include dirname(__DIR__) . '/templates/admin.php';
   }
@@ -536,9 +549,11 @@ final class Router
   {
     header('Content-Type: text/html; charset=utf-8');
     header('X-Robots-Tag: noindex, nofollow');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
 
     $user = $this->auth->currentUser();
     $isTeacher = $this->teacher->isTeacher($user);
+    $assetVersion = AssetVersion::compute();
 
     include dirname(__DIR__) . '/templates/teacher.php';
   }

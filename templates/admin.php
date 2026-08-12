@@ -6,6 +6,7 @@ declare(strict_types=1);
 /** @var bool $isAdmin */
 /** @var bool $adminConfigured */
 /** @var list<array<string, mixed>> $users */
+/** @var int $assetVersion */
 /** @var array{today:int,yesterday:int} $onlineStats */
 /** @var array{periodDays:int,since:string,topClicks:list<array{target:string,clicks:int}>,topPagesByTime:list<array{path:string,label:string,visits:int,totalSeconds:int,avgSeconds:int}>,topPagesByViews:list<array{path:string,label:string,views:int}>,topSearchQueries:list<array{source:string,sourceLabel:string,query:string,visits:int}>}|null $analyticsStats */
 
@@ -63,7 +64,7 @@ $stageStatusLabel = static function (array $stage): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Админ-панель | Piano Bro</title>
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/style.css?v=<?= (int) $assetVersion ?>">
 </head>
 <body class="admin-page">
   <div class="admin">
@@ -341,7 +342,7 @@ $stageStatusLabel = static function (array $stage): string {
   </div>
 
   <?php if (($isAdmin ?? false) && ($adminConfigured ?? false)): ?>
-  <script type="module" src="/assets/js/admin.js"></script>
+  <script type="module" src="/assets/js/admin.js?v=<?= (int) $assetVersion ?>"></script>
   <?php endif; ?>
 </body>
 </html>

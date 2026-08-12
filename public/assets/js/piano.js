@@ -58,10 +58,12 @@ export class PianoKeyboard {
     this.whiteMidis = [];
     this.onNoteOn = null;
     this.onNoteOff = null;
+    if (!container) return;
     this._build();
   }
 
   _build() {
+    if (!this.container) return;
     this.container.innerHTML = '';
     if (this.octavesHost) this.octavesHost.innerHTML = '';
     this.whiteMidis = [];
@@ -230,6 +232,7 @@ export class PianoKeyboard {
   }
 
   relayout({ scrollToDefault = false } = {}) {
+    if (!this.container) return;
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         this._positionBlackKeys();

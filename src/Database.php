@@ -90,6 +90,7 @@ final class Database
     self::migrateUserRoles($pdo);
     self::migrateAnalytics($pdo);
     self::migrateAnalyticsSearchReferral($pdo);
+    self::migrateTeacherStudentExclusive($pdo);
   }
 
   private static function migrateOAuthAccounts(PDO $pdo): void
@@ -393,5 +394,25 @@ final class Database
     }
 
     $pdo->exec('PRAGMA foreign_keys = ON');
+  }
+
+  private static function migrateTeacherStudentExclusive(PDO $pdo): void
+  {
+    $index = $pdo->query(
+      "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'idx_teacher_students_student_unique'",
+    )->fetchColumn();
+    if ($index !== false) {
+      return;
+    }
+
+    $pdo->exec(<<<'SQL'
+      DELETE FROM teacher_students
+      WHERE rowid NOT IN (
+        SELECT MIN(rowid) FROM teacher_students GROUP BY student_id
+      );
+
+      CREATE UNIQUE INDEX idx_teacher_students_student_unique
+        ON teacher_students(student_id);
+      SQL);
   }
 }

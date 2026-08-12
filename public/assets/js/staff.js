@@ -81,6 +81,24 @@ function diatonicSteps(midi) {
 export class StaffView {
   constructor(viewportEl) {
     this.viewport = viewportEl;
+    if (!viewportEl) {
+      this.scrollEl = null;
+      this.svg = null;
+      this.lesson = null;
+      this.eventPositions = [];
+      this.spacing = 40;
+      this.padding = 60;
+      this.spelling = 'sharp';
+      this.referenceQuarter = 400;
+      this.metrics = null;
+      this.drillClef = 'treble';
+      this.drillDualClef = false;
+      this.drillLayoutKey = null;
+      this._drillViewportW = null;
+      this.drillMode = false;
+      return;
+    }
+
     this.scrollEl = viewportEl.querySelector('.staff-scroll');
     this.svg = viewportEl.querySelector('.staff-svg');
     this.lesson = null;
@@ -94,6 +112,7 @@ export class StaffView {
     this.drillDualClef = false;
     this.drillLayoutKey = null;
     this._drillViewportW = null;
+    this.drillMode = false;
   }
 
   loadLesson(lesson) {
@@ -231,6 +250,7 @@ export class StaffView {
   }
 
   render() {
+    if (!this.viewport || !this.svg) return;
     const events = this.lesson?.events;
     if (!events?.length) {
       this.svg.innerHTML = '';

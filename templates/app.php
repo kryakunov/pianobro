@@ -13,20 +13,7 @@
     ];
     $initialScreen = (string) ($page['screen'] ?? 'home');
 
-    $publicDir = dirname(__DIR__) . '/public';
-    $assetVersion = max(
-      filemtime($publicDir . '/assets/js/app.js'),
-      filemtime($publicDir . '/assets/js/note-settings-form.js'),
-      filemtime($publicDir . '/assets/js/routes.js'),
-      filemtime($publicDir . '/assets/js/stats-staff.js'),
-      filemtime($publicDir . '/assets/js/note-roadmap.js'),
-      filemtime($publicDir . '/assets/js/staff.js'),
-      filemtime($publicDir . '/assets/js/clef-glyphs.js'),
-      filemtime($publicDir . '/assets/css/style.css'),
-      filemtime($publicDir . '/assets/js/cookie-consent.js'),
-      filemtime($publicDir . '/assets/js/metrika.js'),
-      filemtime($publicDir . '/assets/favicon.svg'),
-    );
+    $assetVersion = \PianoTrainer\AssetVersion::compute();
 
     $screenActive = static function (string $screen) use ($initialScreen): string {
       return $screen === $initialScreen ? ' screen--active' : '';
@@ -42,6 +29,7 @@
   </script>
 </head>
 <body>
+  <div class="js-boot-error" id="js-boot-error" hidden role="alert"></div>
   <div class="app" id="app">
     <header class="header" id="main-header">
       <div class="header__brand">
