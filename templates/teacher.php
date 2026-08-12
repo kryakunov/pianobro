@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 /** @var array{id:int,email:string,name:string,role?:string}|null $user */
 /** @var bool $isTeacher */
-/** @var bool $teacherConfigured */
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -30,13 +29,7 @@ declare(strict_types=1);
       </div>
     </header>
 
-    <?php if (!$teacherConfigured): ?>
-    <section class="admin-card admin-card--warn">
-      <h2 class="admin-card__title">Доступ не настроен</h2>
-      <p>Добавьте в <code>.env</code> список email преподавателей:</p>
-      <pre class="admin-code">TEACHER_EMAILS=teacher@example.com</pre>
-    </section>
-    <?php elseif ($user === null): ?>
+    <?php if ($user === null): ?>
     <section class="admin-card">
       <h2 class="admin-card__title">Нужен вход</h2>
       <p>Войдите в аккаунт преподавателя на главной странице, затем вернитесь сюда.</p>
@@ -45,7 +38,8 @@ declare(strict_types=1);
     <?php elseif (!$isTeacher): ?>
     <section class="admin-card admin-card--warn">
       <h2 class="admin-card__title">Нет доступа</h2>
-      <p>Аккаунт <strong><?= htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?></strong> не входит в список преподавателей.</p>
+      <p>У аккаунта <strong><?= htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?></strong> нет роли преподавателя.</p>
+      <p class="admin-footnote">При регистрации отметьте «Вы педагог?» или попросите администратора назначить роль в <a href="/admin">админ-панели</a>.</p>
     </section>
     <?php else: ?>
     <div id="teacher-app" class="teacher-layout">

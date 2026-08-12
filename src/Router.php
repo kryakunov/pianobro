@@ -539,7 +539,6 @@ final class Router
 
     $user = $this->auth->currentUser();
     $isTeacher = $this->teacher->isTeacher($user);
-    $teacherConfigured = TeacherService::teacherEmails() !== [];
 
     include dirname(__DIR__) . '/templates/teacher.php';
   }
