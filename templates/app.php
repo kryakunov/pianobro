@@ -135,6 +135,10 @@
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-notes"/></svg>
                 Тренажёр нот
               </a>
+              <a href="/ritm" class="btn btn--secondary btn--lg" id="btn-go-rhythm">
+                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
+                Ритм-игра
+              </a>
               <a href="/melodii" class="btn btn--secondary btn--lg" id="btn-go-melodies">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-melody"/></svg>
                 Выбрать мелодию
@@ -642,11 +646,209 @@
       </div>
     </section>
 
+    <!-- Настройки ритм-игры -->
+    <section class="screen<?= $screenActive('rhythm-pick') ?>" id="screen-rhythm-pick"<?= $screenHidden('rhythm-pick') ?>>
+      <div class="screen-header">
+        <a href="/" class="btn-back" id="btn-back-rhythm">← Назад</a>
+        <h2 class="screen-header__title">
+          <span class="screen-header__icon icon-badge icon-badge--accent" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-play"/></svg>
+          </span>
+          Ритм-игра
+        </h2>
+      </div>
+      <div class="pick-panel">
+        <form class="notes-settings" id="rhythm-settings-form">
+          <div class="notes-settings__grid">
+          <fieldset class="settings-group settings-group--treble">
+            <legend class="settings-group__head">
+              <span class="settings-group__icon icon-badge icon-badge--notes"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-treble"/></svg></span>
+              <span class="settings-group__title">Скрипичный ключ</span>
+            </legend>
+            <div class="settings-group__options">
+              <label class="settings-check">
+                <input type="checkbox" name="treble-first" checked>
+                <span>Первая октава</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="treble-second">
+                <span>Вторая октава</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group settings-group--bass">
+            <legend class="settings-group__head">
+              <span class="settings-group__icon icon-badge icon-badge--bass"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-bass"/></svg></span>
+              <span class="settings-group__title">Басовый ключ</span>
+            </legend>
+            <div class="settings-group__options">
+              <label class="settings-check">
+                <input type="checkbox" name="bass-small">
+                <span>Малая октава</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="bass-great">
+                <span>Большая октава</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group settings-group--alt">
+            <legend class="settings-group__head">
+              <span class="settings-group__icon icon-badge icon-badge--accent"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-sharp"/></svg></span>
+              <span class="settings-group__title">Знаки альтерации</span>
+            </legend>
+            <div class="settings-group__options">
+              <label class="settings-check">
+                <input type="checkbox" name="alt-sharp">
+                <span class="settings-check__icon" aria-hidden="true">♯</span>
+                <span>Диез</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="alt-flat">
+                <span class="settings-check__icon" aria-hidden="true">♭</span>
+                <span>Бемоль</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group settings-group--session settings-group--rhythm-game">
+            <legend class="settings-group__head">
+              <span class="settings-group__icon icon-badge icon-badge--session"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-session"/></svg></span>
+              <span class="settings-group__title">Игра</span>
+            </legend>
+            <div class="rhythm-game-panel">
+              <div class="rhythm-game-block">
+                <p class="rhythm-game-block__title">Скорость стана</p>
+                <div class="rhythm-pick-grid rhythm-pick-grid--speed" role="radiogroup" aria-label="Скорость стана">
+                  <label class="rhythm-pick rhythm-pick--speed">
+                    <input type="radio" name="rhythm-speed" value="very_slow">
+                    <span class="rhythm-pick__surface">
+                      <span class="rhythm-speed-meter rhythm-speed-meter--1" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                      <span class="rhythm-pick__title">Очень медленно</span>
+                    </span>
+                  </label>
+                  <label class="rhythm-pick rhythm-pick--speed">
+                    <input type="radio" name="rhythm-speed" value="slow" checked>
+                    <span class="rhythm-pick__surface">
+                      <span class="rhythm-speed-meter rhythm-speed-meter--2" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                      <span class="rhythm-pick__title">Медленно</span>
+                    </span>
+                  </label>
+                  <label class="rhythm-pick rhythm-pick--speed">
+                    <input type="radio" name="rhythm-speed" value="medium">
+                    <span class="rhythm-pick__surface">
+                      <span class="rhythm-speed-meter rhythm-speed-meter--3" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                      <span class="rhythm-pick__title">Средне</span>
+                    </span>
+                  </label>
+                  <label class="rhythm-pick rhythm-pick--speed">
+                    <input type="radio" name="rhythm-speed" value="fast">
+                    <span class="rhythm-pick__surface">
+                      <span class="rhythm-speed-meter rhythm-speed-meter--4" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                      <span class="rhythm-pick__title">Быстро</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+              <div class="rhythm-game-block">
+                <p class="rhythm-game-block__title">Допустимые ошибки</p>
+                <div class="rhythm-pick-grid rhythm-pick-grid--lives" role="radiogroup" aria-label="Количество жизней">
+                  <label class="rhythm-pick rhythm-pick--lives">
+                    <input type="radio" name="rhythm-lives" value="1">
+                    <span class="rhythm-pick__surface">
+                      <span class="rhythm-lives-icons" aria-hidden="true">♪</span>
+                      <span class="rhythm-pick__title">1</span>
+                      <span class="rhythm-pick__hint">Строго</span>
+                    </span>
+                  </label>
+                  <label class="rhythm-pick rhythm-pick--lives">
+                    <input type="radio" name="rhythm-lives" value="2">
+                    <span class="rhythm-pick__surface">
+                      <span class="rhythm-lives-icons" aria-hidden="true">♪♪</span>
+                      <span class="rhythm-pick__title">2</span>
+                    </span>
+                  </label>
+                  <label class="rhythm-pick rhythm-pick--lives">
+                    <input type="radio" name="rhythm-lives" value="3" checked>
+                    <span class="rhythm-pick__surface">
+                      <span class="rhythm-lives-icons" aria-hidden="true">♪♪♪</span>
+                      <span class="rhythm-pick__title">3</span>
+                    </span>
+                  </label>
+                  <label class="rhythm-pick rhythm-pick--lives">
+                    <input type="radio" name="rhythm-lives" value="5">
+                    <span class="rhythm-pick__surface">
+                      <span class="rhythm-lives-icons" aria-hidden="true">♪♪♪♪♪</span>
+                      <span class="rhythm-pick__title">5</span>
+                    </span>
+                  </label>
+                  <label class="rhythm-pick rhythm-pick--lives">
+                    <input type="radio" name="rhythm-lives" value="10">
+                    <span class="rhythm-pick__surface">
+                      <span class="rhythm-lives-icons rhythm-lives-icons--many" aria-hidden="true">♪×10</span>
+                      <span class="rhythm-pick__title">10</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group settings-group--session">
+            <legend class="settings-group__head">
+              <span class="settings-group__icon icon-badge icon-badge--session"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-session"/></svg></span>
+              <span class="settings-group__title">Длительности нот</span>
+            </legend>
+            <div class="settings-group__options settings-group__options--durations">
+              <label class="settings-check">
+                <input type="checkbox" name="dur-whole">
+                <span class="settings-check__icon" aria-hidden="true">𝅝</span>
+                <span>Целая</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="dur-half">
+                <span class="settings-check__icon" aria-hidden="true">𝅗𝅥</span>
+                <span>Половинная</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="dur-quarter" checked>
+                <span class="settings-check__icon" aria-hidden="true">♩</span>
+                <span>Четверть</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="dur-eighth">
+                <span class="settings-check__icon" aria-hidden="true">♪</span>
+                <span>Восьмая</span>
+              </label>
+              <label class="settings-check">
+                <input type="checkbox" name="dur-sixteenth">
+                <span class="settings-check__icon" aria-hidden="true">♬</span>
+                <span>Шестнадцатая</span>
+              </label>
+            </div>
+          </fieldset>
+          </div>
+
+          <div class="notes-settings__footer">
+            <p class="settings-hint">Ноты движутся по стану — нажимайте клавишу, когда нота доезжает до линии. Каждая ошибка отнимает жизнь.</p>
+            <p class="settings-error" id="rhythm-settings-error" hidden></p>
+            <button type="submit" class="btn btn--primary notes-settings__submit" id="btn-start-rhythm">
+              <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
+              Начать игру
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
     <!-- Тренировка -->
     <section class="screen screen--practice<?= $screenActive('practice') ?>" id="screen-practice"<?= $screenHidden('practice') ?>>
       <div class="practice-topbar">
         <button type="button" class="btn-back" id="btn-back-practice" aria-label="Назад">←</button>
         <h2 class="practice-topbar__title" id="practice-title">Тренировка</h2>
+        <div class="runner-lives" id="runner-lives" hidden aria-label="Жизни"></div>
         <div class="practice-progress" id="practice-progress">0 / 10</div>
       </div>
 
@@ -722,6 +924,8 @@
 
       <div class="practice-layout practice-layout--keyboard-hidden">
         <div class="practice-staff staff-viewport" id="staff-viewport">
+          <div class="runner-hit-line" id="runner-hit-line" hidden aria-hidden="true"></div>
+          <div class="runner-countdown" id="runner-countdown" hidden aria-hidden="true"></div>
           <div class="staff-scroll">
             <svg class="staff-svg" id="staff-svg" role="img" aria-label="Нотный стан"></svg>
           </div>

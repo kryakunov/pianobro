@@ -11,6 +11,16 @@ import {
   validateNoteSettings,
 } from './note-settings-form.js';
 import { StaffView } from './staff.js';
+import { RunnerStaffView, measureRemainingMs } from './runner-staff.js';
+import { RhythmTrainer, DEFAULT_RHYTHM_LIVES } from './rhythm-trainer.js';
+import {
+  readRhythmSettingsFromForm,
+  selectedDurationValues,
+  validateRhythmSettings,
+  describeRhythmSettings,
+  DEFAULT_RHYTHM_SPEED,
+} from './rhythm-settings-form.js';
+import { tempoScaleForSpeed } from './rhythm-trainer.js';
 import { normalizeLesson } from './lesson-utils.js';
 import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
@@ -49,9 +59,9 @@ import { ROUTES, routeForScreen, navigateTo, setNavigateImpl } from './routes.js
 import { initMetrikaPageview, trackGoal, trackPracticePageView } from './metrika.js';
 import { initAnalytics } from './analytics.js';
 
-const SESSION_LIMIT = 10;
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
 const PENDING_NOTES_PRACTICE_KEY = 'piano-pending-notes-practice';
+const PENDING_RHYTHM_PRACTICE_KEY = 'piano-pending-rhythm-practice';
 const PENDING_HOMEWORK_KEY = 'piano-pending-homework';
 
 const $ = (sel) => document.querySelector(sel);
@@ -62,6 +72,7 @@ const els = {
   screenHome: $('#screen-home'),
   screenMelodyPick: $('#screen-melody-pick'),
   screenNotesPick: $('#screen-notes-pick'),
+  screenRhythmPick: $('#screen-rhythm-pick'),
   screenRoadmap: $('#screen-roadmap'),
   screenStats: $('#screen-stats'),
   screenHomework: $('#screen-homework'),
@@ -70,6 +81,7 @@ const els = {
   screenPractice: $('#screen-practice'),
   btnGoMelodies: $('#btn-go-melodies'),
   btnGoNotes: $('#btn-go-notes'),
+  btnGoRhythm: $('#btn-go-rhythm'),
   btnGoRoadmap: $('#btn-go-roadmap'),
   btnGoRoadmapCard: $('#btn-go-roadmap-card'),
   btnBackRoadmap: $('#btn-back-roadmap'),
@@ -104,6 +116,7 @@ const els = {
   authSocialButtons: $('#auth-social-buttons'),
   btnBackMelody: $('#btn-back-melody'),
   btnBackNotes: $('#btn-back-notes'),
+  btnBackRhythm: $('#btn-back-rhythm'),
   btnBackPractice: $('#btn-back-practice'),
   lessonList: $('#lesson-list'),
   melodySearch: $('#melody-search'),
@@ -112,6 +125,8 @@ const els = {
   difficultyTabs: document.querySelectorAll('.difficulty-tab'),
   notesSettingsForm: $('#notes-settings-form'),
   notesSettingsError: $('#notes-settings-error'),
+  rhythmSettingsForm: $('#rhythm-settings-form'),
+  rhythmSettingsError: $('#rhythm-settings-error'),
   practiceTitle: $('#practice-title'),
   practiceProgress: $('#practice-progress'),
   melodyPreviewPanel: $('#melody-preview-panel'),
@@ -127,6 +142,8 @@ const els = {
   practiceFeedback: $('#practice-feedback'),
   practiceControls: $('#practice-controls'),
   staffViewport: $('#staff-viewport'),
+  runnerHitLine: $('#runner-hit-line'),
+  runnerLives: $('#runner-lives'),
   practiceLayout: document.querySelector('.practice-layout'),
   practiceKeyboardArea: $('#practice-keyboard-area'),
   keyboardHintsPanel: $('#keyboard-hints-panel'),
@@ -142,6 +159,7 @@ const els = {
   modalWrong: $('#modal-wrong'),
   modalAccuracy: $('#modal-accuracy'),
   modalSubtitle: $('#modal-subtitle'),
+  modalTitle: $('#modal-title'),
   btnModalRetry: $('#btn-modal-retry'),
   btnModalDone: $('#btn-modal-done'),
 };
@@ -156,19 +174,27 @@ let melodyTrainer;
 let noteTrainer;
 /** @type {StaffView} */
 let staffView;
+/** @type {RunnerStaffView} */
+let runnerStaff;
+/** @type {RhythmTrainer} */
+let rhythmTrainer;
 
 try {
   piano = new PianoKeyboard(els.piano, PIANO_START, PIANO_END);
   melodyTrainer = new MelodyTrainer(piano);
   noteTrainer = new NoteTrainer(piano);
+  rhythmTrainer = new RhythmTrainer(piano);
   staffView = new StaffView(els.staffViewport);
+  runnerStaff = new RunnerStaffView(els.staffViewport);
 } catch (error) {
   practiceWidgetsReady = false;
   console.error('Не удалось инициализировать тренажёр.', error);
   piano = new PianoKeyboard(null, PIANO_START, PIANO_END);
   melodyTrainer = new MelodyTrainer(piano);
   noteTrainer = new NoteTrainer(piano);
+  rhythmTrainer = new RhythmTrainer(piano);
   staffView = new StaffView(null);
+  runnerStaff = new RunnerStaffView(null);
 }
 
 let currentScreen = 'home';
@@ -176,6 +202,10 @@ let appMode = 'melody';
 let selectedLessonId = null;
 let selectedImportedId = null;
 let noteSettings = structuredClone(DEFAULT_NOTE_SETTINGS);
+let rhythmSettings = structuredClone(DEFAULT_NOTE_SETTINGS);
+let rhythmDurations = { quarter: true };
+let rhythmSpeed = DEFAULT_RHYTHM_SPEED;
+let rhythmLives = DEFAULT_RHYTHM_LIVES;
 let currentPracticeTitle = '';
 let lessons = [];
 const lessonCache = new Map();
@@ -242,6 +272,7 @@ function showScreen(name) {
     home: els.screenHome,
     'melody-pick': els.screenMelodyPick,
     'notes-pick': els.screenNotesPick,
+    'rhythm-pick': els.screenRhythmPick,
     roadmap: els.screenRoadmap,
     stats: els.screenStats,
     homework: els.screenHomework,
@@ -402,7 +433,12 @@ function updatePracticeProgress(state) {
   let current;
   let total;
 
-  if (appMode === 'melody') {
+  if (appMode === 'rhythm') {
+    const comboSuffix = state.combo > 1 ? ` · ×${state.combo}` : '';
+    els.practiceProgress.textContent = `${state.score ?? 0}${comboSuffix}`;
+    current = state.score ?? 0;
+    total = Math.max(current, 1);
+  } else if (appMode === 'melody') {
     current = Math.min(state.index, state.total);
     total = state.total;
     els.practiceProgress.textContent = `${current} / ${total}`;
@@ -423,13 +459,81 @@ function updatePracticeProgress(state) {
 }
 
 function resetPracticeProgress() {
-  const limit = appMode === 'notes' ? noteTrainer.sessionLimit : SESSION_LIMIT;
+  if (appMode === 'rhythm') {
+    updatePracticeProgress({ score: 0, combo: 0, lives: rhythmTrainer.maxLives });
+    updateRunnerLives(rhythmTrainer.maxLives, rhythmTrainer.maxLives);
+    return;
+  }
+  if (appMode === 'melody') {
+    const total = melodyTrainer.lesson?.events?.length ?? 0;
+    updatePracticeProgress({ index: 0, total, correct: 0 });
+    return;
+  }
+  const limit = noteTrainer.sessionLimit;
   updatePracticeProgress({ index: 0, total: limit, correct: 0, sessionLimit: limit });
+}
+
+function updateRunnerLives(lives, maxLives = rhythmTrainer.maxLives) {
+  if (!els.runnerLives) return;
+  if (appMode !== 'rhythm' || lives == null || !maxLives) {
+    els.runnerLives.hidden = true;
+    els.runnerLives.replaceChildren();
+    return;
+  }
+
+  els.runnerLives.hidden = false;
+  els.runnerLives.replaceChildren();
+  for (let i = 0; i < maxLives; i++) {
+    const icon = document.createElement('span');
+    icon.className = `runner-life${i < lives ? ' runner-life--full' : ' runner-life--empty'}`;
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '♪';
+    els.runnerLives.appendChild(icon);
+  }
+}
+
+function updateRhythmUI(state) {
+  updatePracticeProgress(state);
+  updateRunnerLives(state.lives, state.maxLives);
 }
 
 function updateMelodyUI(state) {
   updatePracticeProgress(state);
   staffView.update(state);
+}
+
+function showRhythmGameOver(stats) {
+  lastSessionStats = stats;
+  if (els.modalTitle) els.modalTitle.textContent = 'Конец игры';
+  els.modalCorrect.textContent = String(stats.score ?? 0);
+  els.modalWrong.textContent = String(stats.bestCombo ?? 0);
+  els.modalAccuracy.textContent = String(stats.highScore ?? 0);
+
+  const labels = els.sessionModal?.querySelectorAll('.modal-stat__label');
+  if (labels?.length >= 3) {
+    labels[0].textContent = 'Счёт';
+    labels[1].textContent = 'Серия';
+    labels[2].textContent = 'Рекорд';
+  }
+
+  if (els.modalSubtitle) {
+    const beat = stats.score >= stats.highScore && stats.score > 0 ? ' Новый рекорд!' : '';
+    const mistakes = stats.wrong ?? 0;
+    const mistakeText = mistakes > 0 ? ` Ошибок: ${mistakes}.` : '';
+    els.modalSubtitle.textContent = `Вы сыграли ${stats.score} ${pluralNotes(stats.score)}.${mistakeText}${beat}`;
+  }
+
+  els.sessionModal.hidden = false;
+}
+
+function restoreSessionModalLabels() {
+  const labels = els.sessionModal?.querySelectorAll('.modal-stat__label');
+  if (labels?.length >= 3) {
+    labels[0].textContent = 'Верно';
+    labels[1].textContent = 'Ошибки';
+    labels[2].textContent = 'Точность';
+  }
+  if (els.modalTitle) els.modalTitle.textContent = 'Тренировка завершена!';
 }
 
 function updateNoteUI(state) {
@@ -444,6 +548,7 @@ function attachRoadmapSessionContext(stats) {
 }
 
 function showSessionModal(stats) {
+  restoreSessionModalLabels();
   lastSessionStats = stats;
   els.modalCorrect.textContent = String(stats.correct);
   els.modalWrong.textContent = String(stats.wrong);
@@ -714,6 +819,7 @@ function setTrainerSoundEnabled(enabled) {
 
 function hideSessionModal() {
   els.sessionModal.hidden = true;
+  restoreSessionModalLabels();
 }
 
 let keyboardHints = true;
@@ -743,6 +849,8 @@ function setPianoVisible(visible) {
           spelling: noteTrainer.currentSpelling,
           clef: noteTrainer.currentClef,
         });
+      } else if (appMode === 'rhythm' && rhythmTrainer.running) {
+        rhythmTrainer.refreshKeyboardHighlight();
       }
       setTimeout(() => piano.relayout({ scrollToDefault: true }), 120);
       setTimeout(() => piano.relayout({ scrollToDefault: true }), 320);
@@ -756,6 +864,7 @@ function setKeyboardHints(enabled, { persist = true } = {}) {
   }
   melodyTrainer.showKeyboardHints = enabled;
   noteTrainer.showKeyboardHints = enabled;
+  rhythmTrainer.showKeyboardHints = enabled;
   els.keyboardHintTabs?.forEach((tab) => {
     tab.classList.toggle('keyboard-mode__tab--active', tab.dataset.hints === (enabled ? 'on' : 'off'));
   });
@@ -767,6 +876,8 @@ function refreshKeyboardHints() {
     melodyTrainer.refreshKeyboardHighlight();
   } else if (appMode === 'notes' && noteTrainer.running) {
     noteTrainer.refreshKeyboardHint();
+  } else if (appMode === 'rhythm' && rhythmTrainer.running) {
+    rhythmTrainer.refreshKeyboardHighlight();
   }
 }
 
@@ -774,6 +885,98 @@ function showNoteDrillStaff(midi, { spelling, clef } = {}) {
   const dualClef = usesBothClefs(noteTrainer.settings);
   els.staffViewport.classList.toggle('staff-viewport--grand', dualClef);
   staffView.showDrillNote(midi, { spelling, clef, dualClef });
+}
+
+function prepareRhythmRun({ preserveEvents = false } = {}) {
+  const tempoScale = tempoScaleForSpeed(rhythmSpeed);
+  rhythmTrainer.setTempo(rhythmSpeed, tempoScale);
+  if (!preserveEvents || !rhythmTrainer.pendingEvents.length) {
+    rhythmTrainer.pendingEvents = rhythmTrainer.generateBatch(48);
+  }
+  const layout = runnerStaff.load(rhythmTrainer.pendingEvents, rhythmSettings, { tempoScale });
+  if (!layout) return false;
+  rhythmTrainer.resetEvents(runnerStaff.events, layout, tempoScale);
+  return true;
+}
+
+function bootRhythmPractice() {
+  staffView.clear();
+  runnerStaff.clear();
+  els.staffViewport.classList.remove('staff-viewport--grand');
+  els.staffViewport.classList.add('staff-viewport--runner');
+  els.staffViewport.classList.toggle('staff-viewport--grand', usesBothClefs(rhythmSettings));
+  if (els.runnerHitLine) els.runnerHitLine.hidden = false;
+
+  const startRun = () => {
+    if (!prepareRhythmRun()) return;
+    rhythmTrainer.showKeyboardHints = keyboardHints;
+    rhythmTrainer.start();
+  };
+
+  requestAnimationFrame(startRun);
+}
+
+function startRhythmTraining() {
+  const { noteSettings, durations, speed, lives } = readRhythmSettingsFromForm(els.rhythmSettingsForm);
+  const error = validateRhythmSettings(noteSettings, durations);
+  if (error) {
+    if (els.rhythmSettingsError) {
+      els.rhythmSettingsError.textContent = error;
+      els.rhythmSettingsError.hidden = false;
+    }
+    return;
+  }
+  if (els.rhythmSettingsError) els.rhythmSettingsError.hidden = true;
+
+  rhythmSettings = noteSettings;
+  rhythmDurations = durations;
+  rhythmSpeed = speed;
+  rhythmLives = lives;
+  const tempoScale = tempoScaleForSpeed(speed);
+  rhythmTrainer.setTempo(speed, tempoScale);
+  rhythmTrainer.setMaxLives(lives);
+  rhythmTrainer.configure(noteSettings, selectedDurationValues(durations));
+
+  sessionStorage.setItem(PENDING_RHYTHM_PRACTICE_KEY, JSON.stringify({
+    noteSettings,
+    durations,
+    speed,
+    lives,
+    options: readTrainerOptionsFromPrefs(),
+  }));
+  navigateTo(ROUTES.practiceRhythm);
+}
+
+function bootRhythmFromStorage() {
+  let config = null;
+  try {
+    const raw = sessionStorage.getItem(PENDING_RHYTHM_PRACTICE_KEY);
+    if (raw) {
+      config = JSON.parse(raw);
+      sessionStorage.removeItem(PENDING_RHYTHM_PRACTICE_KEY);
+    }
+  } catch {
+    config = null;
+  }
+
+  const noteSettingsConfig = config?.noteSettings ?? rhythmSettings;
+  const durations = config?.durations ?? rhythmDurations;
+  const speed = config?.speed ?? rhythmSpeed;
+  const lives = config?.lives ?? rhythmLives;
+  const options = config?.options ?? readTrainerOptionsFromPrefs();
+
+  rhythmSettings = noteSettingsConfig;
+  rhythmDurations = durations;
+  rhythmSpeed = speed;
+  rhythmLives = lives;
+  const tempoScale = tempoScaleForSpeed(speed);
+  rhythmTrainer.setTempo(speed, tempoScale);
+  rhythmTrainer.setMaxLives(lives);
+  rhythmTrainer.configure(noteSettingsConfig, selectedDurationValues(durations));
+  noteTrainer.setOptions(options);
+  enterPractice('rhythm', describeRhythmSettings(noteSettingsConfig, durations, speed, lives), {
+    returnPath: ROUTES.rhythm,
+  });
 }
 
 function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, returnPath } = {}) {
@@ -818,7 +1021,13 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
     title,
     mode === 'melody' ? melodyTrainer.lesson?.id ?? null : null,
   );
-  trackGoal(mode === 'melody' ? 'practice_melody_start' : 'practice_notes_start');
+  trackGoal(
+    mode === 'melody'
+      ? 'practice_melody_start'
+      : mode === 'rhythm'
+        ? 'practice_rhythm_start'
+        : 'practice_notes_start',
+  );
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -830,6 +1039,8 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
       } else if (mode === 'notes') {
         els.staffViewport.classList.toggle('staff-viewport--grand', usesBothClefs(noteTrainer.settings));
         noteTrainer.start();
+      } else if (mode === 'rhythm') {
+        bootRhythmPractice();
       }
       setTimeout(() => piano.relayout({ scrollToDefault: true }), 150);
       syncPreviewButton();
@@ -842,13 +1053,17 @@ function exitPractice() {
   handlePreviewStop();
   melodyTrainer.reset();
   noteTrainer.stop();
+  rhythmTrainer.stop();
   activeRoadmapStageId = null;
   activeRoadmapCapstone = false;
   lastRoadmapStageCompleted = false;
   lastRoadmapCapstoneReady = false;
   activeHomeworkSubmissionId = null;
   staffView.clear();
-  els.staffViewport.classList.remove('staff-viewport--grand');
+  runnerStaff.clear();
+  els.staffViewport.classList.remove('staff-viewport--grand', 'staff-viewport--runner');
+  if (els.runnerHitLine) els.runnerHitLine.hidden = true;
+  updateRunnerLives(null);
   piano.clearStates();
   hideSessionModal();
   resetPracticeProgress();
@@ -1678,6 +1893,7 @@ const CLIENT_APP_PATHS = new Set([
   ROUTES.home,
   ROUTES.roadmap,
   ROUTES.notes,
+  ROUTES.rhythm,
   ROUTES.melodies,
   ROUTES.stats,
   ROUTES.homework,
@@ -1709,6 +1925,9 @@ async function openScreenForPath(path) {
       break;
     case ROUTES.notes:
       showScreen('notes-pick');
+      break;
+    case ROUTES.rhythm:
+      showScreen('rhythm-pick');
       break;
     case ROUTES.melodies:
       showScreen('melody-pick');
@@ -1986,12 +2205,11 @@ async function runMelodySearch(query) {
 
 let searchDebounceTimer = null;
 
-function loadMelodyLesson(lesson, { activeId = null, title = null, sessionLimit = SESSION_LIMIT, returnPath } = {}) {
+function loadMelodyLesson(lesson, { activeId = null, title = null, sessionLimit = null, returnPath } = {}) {
   stopMelodyPreview();
   handlePreviewStop();
   const normalized = normalizeLesson(lesson);
   melodyTrainer.loadLesson(normalized, { sessionLimit });
-  noteTrainer.sessionLimit = SESSION_LIMIT;
 
   if (returnPath !== ROUTES.roadmap) {
     activeRoadmapStageId = null;
@@ -2398,6 +2616,11 @@ async function bootPractice(boot) {
   if (boot.mode === 'notes') {
     practiceReturnPath = homework?.returnPath ?? boot.returnPath ?? ROUTES.notes;
     bootNotesPractice(homework);
+    return;
+  }
+  if (boot.mode === 'rhythm') {
+    practiceReturnPath = homework?.returnPath ?? boot.returnPath ?? ROUTES.rhythm;
+    bootRhythmFromStorage();
   }
 }
 
@@ -2427,6 +2650,9 @@ async function bootApp() {
     case 'notes-pick':
       showScreen('notes-pick');
       break;
+    case 'rhythm-pick':
+      showScreen('rhythm-pick');
+      break;
     case 'practice':
       await bootPractice(boot);
       break;
@@ -2436,15 +2662,18 @@ async function bootApp() {
 }
 
 function onNoteOn(midiNote) {
-  piano.pressKey(midiNote);
   const trainerRunning = appMode === 'melody'
     ? melodyTrainer.running
-    : noteTrainer.running;
+    : appMode === 'rhythm'
+      ? rhythmTrainer.running
+      : noteTrainer.running;
   if (noteTrainer.soundEnabled && trainerRunning) {
     void playTrainerNote(midiNote, 0.55);
   }
   if (appMode === 'melody') {
     melodyTrainer.handleNoteOn(midiNote);
+  } else if (appMode === 'rhythm') {
+    rhythmTrainer.handleNoteOn(midiNote);
   } else {
     noteTrainer.handleNoteOn(midiNote);
   }
@@ -2453,6 +2682,8 @@ function onNoteOn(midiNote) {
 function onNoteOff(midiNote) {
   if (appMode === 'melody') {
     melodyTrainer.handleNoteOff(midiNote);
+  } else if (appMode === 'rhythm') {
+    rhythmTrainer.handleNoteOff(midiNote);
   } else {
     noteTrainer.handleNoteOff(midiNote);
   }
@@ -2534,6 +2765,31 @@ noteTrainer.onNoteChange = (midiNote, { spelling, clef } = {}) => {
   showNoteDrillStaff(midiNote, { spelling, clef });
 };
 
+rhythmTrainer.onUpdate = (state) => {
+  if (appMode === 'rhythm' && currentScreen === 'practice') updateRhythmUI(state);
+};
+rhythmTrainer.onRelayout = () => prepareRhythmRun({ preserveEvents: true });
+rhythmTrainer.onFeedback = showFeedback;
+rhythmTrainer.onComplete = (stats) => {
+  showRhythmGameOver(stats);
+};
+rhythmTrainer.onScroll = (offset) => {
+  runnerStaff.setScrollOffset(offset);
+};
+rhythmTrainer.onCountdown = (value) => {
+  runnerStaff.setCountdown(value);
+};
+rhythmTrainer.onNoteState = (index, state) => {
+  runnerStaff.setNoteState(index, state);
+};
+rhythmTrainer.onAppendRequest = (count) => {
+  const remaining = measureRemainingMs(runnerStaff.events);
+  const tempoScale = tempoScaleForSpeed(rhythmSpeed);
+  const batch = rhythmTrainer.generateBatch(count, remaining);
+  const layout = runnerStaff.load(batch, rhythmSettings, { append: true, tempoScale });
+  if (layout) rhythmTrainer.appendEvents(layout.events, layout);
+};
+
 els.notesSettingsForm?.addEventListener('submit', (e) => {
   e.preventDefault();
   startNotesTraining();
@@ -2541,6 +2797,17 @@ els.notesSettingsForm?.addEventListener('submit', (e) => {
 
 els.notesSettingsForm?.addEventListener('change', () => {
   if (!els.notesSettingsError.hidden) els.notesSettingsError.hidden = true;
+});
+
+els.rhythmSettingsForm?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  startRhythmTraining();
+});
+
+els.rhythmSettingsForm?.addEventListener('change', () => {
+  if (els.rhythmSettingsError && !els.rhythmSettingsError.hidden) {
+    els.rhythmSettingsError.hidden = true;
+  }
 });
 
 function openNotesPickScreen() {
@@ -2647,6 +2914,10 @@ els.btnModalRetry?.addEventListener('click', () => {
     noteTrainer.reset();
     noteTrainer.start();
     showFeedback('Поехали!', 'info');
+  } else if (appMode === 'rhythm') {
+    restoreSessionModalLabels();
+    bootRhythmPractice();
+    showFeedback('Поехали!', 'info');
   }
 });
 
@@ -2742,6 +3013,7 @@ noteTrainer.setOptions(loadTrainerPrefs() ?? DEFAULT_TRAINER_OPTIONS);
 setPianoVisible(false);
 melodyTrainer.showKeyboardHints = true;
 noteTrainer.showKeyboardHints = true;
+rhythmTrainer.showKeyboardHints = true;
 
 const savedMidiId = loadSavedMidiDeviceId();
 if (savedMidiId) midi.selectedInputId = savedMidiId;

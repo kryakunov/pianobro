@@ -33,9 +33,9 @@ export class MelodyTrainer {
     this.reset();
   }
 
-  /** Full melody for staff display; session slice may be shorter. */
+  /** Lesson shown on staff and used for training (same slice when sessionLimit is set). */
   get staffLesson() {
-    return this.fullLesson ?? this.lesson;
+    return this.lesson;
   }
 
   reset() {

@@ -1,6 +1,7 @@
 import { midiToStaffNote } from './notes.js';
 import { normalizeLesson } from './lesson-utils.js';
 import { clefWidth, renderClefSymbol } from './clef-glyphs.js';
+import { renderNoteFlags } from './note-flags.js';
 
 const TREBLE_REF = 64;
 const BASS_REF = 43;
@@ -235,7 +236,7 @@ export class StaffView {
       accidentalSize: 19 * scale,
       ledgerHalfWidth: 17 * scale,
       chordOffset: 5 * scale,
-      flagStep: 8 * scale,
+      flagStep: 5.5 * scale,
     };
   }
 
@@ -503,17 +504,7 @@ export class StaffView {
       stem = `<line x1="${stemX}" y1="${y}" x2="${stemX}" y2="${stemY2}" class="staff-note__stem" stroke-width="${1.6 * m.scale}"/>`;
     }
 
-    let flags = '';
-    for (let i = 0; i < flagCount; i++) {
-      const offset = i * m.flagStep;
-      if (stemUp) {
-        const fy = stemY2 - offset;
-        flags += `<path d="M ${stemX} ${fy} C ${stemX + 2 * m.scale} ${fy - 6 * m.scale}, ${stemX + 11 * m.scale} ${fy - 8 * m.scale}, ${stemX + 9 * m.scale} ${fy - 16 * m.scale}" class="staff-note__flag"/>`;
-      } else {
-        const fy = stemY2 + offset;
-        flags += `<path d="M ${stemX} ${fy} C ${stemX - 2 * m.scale} ${fy + 6 * m.scale}, ${stemX - 11 * m.scale} ${fy + 8 * m.scale}, ${stemX - 9 * m.scale} ${fy + 16 * m.scale}" class="staff-note__flag"/>`;
-      }
-    }
+    let flags = renderNoteFlags(stemX, stemY2, stemUp, flagCount, m.scale, m.flagStep);
 
     return `
       <g class="staff-note staff-note--${hand} staff-note--${kind}" data-event-index="${eventIndex}" data-midi="${note.midi}">

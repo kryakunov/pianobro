@@ -27,6 +27,8 @@ final class PageRegistry
       $path === '/domashka' => self::homework(),
       $path === '/teacher' => self::teacher(),
       $path === '/trenirovka/noty' => self::practiceNotes(),
+      $path === '/ritm' => self::rhythm(),
+      $path === '/trenirovka/ritm' => self::practiceRhythm(),
       preg_match('#^/melodii/([a-z0-9\-]+)$#', $path, $m) === 1 => self::melodyDetail($m[1], $lessons),
       preg_match('#^/trenirovka/melodiya/([a-z0-9\-]+)$#', $path, $m) === 1 => self::practiceMelody($m[1], $lessons),
       default => null,
@@ -40,6 +42,7 @@ final class PageRegistry
       '/',
       '/put-novichka',
       '/noty',
+      '/ritm',
       '/melodii',
     ];
 
@@ -209,6 +212,39 @@ final class PageRegistry
       description: 'Ученики, статистика и индивидуальные задания для преподавателя.',
       keywords: 'кабинет преподавателя пианино, ученики, домашние задания',
       robots: 'noindex, follow',
+    );
+  }
+
+  /** @return array<string, mixed> */
+  private static function rhythm(): array
+  {
+    return self::base(
+      screen: 'rhythm-pick',
+      path: '/ritm',
+      title: 'Ритм-игра — ноты на бегущем стане | Piano Bro',
+      description: 'Играйте ноты вовремя, пока они движутся по нотному стану. Выберите ключ, октавы и длительности — тренируйте чтение нот в ритме.',
+      keywords: self::NOTE_TRAINER_KEYWORDS . ', ритм игра пианино, ноты в ритме',
+      seoIntro: [
+        'h1' => 'Ритм-игра на нотном стане',
+        'lead' => 'Ноты движутся по стану — нажимайте нужную клавишу, когда нота доезжает до линии. Неверная нота или промах — конец игры. Настройте ключ, октавы и длительности.',
+      ],
+    );
+  }
+
+  /** @return array<string, mixed> */
+  private static function practiceRhythm(): array
+  {
+    return self::base(
+      screen: 'practice',
+      path: '/trenirovka/ritm',
+      title: 'Ритм-игра — тренировка | Piano Bro',
+      description: 'Ритм-игра: нажимайте ноты вовремя на бегущем нотном стане.',
+      keywords: 'ритм игра ноты, тренажер нот в ритме',
+      robots: 'noindex, follow',
+      boot: [
+        'mode' => 'rhythm',
+        'returnPath' => '/ritm',
+      ],
     );
   }
 

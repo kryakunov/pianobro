@@ -350,9 +350,7 @@ export class PianoKeyboard {
     this.onNoteOff?.(midi);
   }
 
-  pressKey(midi) {
-    this.keys.get(midi)?.classList.add('piano-key--pressed');
-  }
+  pressKey() {}
 
   releaseKey(midi) {
     this.keys.get(midi)?.classList.remove('piano-key--pressed');
