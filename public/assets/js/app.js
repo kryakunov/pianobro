@@ -36,6 +36,7 @@ import {
   getGuestNoteEntries,
   clearGuestNoteMap,
   markCapstoneComplete,
+  syncLocalCapstonesToServer,
   mergeCapstoneIntoProgress,
   getCapstoneLabel,
   meetsCapstoneAccuracy,
@@ -2064,14 +2065,16 @@ function applySessionLimitToForm(limit = DEFAULT_NOTE_SESSION_LIMIT) {
 async function refreshRoadmapData(noteStats = null) {
   try {
     const data = await loadRoadmap();
+    const serverProgress = data.progress ?? null;
+
     if (noteStats) {
-      data.progress = buildRoadmapProgressFromStats(data, noteStats);
+      data.progress = buildRoadmapProgressFromStats(data, noteStats, serverProgress);
     } else if (!isLoggedIn()) {
       data.progress = buildGuestRoadmapProgress(data);
     } else {
       try {
-        cachedNoteStats = await loadNoteStats();
-        data.progress = buildRoadmapProgressFromStats(data, cachedNoteStats);
+        cachedNoteStats = noteStats ?? await loadNoteStats();
+        data.progress = buildRoadmapProgressFromStats(data, cachedNoteStats, serverProgress);
       } catch {
         if (data.progress) {
           data.progress = mergeCapstoneIntoProgress(data, data.progress);
@@ -2102,6 +2105,7 @@ async function syncGuestProgressAfterAuth() {
   }
 
   cachedNoteStats = null;
+  await syncLocalCapstonesToServer();
   await refreshRoadmapData();
 }
 

@@ -99,6 +99,25 @@ final class Router
       return;
     }
 
+    if ($path === '/api/roadmap/capstone' && $method === 'POST') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      try {
+        $body = $this->readJsonBody();
+        $this->roadmap->markCapstoneComplete($user['id'], (string) ($body['stageId'] ?? ''));
+        $this->json(['ok' => true]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      } catch (\Throwable $e) {
+        $this->json(['error' => 'Не удалось сохранить прогресс'], 500);
+      }
+      return;
+    }
+
     if ($path === '/api/stats/notes' && $method === 'GET') {
       $user = $this->auth->currentUser();
       if ($user === null) {

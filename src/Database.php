@@ -92,6 +92,7 @@ final class Database
     self::migrateAnalyticsSearchReferral($pdo);
     self::migrateTeacherStudentExclusive($pdo);
     self::migrateHomeworkStatuses($pdo);
+    self::migrateRoadmapCapstones($pdo);
   }
 
   private static function migrateOAuthAccounts(PDO $pdo): void
@@ -414,6 +415,19 @@ final class Database
 
       CREATE UNIQUE INDEX idx_teacher_students_student_unique
         ON teacher_students(student_id);
+      SQL);
+  }
+
+  private static function migrateRoadmapCapstones(PDO $pdo): void
+  {
+    $pdo->exec(<<<'SQL'
+      CREATE TABLE IF NOT EXISTS roadmap_capstone_completions (
+        user_id INTEGER NOT NULL,
+        stage_id TEXT NOT NULL,
+        completed_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (user_id, stage_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
       SQL);
   }
 

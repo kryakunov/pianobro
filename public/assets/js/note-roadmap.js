@@ -88,6 +88,48 @@ export function markCapstoneComplete(stageId) {
   const map = loadCapstoneMap();
   map[stageId] = true;
   saveCapstoneMap(map);
+  void persistCapstoneComplete(stageId);
+}
+
+async function persistCapstoneComplete(stageId) {
+  try {
+    await fetch('/api/roadmap/capstone', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stageId }),
+    });
+  } catch {
+    // ignore — локальный прогресс сохранён, синхронизация повторится при входе
+  }
+}
+
+export async function syncLocalCapstonesToServer() {
+  const map = loadCapstoneMap();
+  const stageIds = Object.keys(map).filter((stageId) => map[stageId]);
+  if (!stageIds.length) return;
+
+  await Promise.all(stageIds.map((stageId) => persistCapstoneComplete(stageId)));
+}
+
+function capstoneMapFromServerProgress(serverProgress) {
+  const map = {};
+  for (const item of serverProgress?.stages ?? []) {
+    if (item.capstoneComplete) {
+      map[item.id] = true;
+    }
+  }
+  return map;
+}
+
+function mergeCapstoneMaps(...maps) {
+  const merged = {};
+  for (const map of maps) {
+    for (const [stageId, complete] of Object.entries(map ?? {})) {
+      if (complete) merged[stageId] = true;
+    }
+  }
+  return merged;
 }
 
 export function clearCapstoneProgress() {
@@ -230,14 +272,18 @@ export function buildGuestRoadmapProgress(roadmapData) {
   );
 }
 
-export function buildRoadmapProgressFromStats(roadmapData, noteStats) {
+export function buildRoadmapProgressFromStats(roadmapData, noteStats, serverProgress = null) {
   const noteMap = {};
   for (const note of noteStats?.notes ?? []) {
     noteMap[note.midi] = {
       history: normalizeHistory(note.history ?? []),
     };
   }
-  return buildProgressFromNoteMap(roadmapData.stages, roadmapData.ranks, noteMap);
+  const capstoneMap = mergeCapstoneMaps(
+    capstoneMapFromServerProgress(serverProgress),
+    loadCapstoneMap(),
+  );
+  return buildProgressFromNoteMap(roadmapData.stages, roadmapData.ranks, noteMap, capstoneMap);
 }
 
 export function projectNoteStatsFromAttempts(noteStats, attempts = []) {
