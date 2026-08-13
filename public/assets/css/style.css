@@ -219,35 +219,6 @@ body {
   color: inherit;
 }
 
-.header__nav {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem 0.75rem;
-  flex: 1 1 auto;
-  justify-content: center;
-  min-width: 0;
-}
-
-.header__nav-link {
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 0.35rem 0.5rem;
-  border-radius: 8px;
-  white-space: nowrap;
-}
-
-.header__nav-link:hover {
-  color: var(--text);
-  background: var(--surface-2);
-}
-
-.header__nav-link--active {
-  color: var(--text);
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface-2));
-}
-
 .header__logo {
   font-size: 0;
 }
@@ -3605,6 +3576,10 @@ a.btn--secondary:visited {
   white-space: nowrap;
 }
 
+.header__auth .btn--sm .icon--btn {
+  opacity: 0.88;
+}
+
 .modal__card--auth {
   max-width: 420px;
   max-height: min(calc(100dvh - 2rem), 900px);
@@ -5633,9 +5608,26 @@ body.body--modal-open {
   background: var(--surface-2);
 }
 
+.teacher-assignment__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .teacher-assignment__header h4 {
   font-size: 0.9375rem;
   margin-bottom: 0.15rem;
+}
+
+.teacher-assignment__delete {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.teacher-assignment__delete:hover:not(:disabled) {
+  color: var(--error);
+  background: var(--error-bg);
 }
 
 .teacher-assignment__meta {
@@ -5826,6 +5818,10 @@ body.body--modal-open {
   gap: 1rem;
   align-items: start;
   padding: 0 1rem 1.5rem;
+}
+
+#teacher-app[hidden] {
+  display: none !important;
 }
 
 .teacher-access-gate {

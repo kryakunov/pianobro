@@ -14,7 +14,7 @@ import { StaffView } from './staff.js';
 import { normalizeLesson } from './lesson-utils.js';
 import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
-import { initAuth, getUser, hasRole, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, mergeGuestNoteStats, loadOAuthProviders, redirectToOAuth, setInviteToken, getInviteToken } from './auth.js';
+import { initAuth, getUser, hasRole, isTeacherUser, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, mergeGuestNoteStats, loadOAuthProviders, redirectToOAuth, setInviteToken, getInviteToken } from './auth.js';
 import { icon, iconBadgeColored } from './icons.js';
 import { playTrainerNote, warmupTrainerSound, unlockTrainerSoundFromGesture } from './trainer-sounds.js';
 import {
@@ -990,7 +990,7 @@ function updateRoadmapProgressFromSession(stats, noteStats = null) {
 function updateAuthUI() {
   const user = getUser();
   const loggedIn = Boolean(user);
-  const isTeacher = hasRole('teacher');
+  const isTeacher = isTeacherUser();
   const isStudent = hasRole('student');
 
   if (els.btnOpenAuth) els.btnOpenAuth.hidden = loggedIn;
@@ -1050,14 +1050,6 @@ function bindCriticalUi() {
     handleClientNavClick(event, ROUTES.home);
   });
 
-  document.querySelectorAll('.header__nav-link[href]').forEach((link) => {
-    link.addEventListener('click', (event) => {
-      const href = link.getAttribute('href');
-      if (!href) return;
-      handleClientNavClick(event, href);
-    });
-  });
-
   els.btnGoMelodies?.addEventListener('click', (event) => {
     event.preventDefault();
     navigateTo(ROUTES.melodies);
@@ -1093,6 +1085,11 @@ function bindCriticalUi() {
   });
 
   els.btnGoTeacher?.addEventListener('click', (event) => {
+    if (!isTeacherUser()) {
+      event.preventDefault();
+      void navigateApp(ROUTES.teacher);
+      return;
+    }
     handleClientNavClick(event, ROUTES.teacher);
   });
 
@@ -1519,16 +1516,24 @@ async function afterAuthSuccess() {
     await openHomeworkScreen();
   }
   if (window.location.pathname === ROUTES.teacher) {
+    if (isTeacherUser() && !document.getElementById('teacher-app')) {
+      window.location.assign(ROUTES.teacher);
+      return;
+    }
     await openTeacherScreen();
   }
 }
 
 const HOMEWORK_STATUS_LABELS = {
   pending: 'Не выполнено',
-  submitted: 'На проверке',
   completed: 'Выполнено',
-  reviewed: 'Проверено',
 };
+
+function normalizeHomeworkStatus(status) {
+  if (status === 'submitted') return 'pending';
+  if (status === 'reviewed') return 'completed';
+  return status;
+}
 
 function formatHomeworkDate(value) {
   if (!value) return '';
@@ -1573,9 +1578,12 @@ function renderHomeworkPanel(items) {
   }
 
   const list = items.map((item) => {
-    const pending = item.status === 'pending';
+    const status = normalizeHomeworkStatus(item.status);
+    const pending = status === 'pending';
     const result = item.result ?? {};
     const accuracy = result.accuracy != null ? `${result.accuracy}%` : '';
+    const minAccuracy = item.payload?.minAccuracy ?? 0;
+    const accuracyHint = pending && accuracy && minAccuracy > 0 ? ` · ${accuracy} (нужно ${minAccuracy}%)` : accuracy ? ` · ${accuracy}` : '';
     const noteCount = item.payload?.sessionLimit;
     const typeLabel = item.type === 'melody'
       ? 'Мелодия'
@@ -1584,11 +1592,11 @@ function renderHomeworkPanel(items) {
     const teacherLabel = item.teacherName ?? item.className ?? 'Преподаватель';
 
     return `
-      <article class="homework-card homework-card--${item.status}">
+      <article class="homework-card homework-card--${status}">
         <div class="homework-card__main">
           <h3 class="homework-card__title">${escapeHtml(item.title)}</h3>
           <p class="homework-card__meta">${escapeHtml(teacherLabel)} · ${typeLabel}${due ? ` · ${due}` : ''}</p>
-          <p class="homework-card__status">${HOMEWORK_STATUS_LABELS[item.status] ?? item.status}${accuracy ? ` · ${accuracy}` : ''}</p>
+          <p class="homework-card__status">${HOMEWORK_STATUS_LABELS[status] ?? status}${accuracyHint}</p>
           ${item.teacherComment ? `<p class="homework-card__comment">${escapeHtml(item.teacherComment)}</p>` : ''}
         </div>
         <div class="homework-card__actions">
@@ -1668,6 +1676,18 @@ function loadTeacherModule() {
 }
 
 async function openTeacherScreen() {
+  if (!isLoggedIn() || !isTeacherUser()) {
+    showScreen('teacher');
+    const { initTeacher } = await loadTeacherModule();
+    await initTeacher();
+    return;
+  }
+
+  if (!document.getElementById('teacher-app')) {
+    window.location.assign(ROUTES.teacher);
+    return;
+  }
+
   showScreen('teacher');
   const { initTeacher } = await loadTeacherModule();
   await initTeacher();
@@ -1694,14 +1714,6 @@ function normalizeAppPath(path) {
 
 function isClientAppPath(path) {
   return CLIENT_APP_PATHS.has(normalizeAppPath(path));
-}
-
-function updateHeaderNavActive(path = window.location.pathname) {
-  const normalized = normalizeAppPath(path);
-  document.querySelectorAll('.header__nav-link[href]').forEach((link) => {
-    const href = link.getAttribute('href');
-    link.classList.toggle('header__nav-link--active', normalizeAppPath(href ?? '') === normalized);
-  });
 }
 
 async function openScreenForPath(path) {
@@ -1733,8 +1745,6 @@ async function openScreenForPath(path) {
       window.location.assign(path);
       return;
   }
-
-  updateHeaderNavActive(normalized);
 }
 
 async function navigateApp(path, { replace = false } = {}) {

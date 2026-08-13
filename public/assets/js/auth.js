@@ -26,6 +26,10 @@ export function hasRole(role) {
   return currentUser?.roles?.includes(role) ?? false;
 }
 
+export function isTeacherUser() {
+  return hasRole('teacher');
+}
+
 export function isLoggedIn() {
   return currentUser !== null;
 }

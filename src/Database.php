@@ -91,6 +91,7 @@ final class Database
     self::migrateAnalytics($pdo);
     self::migrateAnalyticsSearchReferral($pdo);
     self::migrateTeacherStudentExclusive($pdo);
+    self::migrateHomeworkStatuses($pdo);
   }
 
   private static function migrateOAuthAccounts(PDO $pdo): void
@@ -413,6 +414,19 @@ final class Database
 
       CREATE UNIQUE INDEX idx_teacher_students_student_unique
         ON teacher_students(student_id);
+      SQL);
+  }
+
+  private static function migrateHomeworkStatuses(PDO $pdo): void
+  {
+    $pdo->exec(<<<'SQL'
+      UPDATE student_assignments
+      SET status = 'pending', completed_at = NULL
+      WHERE status = 'submitted';
+
+      UPDATE student_assignments
+      SET status = 'completed'
+      WHERE status = 'reviewed';
       SQL);
   }
 }

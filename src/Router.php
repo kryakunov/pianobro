@@ -364,6 +364,20 @@ final class Router
       return;
     }
 
+    if (preg_match('#^/api/teacher/assignments/(\d+)$#', $path, $m) && $method === 'DELETE') {
+      $user = $this->requireTeacher();
+      if ($user === null) {
+        return;
+      }
+      try {
+        $this->teacher->deleteAssignment($user['id'], (int) $m[1]);
+        $this->json(['ok' => true]);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 404);
+      }
+      return;
+    }
+
     if (preg_match('#^/api/teacher/invite/([a-f0-9]+)$#', $path, $m) && $method === 'GET') {
       $preview = $this->teacher->getInvitationPreview($m[1]);
       if ($preview === null) {
@@ -522,7 +536,7 @@ final class Router
     header('Cache-Control: no-store, no-cache, must-revalidate');
 
     $user = $this->auth->currentUser();
-    $isTeacher = $this->roles->isTeacher($user);
+    $isTeacher = $user !== null && $this->roles->hasRole((int) $user['id'], RoleService::ROLE_TEACHER);
     $isStudent = $this->roles->isStudent($user);
 
     include dirname(__DIR__) . '/templates/app.php';

@@ -48,19 +48,29 @@
           </div>
         </a>
       </div>
-      <nav class="header__nav" aria-label="Разделы">
-        <a href="/put-novichka" class="header__nav-link<?= $initialScreen === 'roadmap' ? ' header__nav-link--active' : '' ?>">Путь</a>
-        <a href="/noty" class="header__nav-link<?= $initialScreen === 'notes-pick' ? ' header__nav-link--active' : '' ?>">Ноты</a>
-        <a href="/melodii" class="header__nav-link<?= $initialScreen === 'melody-pick' ? ' header__nav-link--active' : '' ?>">Мелодии</a>
-      </nav>
       <div class="header__auth" id="auth-panel">
-        <button type="button" class="btn btn--secondary btn--sm" id="btn-open-auth"<?= $isLoggedIn ? ' hidden' : '' ?>>Войти</button>
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-open-auth"<?= $isLoggedIn ? ' hidden' : '' ?>>
+          <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-login"/></svg>
+          Войти
+        </button>
         <div class="auth-user" id="auth-user"<?= $isLoggedIn ? '' : ' hidden' ?>>
           <span class="auth-user__name" id="auth-user-name"><?= $isLoggedIn ? htmlspecialchars((string) $user['name'], ENT_QUOTES, 'UTF-8') : '' ?></span>
-          <a href="/statistika" class="btn btn--secondary btn--sm" id="btn-go-stats">Статистика</a>
-          <a href="/domashka" class="btn btn--secondary btn--sm" id="btn-go-homework"<?= ($isLoggedIn && $isStudent) ? '' : ' hidden' ?>>Домашка</a>
-          <a href="/teacher" class="btn btn--secondary btn--sm" id="btn-go-teacher"<?= ($isLoggedIn && $isTeacher) ? '' : ' hidden' ?>>Ученики</a>
-          <button type="button" class="btn btn--secondary btn--sm" id="btn-logout"<?= $isLoggedIn ? '' : ' hidden' ?>>Выйти</button>
+          <a href="/statistika" class="btn btn--secondary btn--sm" id="btn-go-stats">
+            <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-stats"/></svg>
+            Статистика
+          </a>
+          <a href="/domashka" class="btn btn--secondary btn--sm" id="btn-go-homework"<?= ($isLoggedIn && $isStudent) ? '' : ' hidden' ?>>
+            <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-homework"/></svg>
+            Домашка
+          </a>
+          <a href="/teacher" class="btn btn--secondary btn--sm" id="btn-go-teacher"<?= ($isLoggedIn && $isTeacher) ? '' : ' hidden' ?>>
+            <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-users"/></svg>
+            Ученики
+          </a>
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-logout"<?= $isLoggedIn ? '' : ' hidden' ?>>
+            <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-logout"/></svg>
+            Выйти
+          </button>
         </div>
       </div>
     </header>
@@ -401,7 +411,23 @@
           Кабинет преподавателя
         </h2>
       </div>
-      <div class="pick-panel teacher-access-gate" id="teacher-access-gate" hidden></div>
+      <div class="pick-panel teacher-access-gate" id="teacher-access-gate"<?= $isTeacher ? ' hidden' : '' ?>>
+        <?php if (!$isLoggedIn): ?>
+        <section class="admin-card">
+          <h2 class="admin-card__title">Нужен вход</h2>
+          <p>Войдите в аккаунт преподавателя, чтобы управлять учениками и назначать задания.</p>
+          <button type="button" class="btn btn--primary" id="btn-teacher-login">Войти</button>
+        </section>
+        <?php else: ?>
+        <section class="admin-card admin-card--warn">
+          <h2 class="admin-card__title">Нет доступа</h2>
+          <p>У аккаунта <strong><?= htmlspecialchars((string) $user['email'], ENT_QUOTES, 'UTF-8') ?></strong> нет роли преподавателя.</p>
+          <p class="admin-footnote">При регистрации отметьте «Вы педагог?» или попросите администратора назначить роль в <a href="/admin">админ-панели</a>.</p>
+          <a href="/" class="btn btn--secondary btn--sm">На главную</a>
+        </section>
+        <?php endif; ?>
+      </div>
+      <?php if ($isTeacher): ?>
       <div id="teacher-app" class="teacher-layout">
         <aside class="teacher-sidebar">
           <section class="admin-card teacher-invite-card">
@@ -411,7 +437,10 @@
                 <span>Email ученика</span>
                 <input type="email" name="email" required placeholder="student@example.com" autocomplete="email">
               </label>
-              <button type="submit" class="btn btn--primary">Отправить приглашение</button>
+              <button type="submit" class="btn btn--primary">
+                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-send"/></svg>
+                Отправить приглашение
+              </button>
             </form>
             <p class="admin-footnote" id="invite-message" hidden></p>
             <div id="pending-invites" class="teacher-pending-invites"></div>
@@ -432,6 +461,7 @@
           </section>
         </main>
       </div>
+      <?php endif; ?>
     </section>
 
     <!-- Выбор мелодии -->
@@ -899,6 +929,26 @@
     </symbol>
     <symbol id="ico-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7"/>
+    </symbol>
+    <symbol id="ico-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </symbol>
+    <symbol id="ico-homework" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+      <path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/><path d="M9 14l2 2 4-4"/>
+    </symbol>
+    <symbol id="ico-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/>
+    </symbol>
+    <symbol id="ico-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/>
+    </symbol>
+    <symbol id="ico-login" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M16 12H8"/><path d="M21 9l-3 3 3 3"/>
+    </symbol>
+    <symbol id="ico-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M15 12H8"/><path d="M18 9l3 3-3 3"/>
     </symbol>
     <symbol id="ico-midi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
       <path d="M5 5h14v14H5z"/><path d="M9 9v6M15 9v6M12 7v10"/>

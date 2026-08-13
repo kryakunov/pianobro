@@ -80,6 +80,7 @@ export function renderNoteSettingsFormMarkup({
   sessionLimit = DEFAULT_NOTE_SESSION_LIMIT,
   extraFieldsHtml = '',
   submitLabel = 'Назначить',
+  submitIconId = '',
   showHint = true,
 } = {}) {
   const sessionOptions = NOTE_SESSION_LIMITS.map((limit) => {
@@ -88,6 +89,9 @@ export function renderNoteSettingsFormMarkup({
   }).join('');
 
   const formClasses = ['notes-settings', formClass].filter(Boolean).join(' ');
+  const submitIcon = submitIconId
+    ? `<svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#${submitIconId}"/></svg>`
+    : '';
 
   return `
     <form class="${formClasses}" id="${formId}">
@@ -160,7 +164,7 @@ export function renderNoteSettingsFormMarkup({
       <div class="notes-settings__footer">
         ${showHint ? '<p class="settings-hint">Отметьте, что хотите тренировать, и назначьте задание ученику.</p>' : ''}
         <p class="settings-error" id="${formId}-error" hidden></p>
-        <button type="submit" class="btn btn--primary notes-settings__submit">${submitLabel}</button>
+        <button type="submit" class="btn btn--primary notes-settings__submit">${submitIcon}${submitLabel}</button>
       </div>
     </form>
   `;

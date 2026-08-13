@@ -1,4 +1,4 @@
-import { isLoggedIn, hasRole, getUser } from './auth.js';
+import { isLoggedIn, isTeacherUser, getUser } from './auth.js';
 import { iconBadgeColored } from './icons.js';
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 import { enrichNotesForRoadmapDisplay } from './note-roadmap.js';
@@ -77,12 +77,11 @@ function formatDate(value) {
 }
 
 function statusLabel(status) {
+  const normalized = status === 'submitted' ? 'pending' : status === 'reviewed' ? 'completed' : status;
   return {
     pending: 'Не выполнено',
-    submitted: 'На проверке',
     completed: 'Выполнено',
-    reviewed: 'Проверено',
-  }[status] ?? status;
+  }[normalized] ?? normalized;
 }
 
 function showInviteMessage(text, isError = false) {
@@ -278,22 +277,30 @@ function renderAssignmentRow(assignment) {
   const result = assignment.result ?? {};
   const accuracy = result.accuracy != null ? `${result.accuracy}%` : '—';
   const noteCount = assignment.payload?.sessionLimit;
+  const minAccuracy = assignment.payload?.minAccuracy ?? 0;
+  const status = assignment.status === 'submitted' ? 'pending' : assignment.status === 'reviewed' ? 'completed' : assignment.status;
   const typeLabel = assignment.type === 'melody'
     ? 'Мелодия'
     : `Ноты${noteCount ? ` · ${noteCount} шт.` : ''}`;
+  const attemptHint = status === 'pending' && result.accuracy != null && minAccuracy > 0
+    ? ` · нужно ${minAccuracy}%`
+    : '';
 
   return `
-    <article class="teacher-assignment teacher-assignment--${assignment.status}">
+    <article class="teacher-assignment teacher-assignment--${status}">
       <div class="teacher-assignment__header">
         <div>
           <h4>${escapeHtml(assignment.title)}</h4>
           <p class="teacher-assignment__meta">
             ${typeLabel}
-            · <span class="teacher-badge teacher-badge--${assignment.status}">${statusLabel(assignment.status)}</span>
-            · ${accuracy}
+            · <span class="teacher-badge teacher-badge--${status}">${statusLabel(status)}</span>
+            · ${accuracy}${attemptHint}
             ${assignment.completedAt ? ` · ${formatDate(assignment.completedAt)}` : ''}
           </p>
         </div>
+        <button type="button" class="btn btn--secondary btn--sm teacher-assignment__delete" data-assignment-id="${assignment.id}" aria-label="Удалить задание" title="Удалить">
+          <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-trash"/></svg>
+        </button>
       </div>
       ${assignment.teacherComment ? `<p class="teacher-comment">${escapeHtml(assignment.teacherComment)}</p>` : ''}
       <form class="teacher-comment-form" data-assignment-id="${assignment.id}">
@@ -324,6 +331,7 @@ function buildAssignmentFormMarkup() {
     formId: 'form-student-assignment',
     formClass: 'notes-settings--teacher',
     submitLabel: 'Назначить задание',
+    submitIconId: 'ico-homework',
     extraFieldsHtml: `
       <fieldset class="settings-group settings-group--requirements">
         <legend class="settings-group__head">
@@ -421,7 +429,10 @@ function renderStudentDetail(data) {
               <p class="teacher-student-profile__meta">${escapeHtml(user.email)} · был онлайн ${formatDate(user.lastLoginAt)}</p>
             </div>
           </div>
-          <button type="button" class="btn btn--primary btn--sm" id="btn-open-assignment">Назначить задание</button>
+          <button type="button" class="btn btn--primary btn--sm" id="btn-open-assignment">
+            <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-homework"/></svg>
+            Назначить задание
+          </button>
         </div>
       </header>
 
@@ -454,6 +465,7 @@ function renderStudentDetail(data) {
   mountStatsStaffChart(els.main.querySelector('.teacher-stats-staff'), displayNotes);
   bindStudentTabs();
   bindCommentForms();
+  bindDeleteAssignmentButtons();
   document.getElementById('btn-open-assignment')?.addEventListener('click', () => {
     openAssignmentModal(user.id, user.name);
   });
@@ -517,6 +529,30 @@ function bindAssignmentForm() {
   });
 }
 
+function bindDeleteAssignmentButtons() {
+  document.querySelectorAll('.teacher-assignment__delete').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const assignmentId = Number(button.dataset.assignmentId);
+      const title = button.closest('.teacher-assignment')?.querySelector('h4')?.textContent?.trim() ?? 'задание';
+      if (!assignmentId || !confirm(`Удалить задание «${title}»?`)) {
+        return;
+      }
+
+      button.disabled = true;
+      try {
+        await fetchJson(`/api/teacher/assignments/${assignmentId}`, { method: 'DELETE' });
+        if (selectedStudentId) {
+          await loadDashboard();
+          await selectStudent(selectedStudentId);
+        }
+      } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+      }
+    });
+  });
+}
+
 function bindCommentForms() {
   document.querySelectorAll('.teacher-comment-form').forEach((form) => {
     form.addEventListener('submit', async (event) => {
@@ -538,44 +574,59 @@ function bindCommentForms() {
   });
 }
 
+function bindTeacherLoginButton(root) {
+  root?.querySelector('#btn-teacher-login')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('piano:open-auth', { detail: { tab: 'login' } }));
+  });
+}
+
 function renderTeacherAccessGate() {
-  if (!els.teacherAccessGate || !els.teacherApp) {
+  if (!els.teacherAccessGate) {
+    return isLoggedIn() && isTeacherUser() && Boolean(els.teacherApp);
+  }
+
+  const allowed = isLoggedIn() && isTeacherUser();
+
+  if (!allowed) {
+    if (els.teacherApp) {
+      els.teacherApp.hidden = true;
+      els.teacherApp.setAttribute('aria-hidden', 'true');
+    }
+    els.teacherAccessGate.hidden = false;
+
+    if (!isLoggedIn()) {
+      els.teacherAccessGate.innerHTML = `
+        <section class="admin-card">
+          <h2 class="admin-card__title">Нужен вход</h2>
+          <p>Войдите в аккаунт преподавателя, чтобы управлять учениками и назначать задания.</p>
+          <button type="button" class="btn btn--primary" id="btn-teacher-login">Войти</button>
+        </section>
+      `;
+    } else {
+      const user = getUser();
+      els.teacherAccessGate.innerHTML = `
+        <section class="admin-card admin-card--warn">
+          <h2 class="admin-card__title">Нет доступа</h2>
+          <p>У аккаунта <strong>${escapeHtml(user?.email ?? '')}</strong> нет роли преподавателя.</p>
+          <p class="admin-footnote">При регистрации отметьте «Вы педагог?» или попросите администратора назначить роль в <a href="/admin">админ-панели</a>.</p>
+          <a href="/" class="btn btn--secondary btn--sm">На главную</a>
+        </section>
+      `;
+    }
+
+    bindTeacherLoginButton(els.teacherAccessGate);
     return false;
   }
 
-  if (!isLoggedIn()) {
-    els.teacherApp.hidden = true;
-    els.teacherAccessGate.hidden = false;
-    els.teacherAccessGate.innerHTML = `
-      <section class="admin-card">
-        <h2 class="admin-card__title">Нужен вход</h2>
-        <p>Войдите в аккаунт преподавателя, чтобы управлять учениками и назначать задания.</p>
-        <button type="button" class="btn btn--primary" id="btn-teacher-login">Войти</button>
-      </section>
-    `;
-    els.teacherAccessGate.querySelector('#btn-teacher-login')?.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('piano:open-auth', { detail: { tab: 'login' } }));
-    });
-    return false;
-  }
-
-  if (!hasRole('teacher')) {
-    const user = getUser();
-    els.teacherApp.hidden = true;
-    els.teacherAccessGate.hidden = false;
-    els.teacherAccessGate.innerHTML = `
-      <section class="admin-card admin-card--warn">
-        <h2 class="admin-card__title">Нет доступа</h2>
-        <p>У аккаунта <strong>${escapeHtml(user?.email ?? '')}</strong> нет роли преподавателя.</p>
-        <p class="admin-footnote">При регистрации отметьте «Вы педагог?» или попросите администратора назначить роль в <a href="/admin">админ-панели</a>.</p>
-      </section>
-    `;
+  if (!els.teacherApp) {
+    window.location.assign('/teacher');
     return false;
   }
 
   els.teacherAccessGate.hidden = true;
   els.teacherAccessGate.innerHTML = '';
   els.teacherApp.hidden = false;
+  els.teacherApp.removeAttribute('aria-hidden');
   return true;
 }
 
@@ -612,11 +663,13 @@ function bindTeacherUiOnce() {
 }
 
 export async function initTeacher() {
-  bindTeacherUiOnce();
+  bindTeacherLoginButton(document.getElementById('teacher-access-gate'));
 
   if (!renderTeacherAccessGate()) {
     return;
   }
+
+  bindTeacherUiOnce();
 
   if (els.studentsList && !dashboard.students.length) {
     els.studentsList.innerHTML = '<p class="loading">Загрузка…</p>';

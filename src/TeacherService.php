@@ -429,11 +429,24 @@ TEXT;
     $update = $this->db->prepare(
       'UPDATE student_assignments
        SET teacher_comment = :comment,
-           commented_at = datetime(\'now\'),
-           status = CASE WHEN status = \'pending\' THEN status ELSE \'reviewed\' END
+           commented_at = datetime(\'now\')
        WHERE id = :id',
     );
     $update->execute(['comment' => $comment, 'id' => $assignmentId]);
+  }
+
+  public function deleteAssignment(int $teacherId, int $assignmentId): void
+  {
+    $stmt = $this->db->prepare(
+      'SELECT id FROM student_assignments WHERE id = :id AND teacher_id = :teacher_id',
+    );
+    $stmt->execute(['id' => $assignmentId, 'teacher_id' => $teacherId]);
+    if ($stmt->fetch() === false) {
+      throw new \InvalidArgumentException('Задание не найдено');
+    }
+
+    $delete = $this->db->prepare('DELETE FROM student_assignments WHERE id = :id');
+    $delete->execute(['id' => $assignmentId]);
   }
 
   /** @return list<array<string, mixed>> */
@@ -462,7 +475,7 @@ TEXT;
         'type' => (string) $row['type'],
         'payload' => json_decode((string) $row['payload_json'], true) ?: [],
         'teacherName' => (string) $row['teacher_name'],
-        'status' => (string) $row['status'],
+        'status' => $this->normalizeAssignmentStatus((string) $row['status']),
         'dueAt' => $row['due_at'],
         'createdAt' => (string) $row['created_at'],
         'completedAt' => $row['completed_at'],
@@ -498,18 +511,28 @@ TEXT;
     $payload = json_decode((string) $row['payload_json'], true) ?: [];
     $minAccuracy = (int) ($payload['minAccuracy'] ?? 0);
     $accuracy = (int) ($result['accuracy'] ?? 0);
-    $status = ($minAccuracy === 0 || $accuracy >= $minAccuracy) ? 'completed' : 'submitted';
+    $passed = $minAccuracy === 0 || $accuracy >= $minAccuracy;
 
-    $update = $this->db->prepare(
-      'UPDATE student_assignments
-       SET status = :status,
-           result_json = :result,
-           errors_json = :errors,
-           completed_at = datetime(\'now\')
-       WHERE id = :id',
-    );
+    if ($passed) {
+      $update = $this->db->prepare(
+        'UPDATE student_assignments
+         SET status = \'completed\',
+             result_json = :result,
+             errors_json = :errors,
+             completed_at = datetime(\'now\')
+         WHERE id = :id',
+      );
+    } else {
+      $update = $this->db->prepare(
+        'UPDATE student_assignments
+         SET status = \'pending\',
+             result_json = :result,
+             errors_json = :errors
+         WHERE id = :id',
+      );
+    }
+
     $update->execute([
-      'status' => $status,
       'result' => json_encode($result, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
       'errors' => json_encode($errors, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
       'id' => $assignmentId,
@@ -536,7 +559,7 @@ TEXT;
         'type' => (string) $row['type'],
         'payload' => json_decode((string) $row['payload_json'], true) ?: [],
         'dueAt' => $row['due_at'],
-        'status' => (string) $row['status'],
+        'status' => $this->normalizeAssignmentStatus((string) $row['status']),
         'result' => json_decode((string) ($row['result_json'] ?? ''), true),
         'errors' => json_decode((string) ($row['errors_json'] ?? ''), true) ?: [],
         'teacherComment' => $row['teacher_comment'],
@@ -547,6 +570,15 @@ TEXT;
     }
 
     return $items;
+  }
+
+  private function normalizeAssignmentStatus(string $status): string
+  {
+    return match ($status) {
+      'submitted' => 'pending',
+      'reviewed' => 'completed',
+      default => $status,
+    };
   }
 
   private function countPendingAssignments(int $teacherId, int $studentId): int
