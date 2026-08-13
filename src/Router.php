@@ -286,11 +286,6 @@ final class Router
       return;
     }
 
-    if ($path === '/teacher' && $method === 'GET') {
-      $this->renderTeacher();
-      return;
-    }
-
     if ($path === '/api/teacher/dashboard' && $method === 'GET') {
       $user = $this->requireTeacher();
       if ($user === null) {
@@ -525,6 +520,11 @@ final class Router
   {
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate');
+
+    $user = $this->auth->currentUser();
+    $isTeacher = $this->roles->isTeacher($user);
+    $isStudent = $this->roles->isStudent($user);
+
     include dirname(__DIR__) . '/templates/app.php';
   }
 
@@ -543,19 +543,6 @@ final class Router
     $assetVersion = AssetVersion::compute();
 
     include dirname(__DIR__) . '/templates/admin.php';
-  }
-
-  private function renderTeacher(): void
-  {
-    header('Content-Type: text/html; charset=utf-8');
-    header('X-Robots-Tag: noindex, nofollow');
-    header('Cache-Control: no-store, no-cache, must-revalidate');
-
-    $user = $this->auth->currentUser();
-    $isTeacher = $this->teacher->isTeacher($user);
-    $assetVersion = AssetVersion::compute();
-
-    include dirname(__DIR__) . '/templates/teacher.php';
   }
 
   /** @return array{id:int,email:string,name:string,roles:list<string>}|null */

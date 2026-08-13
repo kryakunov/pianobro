@@ -23,13 +23,18 @@
     };
 
     require __DIR__ . '/partials/head.php';
+
+    $user = $user ?? null;
+    $isTeacher = $isTeacher ?? false;
+    $isStudent = $isStudent ?? false;
+    $isLoggedIn = $user !== null;
   ?>
   <script>
     window.__BOOT__ = <?= json_encode($page['boot'] ?? ['screen' => 'home'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
+    window.__USER__ = <?= json_encode($user, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
   </script>
 </head>
 <body>
-  <div class="js-boot-error" id="js-boot-error" hidden role="alert"></div>
   <div class="app" id="app">
     <header class="header" id="main-header">
       <div class="header__brand">
@@ -44,18 +49,18 @@
         </a>
       </div>
       <nav class="header__nav" aria-label="Разделы">
-        <a href="/put-novichka" class="header__nav-link">Путь</a>
-        <a href="/noty" class="header__nav-link">Ноты</a>
-        <a href="/melodii" class="header__nav-link">Мелодии</a>
+        <a href="/put-novichka" class="header__nav-link<?= $initialScreen === 'roadmap' ? ' header__nav-link--active' : '' ?>">Путь</a>
+        <a href="/noty" class="header__nav-link<?= $initialScreen === 'notes-pick' ? ' header__nav-link--active' : '' ?>">Ноты</a>
+        <a href="/melodii" class="header__nav-link<?= $initialScreen === 'melody-pick' ? ' header__nav-link--active' : '' ?>">Мелодии</a>
       </nav>
       <div class="header__auth" id="auth-panel">
-        <button type="button" class="btn btn--secondary btn--sm" id="btn-open-auth">Войти</button>
-        <div class="auth-user" id="auth-user" hidden>
-          <span class="auth-user__name" id="auth-user-name"></span>
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-open-auth"<?= $isLoggedIn ? ' hidden' : '' ?>>Войти</button>
+        <div class="auth-user" id="auth-user"<?= $isLoggedIn ? '' : ' hidden' ?>>
+          <span class="auth-user__name" id="auth-user-name"><?= $isLoggedIn ? htmlspecialchars((string) $user['name'], ENT_QUOTES, 'UTF-8') : '' ?></span>
           <a href="/statistika" class="btn btn--secondary btn--sm" id="btn-go-stats">Статистика</a>
-          <a href="/domashka" class="btn btn--secondary btn--sm" id="btn-go-homework" hidden>Домашка</a>
-          <a href="/teacher" class="btn btn--secondary btn--sm" id="btn-go-teacher" hidden>Ученики</a>
-          <button type="button" class="btn btn--secondary btn--sm" id="btn-logout" hidden>Выйти</button>
+          <a href="/domashka" class="btn btn--secondary btn--sm" id="btn-go-homework"<?= ($isLoggedIn && $isStudent) ? '' : ' hidden' ?>>Домашка</a>
+          <a href="/teacher" class="btn btn--secondary btn--sm" id="btn-go-teacher"<?= ($isLoggedIn && $isTeacher) ? '' : ' hidden' ?>>Ученики</a>
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-logout"<?= $isLoggedIn ? '' : ' hidden' ?>>Выйти</button>
         </div>
       </div>
     </header>
@@ -385,6 +390,50 @@
       </div>
     </section>
 
+    <!-- Кабинет преподавателя -->
+    <section class="screen<?= $screenActive('teacher') ?>" id="screen-teacher"<?= $screenHidden('teacher') ?>>
+      <div class="screen-header">
+        <a href="/" class="btn-back" id="btn-back-teacher">← Назад</a>
+        <h2 class="screen-header__title">
+          <span class="screen-header__icon icon-badge icon-badge--teacher" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-user"/></svg>
+          </span>
+          Кабинет преподавателя
+        </h2>
+      </div>
+      <div class="pick-panel teacher-access-gate" id="teacher-access-gate" hidden></div>
+      <div id="teacher-app" class="teacher-layout">
+        <aside class="teacher-sidebar">
+          <section class="admin-card teacher-invite-card">
+            <h2 class="admin-card__title">Пригласить ученика</h2>
+            <form id="form-invite-student" class="teacher-form">
+              <label class="teacher-form__field teacher-form__field--wide">
+                <span>Email ученика</span>
+                <input type="email" name="email" required placeholder="student@example.com" autocomplete="email">
+              </label>
+              <button type="submit" class="btn btn--primary">Отправить приглашение</button>
+            </form>
+            <p class="admin-footnote" id="invite-message" hidden></p>
+            <div id="pending-invites" class="teacher-pending-invites"></div>
+          </section>
+
+          <section class="admin-card teacher-students-card">
+            <h2 class="admin-card__title">Мои ученики</h2>
+            <div id="teacher-students-list" class="teacher-students-list">
+              <p class="loading">Загрузка…</p>
+            </div>
+          </section>
+        </aside>
+
+        <main class="teacher-main" id="teacher-main">
+          <section class="admin-card teacher-empty-state">
+            <h2 class="admin-card__title">Выберите ученика</h2>
+            <p>Выберите ученика слева — откроются вкладки с обзором, нотами, занятиями и домашкой.</p>
+          </section>
+        </main>
+      </div>
+    </section>
+
     <!-- Выбор мелодии -->
     <section class="screen<?= $screenActive('melody-pick') ?>" id="screen-melody-pick"<?= $screenHidden('melody-pick') ?>>
       <div class="screen-header">
@@ -666,6 +715,20 @@
     </section>
 
     <!-- Авторизация -->
+    <div class="modal" id="teacher-assignment-modal" hidden>
+      <div class="modal__backdrop" data-close-assignment-modal></div>
+      <div class="modal__card modal__card--teacher-assignment" role="dialog" aria-labelledby="teacher-assignment-modal-title" aria-modal="true">
+        <header class="teacher-assignment-modal__header">
+          <div>
+            <h2 class="teacher-assignment-modal__title" id="teacher-assignment-modal-title">Назначить тренировку</h2>
+            <p class="teacher-assignment-modal__subtitle" id="teacher-assignment-modal-subtitle"></p>
+          </div>
+          <button type="button" class="btn btn--secondary btn--sm" data-close-assignment-modal aria-label="Закрыть">✕</button>
+        </header>
+        <div id="teacher-assignment-modal-body" class="teacher-assignment-modal__body"></div>
+      </div>
+    </div>
+
     <div class="modal" id="auth-modal" hidden>
       <div class="modal__backdrop" data-close-auth></div>
       <div class="modal__card modal__card--auth" role="dialog" aria-labelledby="auth-modal-title">

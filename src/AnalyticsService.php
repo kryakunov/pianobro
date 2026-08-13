@@ -65,7 +65,7 @@ final class AnalyticsService
         }
 
         $type = (string) ($event['type'] ?? '');
-        if (!in_array($type, ['click', 'page_view', 'page_time', 'search_referral'], true)) {
+        if (!in_array($type, ['page_time', 'search_referral'], true)) {
           continue;
         }
 
@@ -77,7 +77,7 @@ final class AnalyticsService
         $target = null;
         $durationMs = null;
 
-        if ($type === 'click' || $type === 'search_referral') {
+        if ($type === 'search_referral') {
           $target = $this->normalizeTarget((string) ($event['target'] ?? ''));
           if ($target === null) {
             continue;
@@ -128,9 +128,7 @@ final class AnalyticsService
     return [
       'periodDays' => $days,
       'since' => $since,
-      'topClicks' => $this->topClicks($since),
       'topPagesByTime' => $this->topPagesByTime($since),
-      'topPagesByViews' => $this->topPagesByViews($since),
       'topSearchQueries' => $this->topSearchQueries($since),
     ];
   }
@@ -155,27 +153,6 @@ final class AnalyticsService
     }
 
     return $path;
-  }
-
-  /** @return list<array<string, mixed>> */
-  private function topClicks(string $since): array
-  {
-    $stmt = $this->db->prepare(
-      'SELECT target, COUNT(*) AS clicks
-       FROM analytics_events
-       WHERE event_type = \'click\' AND created_at >= :since
-       GROUP BY target
-       ORDER BY clicks DESC, target ASC
-       LIMIT 20',
-    );
-    $stmt->execute(['since' => $since]);
-
-    return array_map(function (array $row): array {
-      return [
-        'target' => (string) $row['target'],
-        'clicks' => (int) $row['clicks'],
-      ];
-    }, $stmt->fetchAll());
   }
 
   /** @return list<array<string, mixed>> */
@@ -205,28 +182,6 @@ final class AnalyticsService
         'visits' => (int) $row['visits'],
         'totalSeconds' => (int) round($totalMs / 1000),
         'avgSeconds' => (int) round($avgMs / 1000),
-      ];
-    }, $stmt->fetchAll());
-  }
-
-  /** @return list<array<string, mixed>> */
-  private function topPagesByViews(string $since): array
-  {
-    $stmt = $this->db->prepare(
-      'SELECT page_path, COUNT(*) AS views
-       FROM analytics_events
-       WHERE event_type = \'page_view\' AND created_at >= :since
-       GROUP BY page_path
-       ORDER BY views DESC, page_path ASC
-       LIMIT 20',
-    );
-    $stmt->execute(['since' => $since]);
-
-    return array_map(function (array $row): array {
-      return [
-        'path' => (string) $row['page_path'],
-        'label' => self::pageLabel((string) $row['page_path']),
-        'views' => (int) $row['views'],
       ];
     }, $stmt->fetchAll());
   }

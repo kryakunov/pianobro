@@ -8,7 +8,7 @@ declare(strict_types=1);
 /** @var list<array<string, mixed>> $users */
 /** @var int $assetVersion */
 /** @var array{today:int,yesterday:int} $onlineStats */
-/** @var array{periodDays:int,since:string,topClicks:list<array{target:string,clicks:int}>,topPagesByTime:list<array{path:string,label:string,visits:int,totalSeconds:int,avgSeconds:int}>,topPagesByViews:list<array{path:string,label:string,views:int}>,topSearchQueries:list<array{source:string,sourceLabel:string,query:string,visits:int}>}|null $analyticsStats */
+/** @var array{periodDays:int,since:string,topPagesByTime:list<array{path:string,label:string,visits:int,totalSeconds:int,avgSeconds:int}>,topSearchQueries:list<array{source:string,sourceLabel:string,query:string,visits:int}>}|null $analyticsStats */
 
 $formatDate = static function (?string $value): string {
   if ($value === null || $value === '') {
@@ -127,32 +127,6 @@ $stageStatusLabel = static function (array $stage): string {
 
       <div class="admin-analytics__grid">
         <div class="admin-card admin-analytics__card">
-          <h3 class="admin-card__title">Самые частые нажатия</h3>
-          <?php if ($analyticsStats['topClicks'] === []): ?>
-          <p class="admin-analytics__empty">Пока нет данных о нажатиях.</p>
-          <?php else: ?>
-          <div class="admin-analytics-table-wrap">
-            <table class="admin-analytics-table">
-              <thead>
-                <tr>
-                  <th>Кнопка / элемент</th>
-                  <th>Нажатий</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($analyticsStats['topClicks'] as $row): ?>
-                <tr>
-                  <td><code><?= htmlspecialchars((string) $row['target'], ENT_QUOTES, 'UTF-8') ?></code></td>
-                  <td class="admin-analytics-table__num"><?= (int) $row['clicks'] ?></td>
-                </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-          <?php endif; ?>
-        </div>
-
-        <div class="admin-card admin-analytics__card">
           <h3 class="admin-card__title">Время на страницах</h3>
           <?php if ($analyticsStats['topPagesByTime'] === []): ?>
           <p class="admin-analytics__empty">Пока нет данных о времени на страницах.</p>
@@ -212,35 +186,6 @@ $stageStatusLabel = static function (array $stage): string {
           </div>
           <?php endif; ?>
           <p class="admin-analytics__note">Google часто не передаёт текст запроса из соображений приватности. Яндекс и UTM-метки обычно доступны.</p>
-        </div>
-
-        <div class="admin-card admin-analytics__card admin-analytics__card--wide">
-          <h3 class="admin-card__title">Просмотры страниц</h3>
-          <?php if ($analyticsStats['topPagesByViews'] === []): ?>
-          <p class="admin-analytics__empty">Пока нет данных о просмотрах.</p>
-          <?php else: ?>
-          <div class="admin-analytics-table-wrap">
-            <table class="admin-analytics-table">
-              <thead>
-                <tr>
-                  <th>Страница</th>
-                  <th>Просмотры</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($analyticsStats['topPagesByViews'] as $row): ?>
-                <tr>
-                  <td>
-                    <strong><?= htmlspecialchars((string) $row['label'], ENT_QUOTES, 'UTF-8') ?></strong>
-                    <span class="admin-analytics-table__path"><?= htmlspecialchars((string) $row['path'], ENT_QUOTES, 'UTF-8') ?></span>
-                  </td>
-                  <td class="admin-analytics-table__num"><?= (int) $row['views'] ?></td>
-                </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-          <?php endif; ?>
         </div>
       </div>
     </section>

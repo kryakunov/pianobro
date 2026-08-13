@@ -1,4 +1,4 @@
-import { initAnalytics } from './analytics.js';
+import { isLoggedIn, hasRole, getUser } from './auth.js';
 import { iconBadgeColored } from './icons.js';
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 import { enrichNotesForRoadmapDisplay } from './note-roadmap.js';
@@ -27,6 +27,8 @@ async function fetchJson(url, options = {}) {
 }
 
 const els = {
+  teacherApp: document.getElementById('teacher-app'),
+  teacherAccessGate: document.getElementById('teacher-access-gate'),
   studentsList: document.getElementById('teacher-students-list'),
   main: document.getElementById('teacher-main'),
   inviteForm: document.getElementById('form-invite-student'),
@@ -42,6 +44,7 @@ let selectedStudentId = null;
 let assignmentStudentId = null;
 let currentStudentDetail = null;
 let activeStudentTab = 'overview';
+let teacherUiBound = false;
 
 const STUDENT_TABS = [
   { id: 'overview', label: 'Обзор' },
@@ -535,29 +538,89 @@ function bindCommentForms() {
   });
 }
 
+function renderTeacherAccessGate() {
+  if (!els.teacherAccessGate || !els.teacherApp) {
+    return false;
+  }
+
+  if (!isLoggedIn()) {
+    els.teacherApp.hidden = true;
+    els.teacherAccessGate.hidden = false;
+    els.teacherAccessGate.innerHTML = `
+      <section class="admin-card">
+        <h2 class="admin-card__title">Нужен вход</h2>
+        <p>Войдите в аккаунт преподавателя, чтобы управлять учениками и назначать задания.</p>
+        <button type="button" class="btn btn--primary" id="btn-teacher-login">Войти</button>
+      </section>
+    `;
+    els.teacherAccessGate.querySelector('#btn-teacher-login')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('piano:open-auth', { detail: { tab: 'login' } }));
+    });
+    return false;
+  }
+
+  if (!hasRole('teacher')) {
+    const user = getUser();
+    els.teacherApp.hidden = true;
+    els.teacherAccessGate.hidden = false;
+    els.teacherAccessGate.innerHTML = `
+      <section class="admin-card admin-card--warn">
+        <h2 class="admin-card__title">Нет доступа</h2>
+        <p>У аккаунта <strong>${escapeHtml(user?.email ?? '')}</strong> нет роли преподавателя.</p>
+        <p class="admin-footnote">При регистрации отметьте «Вы педагог?» или попросите администратора назначить роль в <a href="/admin">админ-панели</a>.</p>
+      </section>
+    `;
+    return false;
+  }
+
+  els.teacherAccessGate.hidden = true;
+  els.teacherAccessGate.innerHTML = '';
+  els.teacherApp.hidden = false;
+  return true;
+}
+
 async function loadDashboard() {
   dashboard = await fetchJson('/api/teacher/dashboard');
   renderPendingInvites(dashboard.invitations ?? []);
   renderStudentsList();
 }
 
-els.inviteForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  showInviteMessage('');
-  const email = String(new FormData(event.target).get('email') ?? '');
-  try {
-    const result = await fetchJson('/api/teacher/invite', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-    showInviteMessage(result.message ?? 'Готово');
-    event.target.reset();
-    await loadDashboard();
-  } catch (error) {
-    showInviteMessage(error.message, true);
+function bindTeacherUiOnce() {
+  if (teacherUiBound) {
+    return;
   }
-});
+  teacherUiBound = true;
 
-bindAssignmentModalControls();
-initAnalytics();
-await loadDashboard();
+  els.inviteForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    showInviteMessage('');
+    const email = String(new FormData(event.target).get('email') ?? '');
+    try {
+      const result = await fetchJson('/api/teacher/invite', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      showInviteMessage(result.message ?? 'Готово');
+      event.target.reset();
+      await loadDashboard();
+    } catch (error) {
+      showInviteMessage(error.message, true);
+    }
+  });
+
+  bindAssignmentModalControls();
+}
+
+export async function initTeacher() {
+  bindTeacherUiOnce();
+
+  if (!renderTeacherAccessGate()) {
+    return;
+  }
+
+  if (els.studentsList && !dashboard.students.length) {
+    els.studentsList.innerHTML = '<p class="loading">Загрузка…</p>';
+  }
+
+  await loadDashboard();
+}

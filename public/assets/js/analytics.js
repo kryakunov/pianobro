@@ -160,40 +160,6 @@ function recordSearchReferral() {
   }
 }
 
-function describeClickTarget(el) {
-  if (!(el instanceof Element)) {
-    return 'element';
-  }
-
-  if (el.id) {
-    return `${el.tagName.toLowerCase()}#${el.id}`;
-  }
-
-  const analyticsLabel = el.getAttribute('data-analytics-label');
-  if (analyticsLabel) {
-    return `${el.tagName.toLowerCase()}:${analyticsLabel.trim().slice(0, 80)}`;
-  }
-
-  const ariaLabel = el.getAttribute('aria-label');
-  if (ariaLabel) {
-    return `${el.tagName.toLowerCase()}:${ariaLabel.trim().slice(0, 80)}`;
-  }
-
-  if (el.tagName === 'A') {
-    const href = el.getAttribute('href');
-    if (href) {
-      return `link:${href}`;
-    }
-  }
-
-  const text = el.textContent?.trim().replace(/\s+/g, ' ');
-  if (text) {
-    return `${el.tagName.toLowerCase()}:${text.slice(0, 80)}`;
-  }
-
-  return el.tagName.toLowerCase();
-}
-
 function recordPageTime(force = false) {
   if (pageTimeSent && !force) {
     return;
@@ -227,20 +193,6 @@ function onVisibilityChange() {
   }
 }
 
-function onDocumentClick(event) {
-  const target = event.target;
-  if (!(target instanceof Element)) {
-    return;
-  }
-
-  const el = target.closest('button, a[href], input[type="submit"], input[type="button"], [role="button"]');
-  if (!el || el.closest('[data-analytics-ignore]')) {
-    return;
-  }
-
-  enqueue({ type: 'click', target: describeClickTarget(el) });
-}
-
 export function initAnalytics() {
   if (initialized) {
     return;
@@ -250,10 +202,8 @@ export function initAnalytics() {
   pageEnteredAt = Date.now();
   currentPath = window.location.pathname;
 
-  enqueue({ type: 'page_view' });
   recordSearchReferral();
 
-  document.addEventListener('click', onDocumentClick, true);
   window.addEventListener('pagehide', onPageHide);
   document.addEventListener('visibilitychange', onVisibilityChange);
 
@@ -271,7 +221,6 @@ export function trackPageView(path = window.location.pathname) {
   currentPath = path;
   pageEnteredAt = Date.now();
   pageTimeSent = false;
-  enqueue({ type: 'page_view', path });
 }
 
 export function destroyAnalytics() {
@@ -279,7 +228,6 @@ export function destroyAnalytics() {
     return;
   }
 
-  document.removeEventListener('click', onDocumentClick, true);
   window.removeEventListener('pagehide', onPageHide);
   document.removeEventListener('visibilitychange', onVisibilityChange);
 

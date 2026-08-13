@@ -14,7 +14,7 @@ async function fetchJson(url, options = {}) {
   return data;
 }
 
-let currentUser = null;
+let currentUser = window.__USER__ ?? null;
 
 const INVITE_TOKEN_KEY = 'piano-invite-token';
 
@@ -48,7 +48,9 @@ export async function initAuth() {
     const data = await fetchJson('/api/auth/me');
     currentUser = data.user ?? null;
   } catch {
-    currentUser = null;
+    if (window.__USER__ === undefined) {
+      currentUser = null;
+    }
   }
   return currentUser;
 }

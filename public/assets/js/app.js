@@ -44,7 +44,7 @@ import {
   enrichNotesForRoadmapDisplay,
 } from './note-roadmap.js';
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
-import { ROUTES, routeForScreen, navigateTo } from './routes.js';
+import { ROUTES, routeForScreen, navigateTo, setNavigateImpl } from './routes.js';
 import { initMetrikaPageview, trackGoal, trackPracticePageView } from './metrika.js';
 import { initAnalytics } from './analytics.js';
 
@@ -64,6 +64,7 @@ const els = {
   screenRoadmap: $('#screen-roadmap'),
   screenStats: $('#screen-stats'),
   screenHomework: $('#screen-homework'),
+  screenTeacher: $('#screen-teacher'),
   homeworkPanel: $('#homework-panel'),
   screenPractice: $('#screen-practice'),
   btnGoMelodies: $('#btn-go-melodies'),
@@ -83,6 +84,8 @@ const els = {
   btnGoHomework: $('#btn-go-homework'),
   btnGoTeacher: $('#btn-go-teacher'),
   btnBackStats: $('#btn-back-stats'),
+  btnBackHomework: $('#btn-back-homework'),
+  btnBackTeacher: $('#btn-back-teacher'),
   statsPanel: $('#stats-panel'),
   authPanel: $('#auth-panel'),
   btnOpenAuth: $('#btn-open-auth'),
@@ -146,8 +149,6 @@ const els = {
   btnModalHome: $('#btn-modal-home'),
 };
 
-bindCriticalUi();
-
 let practiceWidgetsReady = true;
 
 /** @type {PianoKeyboard} */
@@ -166,7 +167,7 @@ try {
   staffView = new StaffView(els.staffViewport);
 } catch (error) {
   practiceWidgetsReady = false;
-  reportBootError('Не удалось инициализировать тренажёр. Вход и навигация должны работать, но практика может быть недоступна.', error);
+  console.error('Не удалось инициализировать тренажёр.', error);
   piano = new PianoKeyboard(null, PIANO_START, PIANO_END);
   melodyTrainer = new MelodyTrainer(piano);
   noteTrainer = new NoteTrainer(piano);
@@ -246,6 +247,7 @@ function showScreen(name) {
     roadmap: els.screenRoadmap,
     stats: els.screenStats,
     homework: els.screenHomework,
+    teacher: els.screenTeacher,
     practice: els.screenPractice,
   };
 
@@ -1026,22 +1028,35 @@ function closeAuthModal() {
   els.authModal.hidden = true;
 }
 
-function reportBootError(message, error = null) {
-  console.error(message, error);
-  const banner = document.getElementById('js-boot-error');
-  if (!banner || banner.dataset.reported === '1') return;
-  banner.dataset.reported = '1';
-  banner.hidden = false;
-  banner.textContent = `${message} Обновите страницу с полным сбросом кэша (Cmd+Shift+R).`;
-}
-
 function bindCriticalUi() {
+  function handleClientNavClick(event, path) {
+    if (!isClientAppPath(path)) {
+      return;
+    }
+    event.preventDefault();
+    void navigateApp(path);
+  }
+
   function handleStatsNavClick(event) {
     if (!isLoggedIn()) {
       event.preventDefault();
       openAuthModal('login');
+      return;
     }
+    handleClientNavClick(event, ROUTES.stats);
   }
+
+  document.querySelector('.header__brand-link')?.addEventListener('click', (event) => {
+    handleClientNavClick(event, ROUTES.home);
+  });
+
+  document.querySelectorAll('.header__nav-link[href]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      const href = link.getAttribute('href');
+      if (!href) return;
+      handleClientNavClick(event, href);
+    });
+  });
 
   els.btnGoMelodies?.addEventListener('click', (event) => {
     event.preventDefault();
@@ -1065,9 +1080,23 @@ function bindCriticalUi() {
 
   els.btnRoadmapLogin?.addEventListener('click', () => openAuthModal('login'));
 
+  window.addEventListener('piano:open-auth', (event) => {
+    openAuthModal(event.detail?.tab ?? 'login');
+  });
+
   document.querySelectorAll('a[href="/statistika"]').forEach((link) => {
     link.addEventListener('click', handleStatsNavClick);
   });
+
+  els.btnGoHomework?.addEventListener('click', (event) => {
+    handleClientNavClick(event, ROUTES.homework);
+  });
+
+  els.btnGoTeacher?.addEventListener('click', (event) => {
+    handleClientNavClick(event, ROUTES.teacher);
+  });
+
+  els.btnGoStats?.addEventListener('click', handleStatsNavClick);
 
   els.btnOpenAuth?.addEventListener('click', () => openAuthModal('login'));
   els.btnLogout?.addEventListener('click', async () => {
@@ -1269,6 +1298,37 @@ function getLearningNotes(notes = []) {
   return notes.filter((note) => note.level === 'learning' || note.level === 'needs_practice');
 }
 
+function bindStatsPanelTabs(root) {
+  const tabs = root.querySelectorAll('[data-stats-tab]');
+  const panels = root.querySelectorAll('[data-stats-panel]');
+  if (!tabs.length || !panels.length) return;
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const tabId = tab.getAttribute('data-stats-tab');
+      if (!tabId) return;
+
+      tabs.forEach((item) => {
+        const active = item.getAttribute('data-stats-tab') === tabId;
+        item.classList.toggle('stats-tab--active', active);
+        item.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+
+      panels.forEach((panel) => {
+        const active = panel.getAttribute('data-stats-panel') === tabId;
+        panel.hidden = !active;
+      });
+
+      if (tabId === 'map') {
+        const notesData = root._statsNotes;
+        if (notesData) {
+          mountStatsStaffChart(root, notesData);
+        }
+      }
+    });
+  });
+}
+
 function renderLearningNotesOffer(notes = []) {
   const learningNotes = getLearningNotes(notes);
   if (!learningNotes.length) return '';
@@ -1403,12 +1463,31 @@ function renderStatsPanel(data) {
 
   const { notes, dailyProgress } = data;
   const displayNotes = enrichNotesForRoadmapDisplay(notes, cachedRoadmapData);
-  const staffHtml = renderStatsStaffInfographic(displayNotes);
   const offerHtml = renderLearningNotesOffer(notes);
+  const staffHtml = renderStatsStaffInfographic(displayNotes);
   const chartHtml = renderStatsChart(dailyProgress);
 
-  els.statsPanel.innerHTML = staffHtml + offerHtml + chartHtml;
+  els.statsPanel.innerHTML = `
+    <div class="stats-page">
+      ${offerHtml}
+      <nav class="stats-tabs" role="tablist" aria-label="Разделы статистики">
+        <button type="button" class="stats-tab stats-tab--active" data-stats-tab="map" role="tab" aria-selected="true">Карта нот</button>
+        <button type="button" class="stats-tab" data-stats-tab="activity" role="tab" aria-selected="false">Занятия</button>
+      </nav>
+      <div class="stats-tabpanels">
+        <section class="stats-tabpanel" data-stats-panel="map" role="tabpanel">
+          ${staffHtml}
+        </section>
+        <section class="stats-tabpanel" data-stats-panel="activity" role="tabpanel" hidden>
+          ${chartHtml || '<p class="stats-tabpanel__empty">Пройдите тренировку нот — график по дням появится здесь.</p>'}
+        </section>
+      </div>
+    </div>
+  `;
+
+  els.statsPanel._statsNotes = displayNotes;
   mountStatsStaffChart(els.statsPanel, displayNotes);
+  bindStatsPanelTabs(els.statsPanel);
   bindStatsPanelActions(notes);
 }
 
@@ -1438,6 +1517,9 @@ async function afterAuthSuccess() {
   }
   if (window.location.pathname === ROUTES.homework) {
     await openHomeworkScreen();
+  }
+  if (window.location.pathname === ROUTES.teacher) {
+    await openTeacherScreen();
   }
 }
 
@@ -1575,6 +1657,111 @@ async function openHomeworkScreen() {
     els.homeworkPanel.innerHTML = '<p class="loading">Не удалось загрузить задания</p>';
   }
 }
+
+let teacherModulePromise = null;
+
+function loadTeacherModule() {
+  if (!teacherModulePromise) {
+    teacherModulePromise = import('./teacher.js');
+  }
+  return teacherModulePromise;
+}
+
+async function openTeacherScreen() {
+  showScreen('teacher');
+  const { initTeacher } = await loadTeacherModule();
+  await initTeacher();
+}
+
+const CLIENT_APP_PATHS = new Set([
+  ROUTES.home,
+  ROUTES.roadmap,
+  ROUTES.notes,
+  ROUTES.melodies,
+  ROUTES.stats,
+  ROUTES.homework,
+  ROUTES.teacher,
+]);
+
+function normalizeAppPath(path) {
+  try {
+    const url = new URL(path, window.location.origin);
+    return url.pathname.replace(/\/+$/, '') || '/';
+  } catch {
+    return ROUTES.home;
+  }
+}
+
+function isClientAppPath(path) {
+  return CLIENT_APP_PATHS.has(normalizeAppPath(path));
+}
+
+function updateHeaderNavActive(path = window.location.pathname) {
+  const normalized = normalizeAppPath(path);
+  document.querySelectorAll('.header__nav-link[href]').forEach((link) => {
+    const href = link.getAttribute('href');
+    link.classList.toggle('header__nav-link--active', normalizeAppPath(href ?? '') === normalized);
+  });
+}
+
+async function openScreenForPath(path) {
+  const normalized = normalizeAppPath(path);
+
+  switch (normalized) {
+    case ROUTES.home:
+      showScreen('home');
+      break;
+    case ROUTES.roadmap:
+      await openRoadmapScreen();
+      break;
+    case ROUTES.notes:
+      showScreen('notes-pick');
+      break;
+    case ROUTES.melodies:
+      showScreen('melody-pick');
+      break;
+    case ROUTES.stats:
+      await openStatsScreen();
+      break;
+    case ROUTES.homework:
+      await openHomeworkScreen();
+      break;
+    case ROUTES.teacher:
+      await openTeacherScreen();
+      break;
+    default:
+      window.location.assign(path);
+      return;
+  }
+
+  updateHeaderNavActive(normalized);
+}
+
+async function navigateApp(path, { replace = false } = {}) {
+  const normalized = normalizeAppPath(path);
+
+  if (!isClientAppPath(normalized)) {
+    window.location.assign(path);
+    return;
+  }
+
+  if (currentScreen === 'practice') {
+    exitPractice();
+  }
+
+  if (normalized !== normalizeAppPath(window.location.pathname)) {
+    history[replace ? 'replaceState' : 'pushState']({ path: normalized }, '', normalized);
+  }
+
+  await openScreenForPath(normalized);
+}
+
+setNavigateImpl(navigateApp);
+bindCriticalUi();
+
+window.addEventListener('popstate', () => {
+  void openScreenForPath(window.location.pathname);
+});
 
 async function completeHomeworkSubmission(stats) {
   if (!activeHomeworkSubmissionId || !isLoggedIn()) return;
@@ -2228,6 +2415,9 @@ async function bootApp() {
     case 'homework':
       await openHomeworkScreen();
       break;
+    case 'teacher':
+      await openTeacherScreen();
+      break;
     case 'melody-pick':
       if (boot.redirectToPractice && boot.focusLessonId) {
         navigateTo(ROUTES.practiceMelody(boot.focusLessonId));
@@ -2403,6 +2593,14 @@ els.btnBackStats?.addEventListener('click', (event) => {
   event.preventDefault();
   navigateTo(ROUTES.home);
 });
+els.btnBackHomework?.addEventListener('click', (event) => {
+  event.preventDefault();
+  navigateTo(ROUTES.home);
+});
+els.btnBackTeacher?.addEventListener('click', (event) => {
+  event.preventDefault();
+  navigateTo(ROUTES.home);
+});
 
 els.btnBackPractice?.addEventListener('click', () => {
   leavePractice();
@@ -2548,6 +2746,9 @@ handleOAuthRedirect();
 initMetrikaPageview();
 initAnalytics();
 void initInviteFromUrl();
+if (window.__USER__ !== undefined) {
+  updateAuthUI();
+}
 initAuth().then(async () => {
   updateAuthUI();
   const inviteToken = getInviteToken();
@@ -2600,12 +2801,4 @@ window.visualViewport?.addEventListener('resize', () => {
   if (currentScreen === 'practice' && !els.practiceKeyboardArea.hidden) {
     piano.relayout();
   }
-});
-
-window.addEventListener('error', (event) => {
-  reportBootError('На странице произошла ошибка JavaScript.', event.error ?? event.message);
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  reportBootError('На странице произошла ошибка приложения.', event.reason);
 });
