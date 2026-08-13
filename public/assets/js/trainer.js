@@ -20,6 +20,7 @@ export class MelodyTrainer {
 
   loadLesson(lesson, { sessionLimit = null } = {}) {
     const normalized = normalizeLesson(lesson);
+    this.fullLesson = normalized;
     if (sessionLimit && normalized.events.length > sessionLimit) {
       this.lesson = {
         ...normalized,
@@ -30,6 +31,11 @@ export class MelodyTrainer {
       this.lesson = normalized;
     }
     this.reset();
+  }
+
+  /** Full melody for staff display; session slice may be shorter. */
+  get staffLesson() {
+    return this.fullLesson ?? this.lesson;
   }
 
   reset() {

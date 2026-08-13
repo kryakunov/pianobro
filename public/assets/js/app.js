@@ -691,7 +691,7 @@ function previewCurrentMelody() {
   if (melodyTrainer.running) melodyTrainer.pauseForPreview();
 
   updatePreviewUi(id);
-  void playMelodyPreview(melodyTrainer.lesson, {
+  void playMelodyPreview(melodyTrainer.staffLesson, {
     id,
     onEvent: handlePreviewEvent,
     onComplete: handlePreviewStop,
@@ -736,7 +736,7 @@ function setPianoVisible(visible) {
       piano.relayout({ scrollToDefault: true });
       refreshKeyboardHints();
       if (appMode === 'melody' && melodyTrainer.lesson) {
-        staffView.loadLesson(melodyTrainer.lesson);
+        staffView.loadLesson(melodyTrainer.staffLesson);
         staffView.update(melodyTrainer.state);
       } else if (appMode === 'notes' && noteTrainer.currentMidi !== null) {
         showNoteDrillStaff(noteTrainer.currentMidi, {
@@ -824,7 +824,7 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
     requestAnimationFrame(() => {
       piano.relayout({ scrollToDefault: true });
       if (mode === 'melody' && melodyTrainer.lesson) {
-        staffView.loadLesson(melodyTrainer.lesson);
+        staffView.loadLesson(melodyTrainer.staffLesson);
         els.staffViewport.classList.toggle('staff-viewport--grand', melodyTrainer.lesson.twoHands);
         melodyTrainer.start();
       } else if (mode === 'notes') {
@@ -2754,7 +2754,7 @@ window.addEventListener('resize', () => {
   }
   if (currentScreen !== 'practice') return;
   if (appMode === 'melody' && melodyTrainer.lesson) {
-    staffView.loadLesson(melodyTrainer.lesson);
+    staffView.loadLesson(melodyTrainer.staffLesson);
     staffView.update(melodyTrainer.state);
   } else if (appMode === 'notes' && noteTrainer.currentMidi !== null && !staffView.drillMode) {
     showNoteDrillStaff(noteTrainer.currentMidi, {

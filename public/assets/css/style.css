@@ -778,17 +778,20 @@ a.lesson-card {
 .staff-scroll {
   height: 100%;
   min-width: 100%;
+  width: max-content;
 }
 
 .practice-staff .staff-scroll {
   display: block;
   height: 100%;
   min-width: 100%;
+  width: max-content;
 }
 
 .practice-staff .staff-svg {
   display: block;
-  width: 100%;
+  width: auto;
+  min-width: 100%;
   height: auto;
   max-height: 100%;
   margin-top: 0;
