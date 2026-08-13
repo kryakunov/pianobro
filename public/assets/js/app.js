@@ -142,11 +142,7 @@ const els = {
   modalAccuracy: $('#modal-accuracy'),
   modalSubtitle: $('#modal-subtitle'),
   btnModalRetry: $('#btn-modal-retry'),
-  btnModalRoadmapNext: $('#btn-modal-roadmap-next'),
-  btnModalRoadmapCapstone: $('#btn-modal-roadmap-capstone'),
-  btnModalRoadmap: $('#btn-modal-roadmap'),
-  btnModalPick: $('#btn-modal-pick'),
-  btnModalHome: $('#btn-modal-home'),
+  btnModalDone: $('#btn-modal-done'),
 };
 
 let practiceWidgetsReady = true;
@@ -195,6 +191,7 @@ let activeRoadmapStageId = null;
 let activeRoadmapCapstone = false;
 let lastRoadmapStageCompleted = false;
 let lastRoadmapCapstoneReady = false;
+let sessionCompleteGeneration = 0;
 let practiceReturnPath = ROUTES.home;
 let activeHomeworkSubmissionId = null;
 
@@ -438,13 +435,20 @@ function updateNoteUI(state) {
   updatePracticeProgress(state);
 }
 
+function attachRoadmapSessionContext(stats) {
+  if (activeRoadmapStageId && practiceReturnPath === ROUTES.roadmap) {
+    stats.roadmapStageId = activeRoadmapStageId;
+    stats.isRoadmapPractice = true;
+  }
+}
+
 function showSessionModal(stats) {
   lastSessionStats = stats;
   els.modalCorrect.textContent = String(stats.correct);
   els.modalWrong.textContent = String(stats.wrong);
   els.modalAccuracy.textContent = `${stats.accuracy}%`;
 
-  const fromRoadmap = Boolean(stats.roadmapStageId);
+  const fromRoadmap = Boolean(stats.isRoadmapPractice && stats.roadmapStageId);
   const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
   const capstoneReady = fromRoadmap && lastRoadmapCapstoneReady;
   const stage = fromRoadmap ? findStage(cachedRoadmapData, stats.roadmapStageId) : null;
@@ -466,29 +470,13 @@ function showSessionModal(stats) {
     }
   }
 
-  if (els.btnModalRoadmap) els.btnModalRoadmap.hidden = !fromRoadmap;
-  if (els.btnModalRoadmapCapstone) {
-    els.btnModalRoadmapCapstone.hidden = !(capstoneReady && stage?.capstone?.lessonId);
-    if (!els.btnModalRoadmapCapstone.hidden) {
-      els.btnModalRoadmapCapstone.textContent = `Закрепить: ${getCapstoneLabel(stage)}`;
-    }
-  }
-  if (els.btnModalRoadmapNext) {
-    const showNext = stageCompleted && stats.nextRoadmapStage;
-    els.btnModalRoadmapNext.hidden = !showNext;
-  }
-  if (els.btnModalPick) {
-    els.btnModalPick.hidden = fromRoadmap;
-    els.btnModalPick.textContent = 'Другой урок';
-  }
-
   els.sessionModal.hidden = false;
 }
 
 function refreshSessionModalRoadmap(stats) {
-  if (!stats?.roadmapStageId || els.sessionModal?.hidden) return;
+  if (!stats?.isRoadmapPractice || !stats?.roadmapStageId || els.sessionModal?.hidden) return;
 
-  const fromRoadmap = Boolean(stats.roadmapStageId);
+  const fromRoadmap = Boolean(stats.isRoadmapPractice && stats.roadmapStageId);
   const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
   const capstoneReady = fromRoadmap && lastRoadmapCapstoneReady;
   const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
@@ -504,15 +492,6 @@ function refreshSessionModalRoadmap(stats) {
       const total = stats.total ?? stats.correct;
       els.modalSubtitle.textContent = `Вы прошли ${total} ${pluralNotes(total)}`;
     }
-  }
-  if (els.btnModalRoadmapCapstone) {
-    els.btnModalRoadmapCapstone.hidden = !(capstoneReady && stage?.capstone?.lessonId);
-    if (!els.btnModalRoadmapCapstone.hidden) {
-      els.btnModalRoadmapCapstone.textContent = `Закрепить: ${getCapstoneLabel(stage)}`;
-    }
-  }
-  if (els.btnModalRoadmapNext) {
-    els.btnModalRoadmapNext.hidden = !(stageCompleted && stats.nextRoadmapStage);
   }
 }
 
@@ -864,6 +843,8 @@ function exitPractice() {
   noteTrainer.stop();
   activeRoadmapStageId = null;
   activeRoadmapCapstone = false;
+  lastRoadmapStageCompleted = false;
+  lastRoadmapCapstoneReady = false;
   activeHomeworkSubmissionId = null;
   staffView.clear();
   els.staffViewport.classList.remove('staff-viewport--grand');
@@ -881,15 +862,13 @@ function leavePractice() {
 }
 
 async function onSessionComplete(stats) {
-  if (activeRoadmapStageId && !stats.roadmapStageId) {
-    stats.roadmapStageId = activeRoadmapStageId;
-  }
+  const completionGeneration = ++sessionCompleteGeneration;
 
   lastRoadmapStageCompleted = false;
   lastRoadmapCapstoneReady = false;
   stats.nextRoadmapStage = null;
 
-  if (stats.roadmapStageId && stats.mode === 'notes' && stats.attempts?.length) {
+  if (stats.isRoadmapPractice && stats.roadmapStageId && stats.mode === 'notes' && stats.attempts?.length) {
     if (!isLoggedIn()) {
       mergeGuestAttempts(stats.attempts);
     } else if (!cachedNoteStats) {
@@ -903,7 +882,7 @@ async function onSessionComplete(stats) {
       ? projectNoteStatsFromAttempts(cachedNoteStats, stats.attempts)
       : null;
     updateRoadmapProgressFromSession(stats, projected);
-  } else if (stats.roadmapStageId && stats.mode === 'melody' && activeRoadmapCapstone) {
+  } else if (stats.isRoadmapPractice && stats.roadmapStageId && stats.mode === 'melody' && activeRoadmapCapstone) {
     const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
     if (stage && meetsCapstoneAccuracy(stage, stats.accuracy)) {
       markCapstoneComplete(stats.roadmapStageId);
@@ -938,7 +917,7 @@ async function onSessionComplete(stats) {
   }
 
   saveSessionStats(payload).then(async (ok) => {
-    if (!ok) return;
+    if (!ok || completionGeneration !== sessionCompleteGeneration) return;
     cachedNoteStats = null;
     if (activeHomeworkSubmissionId) {
       await completeHomeworkSubmission(stats);
@@ -946,8 +925,9 @@ async function onSessionComplete(stats) {
     if (payload.mode === 'notes') {
       try {
         const data = await loadNoteStats();
+        if (completionGeneration !== sessionCompleteGeneration) return;
         cachedNoteStats = data;
-        if (stats.roadmapStageId) {
+        if (stats.isRoadmapPractice && stats.roadmapStageId) {
           updateRoadmapProgressFromSession(stats, data);
           refreshSessionModalRoadmap(stats);
         }
@@ -2012,6 +1992,11 @@ function loadMelodyLesson(lesson, { activeId = null, title = null, sessionLimit 
   melodyTrainer.loadLesson(normalized, { sessionLimit });
   noteTrainer.sessionLimit = SESSION_LIMIT;
 
+  if (returnPath !== ROUTES.roadmap) {
+    activeRoadmapStageId = null;
+    activeRoadmapCapstone = false;
+  }
+
   if (activeId?.startsWith('remote-')) {
     selectedLessonId = null;
     selectedImportedId = activeId;
@@ -2529,9 +2514,7 @@ melodyTrainer.onUpdate = (state) => {
 };
 melodyTrainer.onFeedback = showFeedback;
 melodyTrainer.onComplete = (stats) => {
-  if (activeRoadmapStageId) {
-    stats.roadmapStageId = activeRoadmapStageId;
-  }
+  attachRoadmapSessionContext(stats);
   onSessionComplete(stats);
 };
 
@@ -2540,9 +2523,7 @@ noteTrainer.onUpdate = (state) => {
 };
 noteTrainer.onFeedback = showFeedback;
 noteTrainer.onComplete = (stats) => {
-  if (activeRoadmapStageId) {
-    stats.roadmapStageId = activeRoadmapStageId;
-  }
+  attachRoadmapSessionContext(stats);
   onSessionComplete(stats);
 };
 noteTrainer.onNoteChange = (midiNote, { spelling, clef } = {}) => {
@@ -2665,36 +2646,8 @@ els.btnModalRetry?.addEventListener('click', () => {
   }
 });
 
-els.btnModalPick?.addEventListener('click', () => {
+els.btnModalDone?.addEventListener('click', () => {
   leavePractice();
-});
-
-els.btnModalRoadmap?.addEventListener('click', () => {
-  hideSessionModal();
-  exitPractice();
-  navigateTo(ROUTES.roadmap);
-});
-
-els.btnModalRoadmapNext?.addEventListener('click', () => {
-  const nextStage = lastSessionStats?.nextRoadmapStage;
-  hideSessionModal();
-  exitPractice();
-  if (nextStage?.id) {
-    sessionStorage.setItem('piano-pending-roadmap-stage', nextStage.id);
-  }
-  navigateTo(ROUTES.roadmap);
-});
-
-els.btnModalRoadmapCapstone?.addEventListener('click', () => {
-  const stageId = lastSessionStats?.roadmapStageId;
-  hideSessionModal();
-  exitPractice();
-  if (stageId) void startRoadmapMelody(stageId);
-});
-
-els.btnModalHome?.addEventListener('click', () => {
-  exitPractice();
-  navigateTo(ROUTES.home);
 });
 
 els.sessionModal?.querySelector('.modal__backdrop')?.addEventListener('click', () => {

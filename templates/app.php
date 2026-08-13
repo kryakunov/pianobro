@@ -846,11 +846,7 @@
         </div>
         <div class="modal__actions">
           <button type="button" class="btn btn--primary" id="btn-modal-retry">Ещё раз</button>
-          <button type="button" class="btn btn--primary" id="btn-modal-roadmap-next" hidden>Следующий уровень</button>
-          <button type="button" class="btn btn--primary" id="btn-modal-roadmap-capstone" hidden>Закрепить мелодией</button>
-          <button type="button" class="btn btn--secondary" id="btn-modal-roadmap" hidden>К пути обучения</button>
-          <button type="button" class="btn btn--secondary" id="btn-modal-pick">Другой урок</button>
-          <button type="button" class="btn btn--secondary" id="btn-modal-home">На главную</button>
+          <button type="button" class="btn btn--secondary" id="btn-modal-done">Готово</button>
         </div>
       </div>
     </div>

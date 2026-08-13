@@ -397,7 +397,8 @@ export function getNextStage(roadmapData, stageId) {
 }
 
 export function getCapstoneLabel(stage) {
-  return stage?.capstone?.title ?? 'Мелодия';
+  const title = stage?.capstone?.title?.trim();
+  return title || 'Мелодия';
 }
 
 export function meetsCapstoneAccuracy(stage, accuracy) {
