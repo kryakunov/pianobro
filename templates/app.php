@@ -832,7 +832,7 @@
           </div>
 
           <div class="notes-settings__footer">
-            <p class="settings-hint">Ноты движутся по стану — нажимайте клавишу, когда нота доезжает до линии. Каждая ошибка отнимает жизнь.</p>
+            <p class="settings-hint">Ноты движутся по стану, синяя линия ползёт слева направо — нажимайте клавишу, когда нота доходит до линии. Каждая ошибка отнимает жизнь.</p>
             <p class="settings-error" id="rhythm-settings-error" hidden></p>
             <button type="submit" class="btn btn--primary notes-settings__submit" id="btn-start-rhythm">
               <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>

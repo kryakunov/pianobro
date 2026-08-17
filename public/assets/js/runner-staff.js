@@ -18,6 +18,10 @@ export function runnerScrollSpeed(tempoScale = DEFAULT_RUNNER_TEMPO_SCALE) {
 const RUNNER_BEATS_PER_MEASURE = 4;
 /** Time from «Играй!» until the first note reaches the hit line. */
 const RUNNER_FIRST_HIT_MS = 4500;
+/** Play line starts near the left edge and crawls rightward. */
+const RUNNER_LINE_START_RATIO = 0.1;
+/** Screen drift of the play line relative to scroll speed (same units: px/ms). */
+const RUNNER_LINE_MOVE_MULT = 0.38;
 
 function durationKind(durationMs, referenceQuarter = RUNNER_REFERENCE_QUARTER) {
   const ratio = durationMs / referenceQuarter;
@@ -65,7 +69,7 @@ export function measureRemainingMs(events, referenceQuarter = RUNNER_REFERENCE_Q
   return measureCapacityMs() - measureAccumulatedMs(events, referenceQuarter);
 }
 
-function layoutRunnerEvents(events, startX, hitLineX, scrollSpeed, scale = 1, lineGap = 14 * scale, { initialAccumulated = 0, startIndex = 0 } = {}) {
+function layoutRunnerEvents(events, startX, lineStartX, advanceSpeed, scale = 1, lineGap = 14 * scale, { initialAccumulated = 0, startIndex = 0 } = {}) {
   const positions = [];
   const hitTimes = [];
   const barXs = [];
@@ -83,7 +87,7 @@ function layoutRunnerEvents(events, startX, hitLineX, scrollSpeed, scale = 1, li
     }
 
     positions.push(x);
-    hitTimes.push((x - hitLineX) / scrollSpeed);
+    hitTimes.push((x - lineStartX) / advanceSpeed);
 
     x += Math.max(
       minNoteAdvance(duration, scale, lineGap),
@@ -132,15 +136,19 @@ export class RunnerStaffView {
     this.layout = null;
   }
 
-  get hitLineX() {
-    if (!this.viewport) return 240;
+  get viewportWidth() {
+    if (!this.viewport) return 800;
     let width = this.viewport.clientWidth;
     if (width < 200) {
       width = this.viewport.parentElement?.clientWidth
         ?? document.documentElement.clientWidth
         ?? 800;
     }
-    return Math.max(96, Math.round(width * 0.28));
+    return width;
+  }
+
+  get lineStartX() {
+    return Math.max(48, Math.round(this.viewportWidth * RUNNER_LINE_START_RATIO));
   }
 
   clear() {
@@ -149,6 +157,17 @@ export class RunnerStaffView {
     this.layout = null;
     this.setScrollOffset(0);
     this.setCountdown(null);
+    this.resetHitLinePosition();
+  }
+
+  resetHitLinePosition() {
+    if (!this.hitLineEl) return;
+    this.hitLineEl.style.left = '';
+  }
+
+  setHitLinePosition(screenX) {
+    if (!this.hitLineEl) return;
+    this.hitLineEl.style.left = `${screenX}px`;
   }
 
   setScrollOffset(px) {
@@ -174,14 +193,16 @@ export class RunnerStaffView {
     this.referenceQuarter = RUNNER_REFERENCE_QUARTER;
     this.spacing = RUNNER_BASE_SPACING;
 
-    const hitLineX = this.hitLineX;
+    const lineStartX = this.lineStartX;
     const scrollSpeed = runnerScrollSpeed(this.tempoScale);
-    const noteStartX = startX ?? hitLineX + RUNNER_FIRST_HIT_MS * scrollSpeed;
+    const lineMoveSpeed = scrollSpeed * RUNNER_LINE_MOVE_MULT;
+    const advanceSpeed = scrollSpeed + lineMoveSpeed;
+    const noteStartX = startX ?? lineStartX + RUNNER_FIRST_HIT_MS * advanceSpeed;
     const { positions, hitTimes, barXs, contentWidth, measureAccumulated } = layoutRunnerEvents(
       events,
       noteStartX,
-      hitLineX,
-      scrollSpeed,
+      lineStartX,
+      advanceSpeed,
       this.metrics.scale,
       this.metrics.lineGap,
       { initialAccumulated, startIndex },
@@ -202,7 +223,9 @@ export class RunnerStaffView {
       contentWidth: Math.max(this.viewport.clientWidth * 1.5, contentWidth),
       tempoScale: this.tempoScale,
       scrollSpeed,
-      hitLineX,
+      lineStartX,
+      lineMoveSpeed,
+      advanceSpeed,
       noteStartX,
       lastX: positions.at(-1) ?? noteStartX,
       barXs,

@@ -916,7 +916,6 @@ a.lesson-card {
 
 .runner-hit-line {
   position: absolute;
-  left: 28%;
   top: 8px;
   bottom: 8px;
   width: 3px;
@@ -925,6 +924,7 @@ a.lesson-card {
   box-shadow: 0 0 12px rgba(108, 140, 255, 0.45);
   z-index: 3;
   pointer-events: none;
+  will-change: left;
 }
 
 .runner-hit-line::before,

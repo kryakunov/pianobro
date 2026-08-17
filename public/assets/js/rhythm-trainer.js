@@ -135,6 +135,8 @@ export class RhythmTrainer {
     this.onActiveNote = null;
     this.onNoteState = null;
     this.onRelayout = null;
+    this.onHitLineUpdate = null;
+    this.lineScreenX = 0;
     this.tempoScale = DEFAULT_RUNNER_TEMPO_SCALE;
     this.pendingEvents = [];
     this.heldMidis = new Set();
@@ -183,6 +185,7 @@ export class RhythmTrainer {
     this.heldMidis = new Set();
     this.lives = this.maxLives;
     this.mistakes = 0;
+    this.lineScreenX = this._lineScreenX(0);
     this._stopLoop();
   }
 
@@ -257,6 +260,7 @@ export class RhythmTrainer {
     this.heldMidis = new Set();
     this.lives = this.maxLives;
     this.mistakes = 0;
+    this.lineScreenX = this._lineScreenX(0);
     this.events.forEach((event) => {
       event.hit = false;
       event.state = 'upcoming';
@@ -264,6 +268,7 @@ export class RhythmTrainer {
 
     this._highlightActiveNote();
     this._emitUpdate({ countdown: Math.ceil(COUNTDOWN_MS / 1000), lives: this.lives });
+    this.onHitLineUpdate?.(this.lineScreenX);
     this.onFeedback?.('Приготовьтесь…', 'info');
     this._startLoop();
   }
@@ -286,6 +291,9 @@ export class RhythmTrainer {
 
     const event = this.events[this.nextIndex];
     if (!event || event.hit) return false;
+
+    const gameTime = now - this.countdownEnd;
+    if (this._timeToHitLine(event, gameTime) <= 0) return false;
 
     this.heldMidis.add(note);
 
@@ -335,7 +343,9 @@ export class RhythmTrainer {
 
     const gameTime = now - this.countdownEnd;
     this.scrollOffset = gameTime * this._scrollSpeed() * this.speed;
+    this.lineScreenX = this._lineScreenX(gameTime);
     this.onScroll?.(this.scrollOffset);
+    this.onHitLineUpdate?.(this.lineScreenX);
 
     const event = this.events[this.nextIndex];
     if (!event) {
@@ -344,7 +354,7 @@ export class RhythmTrainer {
       return;
     }
 
-    if (!event.hit && this._timeToHitLine(event, gameTime) < -this._lateMs()) {
+    if (!event.hit && this._timeToHitLine(event, gameTime) <= 0) {
       event.state = 'missed';
       this.onNoteState?.(event.index, 'missed');
       this.nextIndex++;
@@ -353,7 +363,7 @@ export class RhythmTrainer {
     }
 
     const timeToHit = this._timeToHitLine(event, gameTime);
-    const active = !event.hit && timeToHit <= this._earlyMs() && timeToHit >= -this._lateMs();
+    const active = !event.hit && timeToHit > 0 && timeToHit <= this._earlyMs();
     if (active && event.state !== 'active') {
       event.state = 'active';
       this.onNoteState?.(event.index, 'active');
@@ -390,19 +400,30 @@ export class RhythmTrainer {
     return runnerScrollSpeed(this.tempoScale);
   }
 
+  _lineMoveSpeed() {
+    return this.layout?.lineMoveSpeed ?? this._scrollSpeed() * 0.38;
+  }
+
+  _advanceSpeed() {
+    return this.layout?.advanceSpeed ?? (this._scrollSpeed() + this._lineMoveSpeed());
+  }
+
+  _lineScreenX(gameTime) {
+    const startX = this.layout?.lineStartX ?? 48;
+    return startX + gameTime * this._lineMoveSpeed() * this.speed;
+  }
+
   /** Scale hit windows with tempo — slower scroll gets more time. */
   _earlyMs() {
     return hitWindowsForTempoScale(this.tempoScale).earlyMs;
   }
 
-  _lateMs() {
-    return hitWindowsForTempoScale(this.tempoScale).lateMs;
-  }
-
-  /** Milliseconds until the note reaches the hit line (>0 = still approaching). */
+  /** Milliseconds until the note reaches the play line (>0 = still approaching). */
   _timeToHitLine(event, gameTime) {
-    if (!event) return Infinity;
-    return (event.hitTime ?? 0) - gameTime;
+    if (!event || !this.layout) return Infinity;
+    const scrollOffset = gameTime * this._scrollSpeed() * this.speed;
+    const lineX = this._lineScreenX(gameTime);
+    return (event.x - lineX - scrollOffset) / this._advanceSpeed();
   }
 
   _loseLife(reason) {

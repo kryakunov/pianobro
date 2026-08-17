@@ -1063,6 +1063,7 @@ function exitPractice() {
   runnerStaff.clear();
   els.staffViewport.classList.remove('staff-viewport--grand', 'staff-viewport--runner');
   if (els.runnerHitLine) els.runnerHitLine.hidden = true;
+  runnerStaff.resetHitLinePosition();
   updateRunnerLives(null);
   piano.clearStates();
   hideSessionModal();
@@ -2775,6 +2776,9 @@ rhythmTrainer.onComplete = (stats) => {
 };
 rhythmTrainer.onScroll = (offset) => {
   runnerStaff.setScrollOffset(offset);
+};
+rhythmTrainer.onHitLineUpdate = (screenX) => {
+  runnerStaff.setHitLinePosition(screenX);
 };
 rhythmTrainer.onCountdown = (value) => {
   runnerStaff.setCountdown(value);
