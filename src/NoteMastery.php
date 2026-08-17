@@ -71,9 +71,28 @@ final class NoteMastery
   }
 
   /** @param list<bool> $history */
+  public static function maxStreak(array $history): int
+  {
+    $streak = 0;
+    $best = 0;
+    foreach ($history as $hit) {
+      if ($hit) {
+        $streak++;
+        if ($streak > $best) {
+          $best = $streak;
+        }
+      } else {
+        $streak = 0;
+      }
+    }
+
+    return $best;
+  }
+
+  /** @param list<bool> $history — true if 2+ correct in a row at any point */
   public static function isMastered(array $history): bool
   {
-    return self::endStreak($history) >= self::REQUIRED_STREAK;
+    return self::maxStreak($history) >= self::REQUIRED_STREAK;
   }
 
   /** @param list<bool> $history */

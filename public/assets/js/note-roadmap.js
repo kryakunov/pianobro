@@ -401,6 +401,32 @@ export function getCurrentStageIncompleteNotes(roadmapData, noteStats) {
   return getStageIncompleteNotes(stage, noteStats);
 }
 
+export function getAllIncompleteNotes(roadmapData, noteStats) {
+  const stages = roadmapData?.stages ?? [];
+  if (!stages.length) return [];
+
+  const progressById = new Map(
+    (roadmapData.progress?.stages ?? []).map((item) => [item.id, item]),
+  );
+
+  const byMidi = new Map();
+  let previousCompleted = true;
+
+  for (const stage of stages) {
+    const progress = progressById.get(stage.id);
+    const unlocked = progress?.unlocked ?? previousCompleted;
+    previousCompleted = progress?.completed ?? false;
+
+    if (!unlocked) continue;
+
+    for (const note of getStageIncompleteNotes(stage, noteStats)) {
+      byMidi.set(note.midi, note);
+    }
+  }
+
+  return [...byMidi.values()].sort((a, b) => a.midi - b.midi);
+}
+
 export function enrichNotesForRoadmapDisplay(notes, roadmapData) {
   if (!roadmapData?.progress?.currentStageId) return notes;
 

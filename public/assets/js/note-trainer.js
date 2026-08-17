@@ -262,7 +262,7 @@ export class NoteTrainer {
     this._showCurrentNote();
     this.onFeedback?.(
       this.coverAll
-        ? `Пройдите все ${this.pool.length} нот — каждая минимум ${COVER_ALL_REPEATS} раза`
+        ? `Пройдите все ${this.pool.length} нот в случайном порядке — каждая по ${COVER_ALL_REPEATS} раза`
         : 'Найдите и нажмите ноту на пианино',
       'info',
     );
@@ -412,6 +412,7 @@ export class NoteTrainer {
       total: this.total,
       sessionLimit: this.sessionLimit,
       poolSize: this.pool.length,
+      coverAll: this.coverAll,
       running: this.running,
       soundEnabled: this.soundEnabled,
     });
@@ -429,6 +430,7 @@ export class NoteTrainer {
       total: this.total,
       sessionLimit: this.sessionLimit,
       poolSize: this.pool.length,
+      coverAll: this.coverAll,
       running: this.running,
       soundEnabled: this.soundEnabled,
     };

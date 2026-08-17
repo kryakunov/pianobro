@@ -51,9 +51,9 @@ import {
   getCapstoneLabel,
   meetsCapstoneAccuracy,
   getStageIncompleteNotes,
-  getCurrentStageIncompleteNotes,
   enrichNotesForRoadmapDisplay,
 } from './note-roadmap.js';
+import { isMastered, normalizeHistory } from './note-mastery.js';
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 import { ROUTES, routeForScreen, navigateTo, setNavigateImpl } from './routes.js';
 import { initMetrikaPageview, trackGoal, trackVirtualScreen } from './metrika.js';
@@ -217,6 +217,7 @@ let searchRequestId = 0;
 let selectedDifficultyFilter = 'all';
 let lastSessionStats = null;
 let cachedNoteStats = null;
+let pendingNoteStatsSave = null;
 let cachedRoadmapData = null;
 let activeRoadmapStageId = null;
 let activeRoadmapCapstone = false;
@@ -308,6 +309,8 @@ function showScreen(name) {
   if (name !== 'practice') {
     trackVirtualScreen(name);
   }
+
+  syncPracticeProgressBar();
 }
 
 function updateInputStatusBanner({ error } = {}) {
@@ -433,26 +436,43 @@ async function fetchJson(url, options = {}) {
   return res.json();
 }
 
+function syncPracticeProgressBar() {
+  const show = currentScreen === 'practice' && appMode !== 'rhythm';
+  if (!els.practiceSessionProgress) return;
+  if (show) {
+    els.practiceSessionProgress.removeAttribute('hidden');
+  } else {
+    els.practiceSessionProgress.hidden = true;
+  }
+}
+
 function updatePracticeProgress(state) {
   let current;
   let total;
 
   if (appMode === 'rhythm') {
     const comboSuffix = state.combo > 1 ? ` · ×${state.combo}` : '';
-    els.practiceProgress.textContent = `${state.score ?? 0}${comboSuffix}`;
+    if (els.practiceProgress) {
+      els.practiceProgress.textContent = `${state.score ?? 0}${comboSuffix}`;
+    }
     current = state.score ?? 0;
     total = Math.max(current, 1);
   } else if (appMode === 'melody') {
     current = Math.min(state.index, state.total);
     total = state.total;
-    els.practiceProgress.textContent = `${current} / ${total}`;
+    if (els.practiceProgress) {
+      els.practiceProgress.textContent = `${current} / ${total}`;
+    }
   } else {
-    current = state.correct;
-    total = state.sessionLimit;
-    els.practiceProgress.textContent = `${current} / ${total}`;
+    current = state.correct ?? 0;
+    total = state.sessionLimit ?? noteTrainer.sessionLimit ?? 1;
+    if (els.practiceProgress) {
+      els.practiceProgress.textContent = `${current} / ${total}`;
+    }
   }
 
   const pct = total > 0 ? Math.min(100, (current / total) * 100) : 0;
+  syncPracticeProgressBar();
   if (els.practiceSessionProgressFill) {
     els.practiceSessionProgressFill.style.width = `${pct}%`;
   }
@@ -473,8 +493,17 @@ function resetPracticeProgress() {
     updatePracticeProgress({ index: 0, total, correct: 0 });
     return;
   }
+  if (noteTrainer.coverAll) {
+    updatePracticeProgress({
+      coverAll: true,
+      correct: 0,
+      sessionLimit: noteTrainer.pool.length * 2,
+      poolSize: noteTrainer.pool.length,
+    });
+    return;
+  }
   const limit = noteTrainer.sessionLimit;
-  updatePracticeProgress({ index: 0, total: limit, correct: 0, sessionLimit: limit });
+  updatePracticeProgress({ correct: 0, sessionLimit: limit, poolSize: noteTrainer.pool.length });
 }
 
 function updateRunnerLives(lives, maxLives = rhythmTrainer.maxLives) {
@@ -1023,10 +1052,10 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
       void warmupTrainerSound();
     }
   }
-  resetPracticeProgress();
   showFeedback('', 'info');
   updateInputStatusBanner();
   showScreen('practice');
+  resetPracticeProgress();
   setPianoVisible(true);
   trackVirtualScreen('practice', {
     mode,
@@ -1044,6 +1073,7 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
       } else if (mode === 'notes') {
         els.staffViewport.classList.toggle('staff-viewport--grand', usesBothClefs(noteTrainer.settings));
         noteTrainer.start();
+        updateNoteUI(noteTrainer.state);
       } else if (mode === 'rhythm') {
         bootRhythmPractice();
       }
@@ -1133,7 +1163,7 @@ async function onSessionComplete(stats) {
     payload.lessonId = selectedLessonId ?? selectedImportedId ?? null;
   }
 
-  saveSessionStats(payload).then(async (ok) => {
+  const savePromise = saveSessionStats(payload).then(async (ok) => {
     if (!ok || completionGeneration !== sessionCompleteGeneration) return;
     cachedNoteStats = null;
     if (activeHomeworkSubmissionId) {
@@ -1157,6 +1187,12 @@ async function onSessionComplete(stats) {
       }
     }
   });
+  savePromise.finally(() => {
+    if (pendingNoteStatsSave === savePromise) {
+      pendingNoteStatsSave = null;
+    }
+  });
+  pendingNoteStatsSave = savePromise;
 }
 
 function updateRoadmapProgressFromSession(stats, noteStats = null) {
@@ -1489,12 +1525,21 @@ function setAuthTab(tab) {
   if (titleEl) titleEl.textContent = title;
 }
 
-function getLearningNotes(notes = []) {
-  if (cachedRoadmapData) {
-    const incomplete = getCurrentStageIncompleteNotes(cachedRoadmapData, { notes });
-    if (incomplete.length) return incomplete;
+function noteWasPlayedWithErrors(note) {
+  if (note.level === 'mastered') return false;
+
+  const history = normalizeHistory(note.history ?? []);
+  if (history.length > 0) {
+    return !isMastered(history) && history.some((hit) => !hit);
   }
-  return notes.filter((note) => note.level === 'learning' || note.level === 'needs_practice');
+
+  return Number(note.wrong ?? 0) > 0;
+}
+
+function getLearningNotes(notes = []) {
+  return notes
+    .filter(noteWasPlayedWithErrors)
+    .sort((a, b) => a.midi - b.midi);
 }
 
 function bindStatsPanelTabs(root) {
@@ -1532,7 +1577,7 @@ function renderLearningNotesOffer(notes = []) {
   const learningNotes = getLearningNotes(notes);
   if (!learningNotes.length) return '';
 
-  const maxTags = 10;
+  const maxTags = 8;
   const visible = learningNotes.slice(0, maxTags);
   const rest = learningNotes.length - visible.length;
 
@@ -1544,25 +1589,22 @@ function renderLearningNotesOffer(notes = []) {
     ? `<span class="stats-practice-cta__tag stats-practice-cta__more">+${rest}</span>`
     : '';
 
-  const stage = cachedRoadmapData
-    ? findStage(cachedRoadmapData, cachedRoadmapData.progress?.currentStageId)
-    : null;
-  const offerText = stage
-    ? `На уровне «${stage.title}» ${learningNotes.length} ${pluralNotes(learningNotes.length)} ещё не дошли до 2 верных подряд — можно потренировать только их.`
-    : `${learningNotes.length} ${pluralNotes(learningNotes.length)} ещё не дошли до 2 верных подряд без ошибки — можно потренировать только их.`;
+  const offerText = `${learningNotes.length} ${pluralNotes(learningNotes.length)} с ошибками — все за один заход`;
 
   return `
     <section class="stats-practice-cta" aria-label="Тренировка невыученных нот">
-      <div class="stats-practice-cta__head">
-        ${iconBadgeColored('learning', 'primary')}
-        <h3 class="stats-practice-cta__title">Потренировать невыученные ноты</h3>
+      <div class="stats-practice-cta__body">
+        <div class="stats-practice-cta__head">
+          ${icon('learning', 'icon icon--btn stats-practice-cta__icon')}
+          <div class="stats-practice-cta__copy">
+            <h3 class="stats-practice-cta__title">Невыученные ноты</h3>
+            <p class="stats-practice-cta__text">${offerText}</p>
+          </div>
+        </div>
+        <div class="stats-practice-cta__tags">${tags}${moreTag}</div>
       </div>
-      <p class="stats-practice-cta__text">
-        ${offerText}
-      </p>
-      <div class="stats-practice-cta__tags">${tags}${moreTag}</div>
-      <button type="button" class="btn btn--primary btn--sm" id="btn-stats-practice-learning">
-        Начать тренировку
+      <button type="button" class="btn btn--primary btn--sm stats-practice-cta__action" id="btn-stats-practice-learning">
+        Потренировать
       </button>
     </section>
   `;
@@ -1581,9 +1623,8 @@ function startLearningNotesTraining(notes) {
   saveTrainerPrefs(options);
   noteTrainer.setCustomPool(midis, { coverAll: true });
   noteTrainer.setOptions(options);
-  noteTrainer.sessionLimit = DEFAULT_NOTE_SESSION_LIMIT;
   noteSettings = noteTrainer.settings;
-  enterPractice('notes', 'Ноты в процессе', { returnPath: ROUTES.stats });
+  enterPractice('notes', `Невыученные ноты (${learningNotes.length})`, { returnPath: ROUTES.stats });
 }
 
 function bindStatsPanelActions(notes) {
@@ -1670,13 +1711,17 @@ function renderStatsPanel(data) {
 
   els.statsPanel.innerHTML = `
     <div class="stats-page">
-      ${offerHtml}
       <nav class="stats-tabs" role="tablist" aria-label="Разделы статистики">
-        <button type="button" class="stats-tab stats-tab--active" data-stats-tab="map" role="tab" aria-selected="true">Карта нот</button>
-        <button type="button" class="stats-tab" data-stats-tab="activity" role="tab" aria-selected="false">Занятия</button>
+        <button type="button" class="stats-tab stats-tab--active" data-stats-tab="map" role="tab" aria-selected="true">
+          <span class="stats-tab__inner">${icon('treble', 'icon icon--btn stats-tab__icon')}<span>Карта нот</span></span>
+        </button>
+        <button type="button" class="stats-tab" data-stats-tab="activity" role="tab" aria-selected="false">
+          <span class="stats-tab__inner">${icon('chart', 'icon icon--btn stats-tab__icon')}<span>Занятия</span></span>
+        </button>
       </nav>
       <div class="stats-tabpanels">
         <section class="stats-tabpanel" data-stats-panel="map" role="tabpanel">
+          ${offerHtml}
           ${staffHtml}
         </section>
         <section class="stats-tabpanel" data-stats-panel="activity" role="tabpanel" hidden>
@@ -1697,6 +1742,13 @@ async function openStatsScreen() {
   if (!isLoggedIn()) {
     renderStatsPanel(null);
     return;
+  }
+  if (pendingNoteStatsSave) {
+    try {
+      await pendingNoteStatsSave;
+    } catch {
+      /* ignore */
+    }
   }
   els.statsPanel.innerHTML = '<p class="loading">Загрузка статистики…</p>';
   try {

@@ -11,8 +11,23 @@ export function endStreak(history) {
 }
 
 /** @param {boolean[]} history */
+export function maxStreak(history) {
+  let streak = 0;
+  let best = 0;
+  for (const hit of history) {
+    if (hit) {
+      streak += 1;
+      if (streak > best) best = streak;
+    } else {
+      streak = 0;
+    }
+  }
+  return best;
+}
+
+/** @param {boolean[]} history — true if 2+ correct in a row at any point */
 export function isMastered(history) {
-  return endStreak(history) >= REQUIRED_STREAK;
+  return maxStreak(history) >= REQUIRED_STREAK;
 }
 
 /** @param {boolean[]} history */
