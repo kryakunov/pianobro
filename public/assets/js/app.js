@@ -56,7 +56,7 @@ import {
 } from './note-roadmap.js';
 import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff.js';
 import { ROUTES, routeForScreen, navigateTo, setNavigateImpl } from './routes.js';
-import { initMetrikaPageview, trackGoal, trackPracticePageView } from './metrika.js';
+import { initMetrikaPageview, trackGoal, trackVirtualScreen } from './metrika.js';
 import { initAnalytics } from './analytics.js';
 
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
@@ -304,6 +304,10 @@ function showScreen(name) {
   }
 
   updateInputStatusBanner();
+
+  if (name !== 'practice') {
+    trackVirtualScreen(name);
+  }
 }
 
 function updateInputStatusBanner({ error } = {}) {
@@ -577,6 +581,12 @@ function showSessionModal(stats) {
   }
 
   els.sessionModal.hidden = false;
+  trackGoal('finish_training', {
+    mode: stats.mode ?? appMode,
+    accuracy: stats.accuracy,
+    correct: stats.correct,
+    wrong: stats.wrong,
+  });
 }
 
 function refreshSessionModalRoadmap(stats) {
@@ -928,6 +938,8 @@ function startRhythmTraining() {
   }
   if (els.rhythmSettingsError) els.rhythmSettingsError.hidden = true;
 
+  trackGoal('start_training', { source: 'rhythm_settings' });
+
   rhythmSettings = noteSettings;
   rhythmDurations = durations;
   rhythmSpeed = speed;
@@ -1016,18 +1028,11 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
   updateInputStatusBanner();
   showScreen('practice');
   setPianoVisible(true);
-  trackPracticePageView(
+  trackVirtualScreen('practice', {
     mode,
     title,
-    mode === 'melody' ? melodyTrainer.lesson?.id ?? null : null,
-  );
-  trackGoal(
-    mode === 'melody'
-      ? 'practice_melody_start'
-      : mode === 'rhythm'
-        ? 'practice_rhythm_start'
-        : 'practice_notes_start',
-  );
+    lessonId: mode === 'melody' ? melodyTrainer.lesson?.id ?? null : null,
+  });
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -1110,11 +1115,6 @@ async function onSessionComplete(stats) {
   }
 
   showSessionModal(stats);
-  trackGoal(stats.mode === 'melody' ? 'practice_melody_complete' : 'practice_notes_complete', {
-    accuracy: stats.accuracy,
-    correct: stats.correct,
-    wrong: stats.wrong,
-  });
 
   if (!isLoggedIn()) return;
 
@@ -1342,6 +1342,8 @@ function bindCriticalUi() {
       return;
     }
 
+    const isTeacher = form.get('is_teacher') === '1';
+
     try {
       await register(
         form.get('name'),
@@ -1349,8 +1351,11 @@ function bindCriticalUi() {
         password,
         passwordConfirm,
         form.get('website'),
-        form.get('is_teacher') === '1',
+        isTeacher,
       );
+      if (isTeacher) {
+        trackGoal('teacher_register');
+      }
       await afterAuthSuccess();
     } catch (err) {
       if (els.authErrorRegister) {
@@ -1566,6 +1571,8 @@ function renderLearningNotesOffer(notes = []) {
 function startLearningNotesTraining(notes) {
   const learningNotes = getLearningNotes(notes);
   if (!learningNotes.length) return;
+
+  trackGoal('start_training', { source: 'stats_learning_notes' });
 
   activeRoadmapStageId = null;
   const midis = learningNotes.map((note) => note.midi);
@@ -2538,6 +2545,7 @@ function startNotesTraining() {
   }
 
   els.notesSettingsError.hidden = true;
+  trackGoal('start_training', { source: 'notes_settings' });
   sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
     settings,
     options,
