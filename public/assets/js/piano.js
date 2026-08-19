@@ -1,10 +1,12 @@
 import { isBlackKey, midiToName, REVERSE_KEYBOARD_MAP } from './notes.js';
 
 const WHITE_KEY_WIDTH = 24;
+const MOBILE_WHITE_KEY_WIDTH = 36;
 const BLACK_KEY_WIDTH = 14;
 const KEY_HEIGHT = 170;
 const OCTAVE_RAIL_HEIGHT = 34;
 const MOBILE_MAX_WIDTH = '(max-width: 768px)';
+const TAP_MOVE_THRESHOLD = 10;
 
 const OCTAVE_LABEL_BY_C = {
   24: 'Контроктава',
@@ -139,8 +141,24 @@ export class PianoKeyboard {
     return !window.matchMedia(MOBILE_MAX_WIDTH).matches;
   }
 
+  _getWhiteKeyWidth() {
+    if (this._isFullWidthLayout()) return WHITE_KEY_WIDTH;
+    if (this.container?.closest('.practice-keyboard') && window.matchMedia(MOBILE_MAX_WIDTH).matches) {
+      return MOBILE_WHITE_KEY_WIDTH;
+    }
+    return WHITE_KEY_WIDTH;
+  }
+
+  _usesDeferredTouchTap() {
+    return Boolean(this.container?.closest('.practice-keyboard'))
+      && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  }
+
   _getBlackKeyWidth() {
-    if (!this._isFullWidthLayout()) return BLACK_KEY_WIDTH;
+    if (!this._isFullWidthLayout()) {
+      const whiteWidth = this._getWhiteKeyWidth();
+      return Math.max(8, Math.round(whiteWidth * (BLACK_KEY_WIDTH / WHITE_KEY_WIDTH)));
+    }
 
     const whites = this.whiteMidis.length;
     if (!whites) return BLACK_KEY_WIDTH;
@@ -162,7 +180,8 @@ export class PianoKeyboard {
     if (measured > 0) return measured;
     const whites = this.whiteMidis.length;
     if (!whites) return 0;
-    return whites * WHITE_KEY_WIDTH - Math.max(0, whites - 1);
+    const whiteWidth = this._getWhiteKeyWidth();
+    return whites * whiteWidth - Math.max(0, whites - 1);
   }
 
   _applyKeysWidth(width) {
@@ -325,14 +344,71 @@ export class PianoKeyboard {
       btn.appendChild(hint);
     }
 
+    let touchTap = null;
+
+    const clearTouchTap = () => {
+      touchTap = null;
+    };
+
     const release = () => this._triggerNoteOff(midi);
+
     btn.addEventListener('pointerdown', (e) => {
+      if (this._usesDeferredTouchTap() && e.pointerType !== 'mouse') {
+        const scrollHost = this._getScrollHost();
+        touchTap = {
+          pointerId: e.pointerId,
+          startX: e.clientX,
+          startY: e.clientY,
+          startScrollLeft: scrollHost?.scrollLeft ?? 0,
+          cancelled: false,
+        };
+        btn.setPointerCapture?.(e.pointerId);
+        return;
+      }
+
       e.preventDefault();
       btn.setPointerCapture?.(e.pointerId);
       this._triggerNoteOn(midi);
     });
-    btn.addEventListener('pointerup', release);
-    btn.addEventListener('pointercancel', release);
+
+    btn.addEventListener('pointermove', (e) => {
+      if (!touchTap || touchTap.pointerId !== e.pointerId || touchTap.cancelled) return;
+
+      const dx = e.clientX - touchTap.startX;
+      const dy = e.clientY - touchTap.startY;
+      const scrollHost = this._getScrollHost();
+      const scrolled = scrollHost
+        ? Math.abs(scrollHost.scrollLeft - touchTap.startScrollLeft) > 2
+        : false;
+
+      if (Math.hypot(dx, dy) > TAP_MOVE_THRESHOLD || scrolled) {
+        touchTap.cancelled = true;
+      }
+    });
+
+    btn.addEventListener('pointerup', (e) => {
+      if (touchTap?.pointerId === e.pointerId) {
+        if (!touchTap.cancelled) {
+          this._triggerNoteOn(midi);
+          release();
+        }
+        clearTouchTap();
+        btn.releasePointerCapture?.(e.pointerId);
+        return;
+      }
+
+      if (e.pointerType === 'mouse') release();
+    });
+
+    btn.addEventListener('pointercancel', (e) => {
+      if (touchTap?.pointerId === e.pointerId) {
+        clearTouchTap();
+        btn.releasePointerCapture?.(e.pointerId);
+        return;
+      }
+      release();
+    });
+
     btn.addEventListener('pointerleave', (e) => {
       if (e.pointerType === 'mouse') release();
     });

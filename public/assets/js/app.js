@@ -160,8 +160,9 @@ const els = {
   modalAccuracy: $('#modal-accuracy'),
   modalSubtitle: $('#modal-subtitle'),
   modalTitle: $('#modal-title'),
-  btnModalRetry: $('#btn-modal-retry'),
-  btnModalDone: $('#btn-modal-done'),
+  modalActions: $('#modal-actions'),
+  modalDiscover: $('#modal-discover'),
+  modalRegisterHint: $('#modal-register-hint'),
 };
 
 let practiceWidgetsReady = true;
@@ -216,6 +217,8 @@ let searchQuery = '';
 let searchRequestId = 0;
 let selectedDifficultyFilter = 'all';
 let lastSessionStats = null;
+let pendingSessionModalAuthRedirect = null;
+let sessionModalSuspendedForAuth = false;
 let cachedNoteStats = null;
 let pendingNoteStatsSave = null;
 let cachedRoadmapData = null;
@@ -553,10 +556,18 @@ function showRhythmGameOver(stats) {
     const beat = stats.score >= stats.highScore && stats.score > 0 ? ' Новый рекорд!' : '';
     const mistakes = stats.wrong ?? 0;
     const mistakeText = mistakes > 0 ? ` Ошибок: ${mistakes}.` : '';
-    els.modalSubtitle.textContent = `Вы сыграли ${stats.score} ${pluralNotes(stats.score)}.${mistakeText}${beat}`;
+    const baseText = `Вы сыграли ${stats.score} ${pluralNotes(stats.score)}.${mistakeText}${beat}`;
+    els.modalSubtitle.textContent = enhanceSessionSubtitle(baseText, stats);
   }
 
   els.sessionModal.hidden = false;
+  renderSessionModalUi(stats);
+  trackGoal('finish_training', {
+    mode: stats.mode ?? appMode,
+    accuracy: stats.accuracy,
+    correct: stats.correct,
+    wrong: stats.wrong,
+  });
 }
 
 function restoreSessionModalLabels() {
@@ -593,23 +604,26 @@ function showSessionModal(stats) {
   const stage = fromRoadmap ? findStage(cachedRoadmapData, stats.roadmapStageId) : null;
 
   if (els.modalSubtitle) {
+    let baseText;
     if (stageCompleted) {
-      els.modalSubtitle.textContent = stage
+      baseText = stage
         ? `Уровень «${stage.title}» завершён! +${stage.xp} XP`
         : 'Уровень завершён!';
     } else if (capstoneReady && stage?.capstone) {
-      els.modalSubtitle.textContent = `Все ноты освоены! Закрепите уровень мелодией «${getCapstoneLabel(stage)}»`;
+      baseText = `Все ноты освоены! Закрепите уровень мелодией «${getCapstoneLabel(stage)}»`;
     } else if (fromRoadmap && stats.roadmapCapstoneFailed) {
-      els.modalSubtitle.textContent = `Нужна точность от ${stage?.capstone?.minAccuracy ?? 75}% — попробуйте ещё раз`;
+      baseText = `Нужна точность от ${stage?.capstone?.minAccuracy ?? 75}% — попробуйте ещё раз`;
     } else {
       const total = stats.total ?? stats.correct;
-      els.modalSubtitle.textContent = fromRoadmap && isLoggedIn()
+      baseText = fromRoadmap && isLoggedIn()
         ? `Сохраняем прогресс… (${total} ${pluralNotes(total)})`
         : `Вы прошли ${total} ${pluralNotes(total)}`;
     }
+    els.modalSubtitle.textContent = enhanceSessionSubtitle(baseText, stats);
   }
 
   els.sessionModal.hidden = false;
+  renderSessionModalUi(stats);
   trackGoal('finish_training', {
     mode: stats.mode ?? appMode,
     accuracy: stats.accuracy,
@@ -627,17 +641,21 @@ function refreshSessionModalRoadmap(stats) {
   const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
 
   if (els.modalSubtitle) {
+    let baseText;
     if (stageCompleted) {
-      els.modalSubtitle.textContent = stage
+      baseText = stage
         ? `Уровень «${stage.title}» завершён! +${stage.xp} XP`
         : 'Уровень завершён!';
     } else if (capstoneReady && stage?.capstone) {
-      els.modalSubtitle.textContent = `Все ноты освоены! Закрепите уровень мелодией «${getCapstoneLabel(stage)}»`;
+      baseText = `Все ноты освоены! Закрепите уровень мелодией «${getCapstoneLabel(stage)}»`;
     } else {
       const total = stats.total ?? stats.correct;
-      els.modalSubtitle.textContent = `Вы прошли ${total} ${pluralNotes(total)}`;
+      baseText = `Вы прошли ${total} ${pluralNotes(total)}`;
     }
+    els.modalSubtitle.textContent = enhanceSessionSubtitle(baseText, stats);
   }
+
+  renderSessionModalUi(stats);
 }
 
 function pluralNotes(count) {
@@ -646,6 +664,249 @@ function pluralNotes(count) {
   if (mod10 === 1 && mod100 !== 11) return 'ноту';
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'ноты';
   return 'нот';
+}
+
+const SESSION_MODAL_DISCOVER = [
+  { id: 'roadmap', path: ROUTES.roadmap, icon: 'target', title: 'Путь новичка', text: '8 уровней с нуля' },
+  { id: 'melodies', path: ROUTES.melodies, icon: 'melody', title: 'Мелодии', text: 'Играйте музыку' },
+  { id: 'notes', path: ROUTES.notes, icon: 'notes', title: 'Тренажёр нот', text: 'Свои настройки' },
+  { id: 'rhythm', path: ROUTES.rhythm, icon: 'play', title: 'Ритм-игра', text: 'Ноты в темпе' },
+];
+
+function practiceReturnLabel(path) {
+  const labels = {
+    [ROUTES.notes]: 'К настройкам тренажёра',
+    [ROUTES.rhythm]: 'К ритм-игре',
+    [ROUTES.melodies]: 'К мелодиям',
+    [ROUTES.roadmap]: 'К пути новичка',
+    [ROUTES.home]: 'На главную',
+  };
+  return labels[path] ?? 'Готово';
+}
+
+function buildSessionDiscoverCards(mode) {
+  if (isLoggedIn()) return [];
+
+  const skipId = { notes: 'notes', melody: 'melodies', rhythm: 'rhythm' }[mode];
+  const order = ['roadmap', 'melodies', 'notes', 'rhythm'];
+
+  return order
+    .filter((id) => id !== skipId)
+    .slice(0, 3)
+    .map((id) => SESSION_MODAL_DISCOVER.find((item) => item.id === id))
+    .filter(Boolean);
+}
+
+function buildSessionModalActions(stats) {
+  const mode = stats.mode ?? appMode;
+  const loggedIn = isLoggedIn();
+  const fromRoadmap = Boolean(stats.isRoadmapPractice && stats.roadmapStageId);
+  const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
+  const capstoneReady = fromRoadmap && lastRoadmapCapstoneReady;
+  const capstoneFailed = Boolean(stats.roadmapCapstoneFailed);
+  const stage = fromRoadmap ? findStage(cachedRoadmapData, stats.roadmapStageId) : null;
+  const actions = [];
+
+  if (!loggedIn) {
+    if (fromRoadmap && stageCompleted) {
+      actions.push({ id: 'register', label: 'Сохранить уровень и XP', variant: 'primary' });
+    } else if (mode === 'rhythm') {
+      actions.push({ id: 'register', label: 'Сохранить рекорд', variant: 'primary' });
+    } else {
+      actions.push({ id: 'register', label: 'Сохранить прогресс — бесплатно', variant: 'primary' });
+    }
+  } else {
+    actions.push({ id: 'stats', label: 'Моя карта нот', variant: 'primary', path: ROUTES.stats });
+  }
+
+  if (fromRoadmap) {
+    if (stageCompleted && stats.nextRoadmapStage) {
+      actions.push({
+        id: 'next-stage',
+        label: `Следующий уровень: ${stats.nextRoadmapStage.title}`,
+        variant: 'secondary',
+        stageId: stats.nextRoadmapStage.id,
+      });
+    } else if (capstoneReady && stage && !capstoneFailed) {
+      actions.push({
+        id: 'capstone',
+        label: `Сыграть мелодию «${getCapstoneLabel(stage)}»`,
+        variant: 'secondary',
+        stageId: stats.roadmapStageId,
+      });
+    }
+  } else if (mode === 'notes') {
+    actions.push({ id: 'roadmap', label: 'Путь новичка', variant: 'secondary', path: ROUTES.roadmap });
+  } else if (mode === 'rhythm') {
+    actions.push({ id: 'notes', label: 'Тренажёр нот', variant: 'secondary', path: ROUTES.notes });
+  } else if (mode === 'melody') {
+    actions.push({ id: 'melodies', label: 'Другие мелодии', variant: 'secondary', path: ROUTES.melodies });
+  }
+
+  actions.push({ id: 'retry', label: 'Ещё раз', variant: 'outline' });
+  actions.push({ id: 'leave', label: practiceReturnLabel(practiceReturnPath), variant: 'link' });
+
+  return actions;
+}
+
+function enhanceSessionSubtitle(baseText, stats) {
+  if (isLoggedIn()) return baseText;
+
+  const fromRoadmap = Boolean(stats.isRoadmapPractice && stats.roadmapStageId);
+  if (fromRoadmap && (lastRoadmapStageCompleted || lastRoadmapCapstoneReady || stats.roadmapCapstoneFailed)) {
+    return baseText;
+  }
+
+  const mode = stats.mode ?? appMode;
+  if (mode === 'rhythm') {
+    return `${baseText} Зарегистрируйтесь, чтобы сохранить рекорд.`;
+  }
+
+  const accuracy = stats.accuracy ?? 0;
+  if (accuracy >= 80) {
+    return `${baseText} Сохраните результат — откроется карта нот.`;
+  }
+
+  return `${baseText} Зарегистрируйтесь, чтобы не потерять прогресс.`;
+}
+
+function renderSessionModalUi(stats) {
+  if (!stats) return;
+
+  const mode = stats.mode ?? appMode;
+  const actions = buildSessionModalActions(stats);
+  const discover = buildSessionDiscoverCards(mode);
+
+  if (els.modalRegisterHint) {
+    if (!isLoggedIn()) {
+      els.modalRegisterHint.hidden = false;
+      els.modalRegisterHint.innerHTML = `
+        <li>Прогресс на телефоне и компьютере</li>
+        <li>Карта нот — видно, что выучено</li>
+        <li>Путь новичка: 8 уровней с XP</li>
+      `;
+    } else {
+      els.modalRegisterHint.hidden = true;
+      els.modalRegisterHint.innerHTML = '';
+    }
+  }
+
+  if (els.modalDiscover) {
+    if (discover.length) {
+      els.modalDiscover.hidden = false;
+      els.modalDiscover.innerHTML = `
+        <p class="modal-discover__title">Что ещё на Piano Bro</p>
+        <div class="modal-discover__scroll">
+          ${discover.map((card) => `
+            <button type="button" class="modal-discover__card" data-discover="${escapeHtml(card.id)}" data-path="${escapeHtml(card.path)}">
+              <span class="modal-discover__icon icon-badge icon-badge--primary">${icon(card.icon, 'icon icon--badge')}</span>
+              <span class="modal-discover__card-title">${escapeHtml(card.title)}</span>
+              <span class="modal-discover__card-text">${escapeHtml(card.text)}</span>
+            </button>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      els.modalDiscover.hidden = true;
+      els.modalDiscover.innerHTML = '';
+    }
+  }
+
+  if (!els.modalActions) return;
+
+  els.modalActions.innerHTML = actions.map((action) => {
+    const btnClass = action.variant === 'primary'
+      ? 'btn btn--primary'
+      : action.variant === 'secondary'
+        ? 'btn btn--secondary'
+        : action.variant === 'outline'
+          ? 'btn btn--outline'
+          : 'btn btn--text modal-action-link';
+    const pathAttr = action.path ? ` data-path="${escapeHtml(action.path)}"` : '';
+    const stageAttr = action.stageId ? ` data-stage-id="${escapeHtml(action.stageId)}"` : '';
+    return `<button type="button" class="${btnClass}" data-modal-action="${escapeHtml(action.id)}"${pathAttr}${stageAttr}>${escapeHtml(action.label)}</button>`;
+  }).join('');
+}
+
+function retryPracticeFromModal() {
+  hideSessionModal();
+  if (appMode === 'melody' && melodyTrainer.lesson) {
+    melodyTrainer.reset();
+    melodyTrainer.start();
+    showFeedback('Поехали!', 'info');
+  } else if (appMode === 'notes') {
+    noteTrainer.reset();
+    noteTrainer.start();
+    showFeedback('Поехали!', 'info');
+  } else if (appMode === 'rhythm') {
+    restoreSessionModalLabels();
+    bootRhythmPractice();
+    showFeedback('Поехали!', 'info');
+  }
+}
+
+function handleSessionModalAction(actionId, dataset) {
+  switch (actionId) {
+    case 'register':
+      pendingSessionModalAuthRedirect = 'stats';
+      trackGoal('modal_register_click', { mode: appMode });
+      openAuthModal('register');
+      break;
+    case 'stats':
+      trackGoal('modal_stats_click', { mode: appMode });
+      leavePracticeTo(ROUTES.stats);
+      break;
+    case 'roadmap':
+      trackGoal('modal_roadmap_click', { mode: appMode });
+      leavePracticeTo(ROUTES.roadmap);
+      break;
+    case 'notes':
+    case 'melodies':
+    case 'rhythm':
+      trackGoal('modal_cross_mode', { mode: appMode, target: actionId });
+      if (dataset.path) leavePracticeTo(dataset.path);
+      break;
+    case 'next-stage':
+      trackGoal('modal_next_stage_click', { mode: appMode, stageId: dataset.stageId ?? null });
+      hideSessionModal();
+      if (dataset.stageId) void startRoadmapStage(dataset.stageId);
+      break;
+    case 'capstone':
+      trackGoal('modal_capstone_click', { mode: appMode, stageId: dataset.stageId ?? null });
+      hideSessionModal();
+      if (dataset.stageId) void startRoadmapMelody(dataset.stageId);
+      break;
+    case 'retry':
+      trackGoal('modal_retry', { mode: appMode });
+      retryPracticeFromModal();
+      break;
+    case 'leave':
+      trackGoal('modal_leave', { mode: appMode });
+      leavePractice();
+      break;
+    default:
+      break;
+  }
+}
+
+function bindSessionModalUi() {
+  els.sessionModal?.addEventListener('click', (event) => {
+    const actionBtn = event.target.closest('[data-modal-action]');
+    if (actionBtn) {
+      handleSessionModalAction(actionBtn.dataset.modalAction, actionBtn.dataset);
+      return;
+    }
+
+    const discoverBtn = event.target.closest('[data-discover]');
+    if (discoverBtn) {
+      trackGoal('modal_cross_mode', {
+        mode: appMode,
+        target: discoverBtn.dataset.discover ?? null,
+        source: 'discover',
+      });
+      if (discoverBtn.dataset.path) leavePracticeTo(discoverBtn.dataset.path);
+    }
+  });
 }
 
 function readSessionLimitFromForm() {
@@ -858,10 +1119,42 @@ function setTrainerSoundEnabled(enabled) {
 
 function hideSessionModal() {
   els.sessionModal.hidden = true;
+  sessionModalSuspendedForAuth = false;
   restoreSessionModalLabels();
+  if (els.modalRegisterHint) {
+    els.modalRegisterHint.hidden = true;
+    els.modalRegisterHint.innerHTML = '';
+  }
+  if (els.modalDiscover) {
+    els.modalDiscover.hidden = true;
+    els.modalDiscover.innerHTML = '';
+  }
+  if (els.modalActions) els.modalActions.innerHTML = '';
 }
 
-let keyboardHints = true;
+function suspendSessionModalForAuth() {
+  if (!els.sessionModal || els.sessionModal.hidden) return;
+  sessionModalSuspendedForAuth = true;
+  els.sessionModal.hidden = true;
+}
+
+function restoreSessionModalIfSuspended() {
+  if (!sessionModalSuspendedForAuth || !lastSessionStats) return;
+  sessionModalSuspendedForAuth = false;
+  els.sessionModal.hidden = false;
+}
+
+function leavePracticeTo(path) {
+  hideSessionModal();
+  exitPractice();
+  navigateTo(path ?? practiceReturnPath ?? ROUTES.home);
+}
+
+function leavePractice() {
+  leavePracticeTo(practiceReturnPath || ROUTES.home);
+}
+
+let keyboardHints = false;
 
 function prefersTouchInput() {
   return (
@@ -1046,7 +1339,7 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
       void warmupTrainerSound();
     }
   } else {
-    setKeyboardHints(resolvedHints ?? true, { persist: false });
+    setKeyboardHints(resolvedHints ?? keyboardHints, { persist: false });
     syncPracticeControls();
     if (noteTrainer.soundEnabled) {
       void warmupTrainerSound();
@@ -1105,12 +1398,6 @@ function exitPractice() {
   resetPracticeProgress();
   showFeedback('', 'info');
   syncPracticeControls();
-}
-
-function leavePractice() {
-  const path = practiceReturnPath || ROUTES.home;
-  exitPractice();
-  navigateTo(path);
 }
 
 async function onSessionComplete(stats) {
@@ -1249,6 +1536,7 @@ function updateRegisterTeacherOptionVisibility() {
 
 function openAuthModal(tab = 'login') {
   if (!els.authModal) return;
+  suspendSessionModalForAuth();
   els.authModal.hidden = false;
   setAuthTab(tab);
   updateRegisterTeacherOptionVisibility();
@@ -1259,6 +1547,9 @@ function openAuthModal(tab = 'login') {
 function closeAuthModal() {
   if (!els.authModal) return;
   els.authModal.hidden = true;
+  if (!isLoggedIn()) {
+    restoreSessionModalIfSuspended();
+  }
 }
 
 function bindCriticalUi() {
@@ -1764,7 +2055,20 @@ async function openStatsScreen() {
 async function afterAuthSuccess() {
   updateAuthUI();
   await syncGuestProgressAfterAuth();
+  sessionModalSuspendedForAuth = false;
   closeAuthModal();
+
+  if (lastSessionStats && pendingSessionModalAuthRedirect === 'stats') {
+    pendingSessionModalAuthRedirect = null;
+    if (els.modalSubtitle) {
+      els.modalSubtitle.textContent = 'Прогресс сохранён! Откройте карту нот или продолжайте тренировку.';
+    }
+    if (els.sessionModal) els.sessionModal.hidden = false;
+    renderSessionModalUi(lastSessionStats);
+    return;
+  }
+  pendingSessionModalAuthRedirect = null;
+
   if (window.location.pathname === ROUTES.stats) {
     await openStatsScreen();
   }
@@ -2968,26 +3272,7 @@ els.btnMidiUpload?.addEventListener('click', () => {
   els.midiUpload?.click();
 });
 
-els.btnModalRetry?.addEventListener('click', () => {
-  hideSessionModal();
-  if (appMode === 'melody' && melodyTrainer.lesson) {
-    melodyTrainer.reset();
-    melodyTrainer.start();
-    showFeedback('Поехали!', 'info');
-  } else if (appMode === 'notes') {
-    noteTrainer.reset();
-    noteTrainer.start();
-    showFeedback('Поехали!', 'info');
-  } else if (appMode === 'rhythm') {
-    restoreSessionModalLabels();
-    bootRhythmPractice();
-    showFeedback('Поехали!', 'info');
-  }
-});
-
-els.btnModalDone?.addEventListener('click', () => {
-  leavePractice();
-});
+bindSessionModalUi();
 
 els.sessionModal?.querySelector('.modal__backdrop')?.addEventListener('click', () => {
   hideSessionModal();
@@ -3075,9 +3360,9 @@ applySessionLimitToForm(DEFAULT_NOTE_SESSION_LIMIT);
 noteTrainer.sessionLimit = DEFAULT_NOTE_SESSION_LIMIT;
 noteTrainer.setOptions(loadTrainerPrefs() ?? DEFAULT_TRAINER_OPTIONS);
 setPianoVisible(false);
-melodyTrainer.showKeyboardHints = true;
-noteTrainer.showKeyboardHints = true;
-rhythmTrainer.showKeyboardHints = true;
+melodyTrainer.showKeyboardHints = false;
+noteTrainer.showKeyboardHints = false;
+rhythmTrainer.showKeyboardHints = false;
 
 const savedMidiId = loadSavedMidiDeviceId();
 if (savedMidiId) midi.selectedInputId = savedMidiId;

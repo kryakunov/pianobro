@@ -16,7 +16,7 @@ export const RHYTHM_DURATION_OPTIONS = [
 
 export const DEFAULT_RHYTHM_DURATIONS = {
   whole: false,
-  half: false,
+  half: true,
   quarter: true,
   eighth: false,
   sixteenth: false,
@@ -41,6 +41,12 @@ export function normalizeRhythmLives(value) {
   return RHYTHM_LIVES_OPTIONS.includes(parsed) ? parsed : DEFAULT_RHYTHM_LIVES;
 }
 
+export function normalizeRhythmSpeed(value) {
+  return RHYTHM_SPEED_OPTIONS.some((item) => item.key === value)
+    ? value
+    : DEFAULT_RHYTHM_SPEED;
+}
+
 export function tempoScaleForSpeed(speedKey) {
   const option = RHYTHM_SPEED_OPTIONS.find((item) => item.key === speedKey);
   return option?.tempoScale
@@ -58,7 +64,8 @@ export function rhythmSpeedLabel(speedKey) {
 const COUNTDOWN_MS = 3000;
 /** Base hit window at «Средне» (tempoScale 2.2). Slower modes scale up automatically. */
 const EARLY_MS = 1800;
-const LATE_MS = 3200;
+/** Grace after the play line passes the note before a miss is counted. */
+const LATE_MS = 2000;
 const MEDIUM_TEMPO_SCALE = 2.2;
 
 /** @param {number} tempoScale */
@@ -126,7 +133,7 @@ export class RhythmTrainer {
     this.gameStart = 0;
     this._rafId = null;
     this.soundEnabled = true;
-    this.showKeyboardHints = true;
+    this.showKeyboardHints = false;
     this.onUpdate = null;
     this.onFeedback = null;
     this.onComplete = null;
@@ -293,7 +300,7 @@ export class RhythmTrainer {
     if (!event || event.hit) return false;
 
     const gameTime = now - this.countdownEnd;
-    if (this._timeToHitLine(event, gameTime) <= 0) return false;
+    if (this._timeToHitLine(event, gameTime) <= -this._lateMs()) return false;
 
     this.heldMidis.add(note);
 
@@ -354,7 +361,7 @@ export class RhythmTrainer {
       return;
     }
 
-    if (!event.hit && this._timeToHitLine(event, gameTime) <= 0) {
+    if (!event.hit && this._timeToHitLine(event, gameTime) <= -this._lateMs()) {
       event.state = 'missed';
       this.onNoteState?.(event.index, 'missed');
       this.nextIndex++;
@@ -363,8 +370,8 @@ export class RhythmTrainer {
     }
 
     const timeToHit = this._timeToHitLine(event, gameTime);
-    const active = !event.hit && timeToHit > 0 && timeToHit <= this._earlyMs();
-    if (active && event.state !== 'active') {
+    const inHitWindow = !event.hit && timeToHit <= this._earlyMs() && timeToHit > -this._lateMs();
+    if (inHitWindow && event.state !== 'active') {
       event.state = 'active';
       this.onNoteState?.(event.index, 'active');
       this._highlightActiveNote();
@@ -416,6 +423,10 @@ export class RhythmTrainer {
   /** Scale hit windows with tempo — slower scroll gets more time. */
   _earlyMs() {
     return hitWindowsForTempoScale(this.tempoScale).earlyMs;
+  }
+
+  _lateMs() {
+    return hitWindowsForTempoScale(this.tempoScale).lateMs;
   }
 
   /** Milliseconds until the note reaches the play line (>0 = still approaching). */

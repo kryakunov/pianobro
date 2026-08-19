@@ -997,12 +997,6 @@ a.lesson-card {
   filter: drop-shadow(0 0 6px rgba(192, 57, 43, 0.75));
 }
 
-.settings-group__options--durations {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  gap: 0.5rem;
-}
-
 .piano-wrap {
   background: linear-gradient(180deg, #1a1410 0%, #0d0b09 100%);
   border: 1px solid var(--border);
@@ -2510,7 +2504,62 @@ a.btn--secondary:visited {
 }
 
 .settings-group--rhythm-game {
-  padding-bottom: 1rem;
+  padding-bottom: 0.875rem;
+}
+
+.settings-group--rhythm-game .rhythm-options-row {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.rhythm-options-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.rhythm-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.rhythm-option__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.rhythm-option__select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 1.75rem 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--surface-2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b92a8' d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.rhythm-option__select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(108, 140, 255, 0.2);
 }
 
 .rhythm-game-panel {
@@ -2536,6 +2585,10 @@ a.btn--secondary:visited {
 }
 
 .rhythm-pick-grid--lives {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.rhythm-pick-grid--durations {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
@@ -2602,6 +2655,11 @@ a.btn--secondary:visited {
   color: var(--text);
 }
 
+.rhythm-pick--speed .rhythm-pick__surface {
+  min-height: 4.25rem;
+  padding: 0.55rem 0.2rem;
+}
+
 .rhythm-pick--speed .rhythm-pick__title {
   font-size: 0.75rem;
 }
@@ -2623,7 +2681,7 @@ a.btn--secondary:visited {
   justify-content: center;
   gap: 0.22rem;
   width: 100%;
-  height: 1.35rem;
+  height: 1.15rem;
 }
 
 .rhythm-speed-meter span {
@@ -2672,6 +2730,51 @@ a.btn--secondary:visited {
 
 .rhythm-pick--lives .rhythm-pick__title {
   font-size: 1rem;
+}
+
+.rhythm-pick--duration .rhythm-pick__surface {
+  min-height: 4.75rem;
+  padding: 0.5rem 0.15rem;
+}
+
+.rhythm-duration-icon {
+  font-size: 1.125rem;
+  line-height: 1;
+  color: var(--primary);
+}
+
+.rhythm-duration-icon--svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.rhythm-duration-icon--svg .icon {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.rhythm-pick--duration .rhythm-pick__title {
+  font-size: 0.6875rem;
+  line-height: 1.15;
+  max-width: 100%;
+  hyphens: auto;
+}
+
+.rhythm-pick:has(input:checked) .rhythm-duration-icon {
+  color: #fff;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.35));
+}
+
+.rhythm-pick:has(input:checked) .rhythm-duration-icon--svg {
+  filter: none;
+}
+
+.rhythm-pick:has(input:checked) .rhythm-duration-icon--svg .icon {
+  color: #fff;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
 }
 
 .settings-group__head {
@@ -3027,6 +3130,19 @@ a.btn--secondary:visited {
     align-items: stretch;
   }
 
+  .rhythm-options-row {
+    gap: 0.45rem;
+  }
+
+  .rhythm-option {
+    padding: 0.55rem 0.6rem;
+  }
+
+  .rhythm-option__select {
+    font-size: 0.75rem;
+    padding-right: 1.5rem;
+  }
+
   .settings-group--daily .settings-select {
     flex-direction: column;
     align-items: stretch;
@@ -3048,6 +3164,20 @@ a.btn--secondary:visited {
 
   .rhythm-pick-grid--lives {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .rhythm-pick-grid--durations {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .rhythm-pick--duration .rhythm-pick__surface,
+  .rhythm-pick--speed .rhythm-pick__surface {
+    min-height: 4.25rem;
+    padding: 0.45rem 0.1rem;
+  }
+
+  .rhythm-pick--duration .rhythm-pick__title {
+    font-size: 0.625rem;
   }
 
   .rhythm-pick__surface {
@@ -3571,11 +3701,19 @@ a.btn--secondary:visited {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  overflow-y: auto;
+  overflow: hidden;
+}
+
+#auth-modal:not([hidden]) {
+  z-index: 110;
+}
+
+#session-modal:not([hidden]) {
+  z-index: 105;
 }
 
 .modal__backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
@@ -3583,6 +3721,7 @@ a.btn--secondary:visited {
 
 .modal__card {
   position: relative;
+  z-index: 1;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -3592,6 +3731,16 @@ a.btn--secondary:visited {
   text-align: center;
   box-shadow: var(--shadow);
   animation: modal-in 0.25s ease-out;
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.modal__card--session {
+  max-width: 420px;
+  max-height: min(calc(100dvh - 2rem), 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes modal-in {
@@ -3677,6 +3826,136 @@ a.btn--secondary:visited {
 
 .modal__actions .btn {
   width: 100%;
+}
+
+.modal-register-hint {
+  list-style: none;
+  padding: 0;
+  margin: -0.5rem 0 1rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.modal-register-hint li {
+  position: relative;
+  padding: 0.15rem 0 0.15rem 1.15rem;
+}
+
+.modal-register-hint li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--success);
+  font-size: 0.75rem;
+}
+
+.modal-discover {
+  margin-bottom: 1.15rem;
+  text-align: left;
+}
+
+.modal-discover__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.modal-discover__scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.15rem;
+  scrollbar-width: thin;
+}
+
+.modal-discover__card {
+  flex: 0 0 auto;
+  width: 7.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.65rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.modal-discover__card:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.modal-discover__icon {
+  margin-bottom: 0.15rem;
+}
+
+.modal-discover__card-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.modal-discover__card-text {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  line-height: 1.25;
+}
+
+.modal-action-link {
+  margin-top: 0.15rem;
+}
+
+.btn--outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn--outline:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.btn--text {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  text-decoration: underline;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.btn--text:hover:not(:disabled) {
+  color: var(--text);
+}
+
+@media (max-width: 768px) {
+  .modal {
+    padding: 0.5rem;
+  }
+
+  .modal__card--session {
+    padding: 1.35rem 1rem 1.25rem;
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .modal__subtitle {
+    margin-bottom: 1rem;
+  }
+
+  .modal__stats {
+    margin-bottom: 1rem;
+  }
 }
 
 @media (min-width: 769px) {
@@ -3812,8 +4091,13 @@ a.btn--secondary:visited {
     margin: 0;
   }
 
-  .piano-key {
-    touch-action: manipulation;
+  .practice-keyboard .piano-key--white {
+    flex: none;
+    width: 36px;
+  }
+
+  .practice-keyboard .piano-key {
+    touch-action: pan-x;
   }
 }
 

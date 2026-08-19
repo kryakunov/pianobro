@@ -15,7 +15,7 @@ export class MelodyTrainer {
     this.onUpdate = null;
     this.onComplete = null;
     this.onFeedback = null;
-    this.showKeyboardHints = true;
+    this.showKeyboardHints = false;
   }
 
   loadLesson(lesson, { sessionLimit = null } = {}) {

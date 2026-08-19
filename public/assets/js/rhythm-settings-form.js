@@ -10,6 +10,7 @@ import {
   RHYTHM_LIVES_OPTIONS,
   RHYTHM_SPEED_OPTIONS,
   normalizeRhythmLives,
+  normalizeRhythmSpeed,
   rhythmSpeedLabel,
 } from './rhythm-trainer.js';
 
@@ -56,11 +57,11 @@ export function readRhythmSettingsFromForm(form) {
     durations[option.key] = checked(`dur-${option.key}`);
   }
 
-  const speedInput = form.querySelector('[name="rhythm-speed"]:checked');
-  const speed = speedInput?.value || DEFAULT_RHYTHM_SPEED;
+  const speedSelect = form.querySelector('[name="rhythm-speed"]');
+  const speed = normalizeRhythmSpeed(speedSelect?.value);
 
-  const livesInput = form.querySelector('[name="rhythm-lives"]:checked');
-  const lives = normalizeRhythmLives(livesInput?.value);
+  const livesSelect = form.querySelector('[name="rhythm-lives"]');
+  const lives = normalizeRhythmLives(livesSelect?.value);
 
   return { noteSettings, durations, speed, lives };
 }
@@ -89,11 +90,11 @@ export function applyRhythmSettingsToForm(form, { noteSettings, durations, speed
     set(`dur-${option.key}`, dur[option.key] ?? false);
   }
 
-  const speedInput = form.querySelector(`[name="rhythm-speed"][value="${speedKey}"]`);
-  if (speedInput) speedInput.checked = true;
+  const speedSelect = form.querySelector('[name="rhythm-speed"]');
+  if (speedSelect) speedSelect.value = normalizeRhythmSpeed(speedKey);
 
-  const livesInput = form.querySelector(`[name="rhythm-lives"][value="${String(livesCount)}"]`);
-  if (livesInput) livesInput.checked = true;
+  const livesSelect = form.querySelector('[name="rhythm-lives"]');
+  if (livesSelect) livesSelect.value = String(livesCount);
 }
 
 function hasSelectedOctaves(settings) {

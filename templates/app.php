@@ -716,117 +716,69 @@
           <fieldset class="settings-group settings-group--session settings-group--rhythm-game">
             <legend class="settings-group__head">
               <span class="settings-group__icon icon-badge icon-badge--session"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-session"/></svg></span>
-              <span class="settings-group__title">Игра</span>
-            </legend>
-            <div class="rhythm-game-panel">
-              <div class="rhythm-game-block">
-                <p class="rhythm-game-block__title">Скорость стана</p>
-                <div class="rhythm-pick-grid rhythm-pick-grid--speed" role="radiogroup" aria-label="Скорость стана">
-                  <label class="rhythm-pick rhythm-pick--speed">
-                    <input type="radio" name="rhythm-speed" value="very_slow">
-                    <span class="rhythm-pick__surface">
-                      <span class="rhythm-speed-meter rhythm-speed-meter--1" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-                      <span class="rhythm-pick__title">Очень медленно</span>
-                    </span>
-                  </label>
-                  <label class="rhythm-pick rhythm-pick--speed">
-                    <input type="radio" name="rhythm-speed" value="slow" checked>
-                    <span class="rhythm-pick__surface">
-                      <span class="rhythm-speed-meter rhythm-speed-meter--2" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-                      <span class="rhythm-pick__title">Медленно</span>
-                    </span>
-                  </label>
-                  <label class="rhythm-pick rhythm-pick--speed">
-                    <input type="radio" name="rhythm-speed" value="medium">
-                    <span class="rhythm-pick__surface">
-                      <span class="rhythm-speed-meter rhythm-speed-meter--3" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-                      <span class="rhythm-pick__title">Средне</span>
-                    </span>
-                  </label>
-                  <label class="rhythm-pick rhythm-pick--speed">
-                    <input type="radio" name="rhythm-speed" value="fast">
-                    <span class="rhythm-pick__surface">
-                      <span class="rhythm-speed-meter rhythm-speed-meter--4" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-                      <span class="rhythm-pick__title">Быстро</span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-              <div class="rhythm-game-block">
-                <p class="rhythm-game-block__title">Допустимые ошибки</p>
-                <div class="rhythm-pick-grid rhythm-pick-grid--lives" role="radiogroup" aria-label="Количество жизней">
-                  <label class="rhythm-pick rhythm-pick--lives">
-                    <input type="radio" name="rhythm-lives" value="1">
-                    <span class="rhythm-pick__surface">
-                      <span class="rhythm-lives-icons" aria-hidden="true">♪</span>
-                      <span class="rhythm-pick__title">1</span>
-                      <span class="rhythm-pick__hint">Строго</span>
-                    </span>
-                  </label>
-                  <label class="rhythm-pick rhythm-pick--lives">
-                    <input type="radio" name="rhythm-lives" value="2">
-                    <span class="rhythm-pick__surface">
-                      <span class="rhythm-lives-icons" aria-hidden="true">♪♪</span>
-                      <span class="rhythm-pick__title">2</span>
-                    </span>
-                  </label>
-                  <label class="rhythm-pick rhythm-pick--lives">
-                    <input type="radio" name="rhythm-lives" value="3" checked>
-                    <span class="rhythm-pick__surface">
-                      <span class="rhythm-lives-icons" aria-hidden="true">♪♪♪</span>
-                      <span class="rhythm-pick__title">3</span>
-                    </span>
-                  </label>
-                  <label class="rhythm-pick rhythm-pick--lives">
-                    <input type="radio" name="rhythm-lives" value="5">
-                    <span class="rhythm-pick__surface">
-                      <span class="rhythm-lives-icons" aria-hidden="true">♪♪♪♪♪</span>
-                      <span class="rhythm-pick__title">5</span>
-                    </span>
-                  </label>
-                  <label class="rhythm-pick rhythm-pick--lives">
-                    <input type="radio" name="rhythm-lives" value="10">
-                    <span class="rhythm-pick__surface">
-                      <span class="rhythm-lives-icons rhythm-lives-icons--many" aria-hidden="true">♪×10</span>
-                      <span class="rhythm-pick__title">10</span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </fieldset>
-
-          <fieldset class="settings-group settings-group--session">
-            <legend class="settings-group__head">
-              <span class="settings-group__icon icon-badge icon-badge--session"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-session"/></svg></span>
               <span class="settings-group__title">Длительности нот</span>
             </legend>
-            <div class="settings-group__options settings-group__options--durations">
-              <label class="settings-check">
-                <input type="checkbox" name="dur-whole">
-                <span class="settings-check__icon" aria-hidden="true">𝅝</span>
-                <span>Целая</span>
+            <div class="rhythm-pick-grid rhythm-pick-grid--durations" role="group" aria-label="Длительности нот">
+              <label class="rhythm-pick rhythm-pick--duration" title="Целая">
+                <input type="checkbox" name="dur-whole" aria-label="Целая">
+                <span class="rhythm-pick__surface">
+                  <span class="rhythm-duration-icon rhythm-duration-icon--svg" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24"><use href="#ico-note-whole"/></svg>
+                  </span>
+                  <span class="rhythm-pick__title">Целая</span>
+                </span>
               </label>
-              <label class="settings-check">
-                <input type="checkbox" name="dur-half">
-                <span class="settings-check__icon" aria-hidden="true">𝅗𝅥</span>
-                <span>Половинная</span>
+              <label class="rhythm-pick rhythm-pick--duration" title="Половинная">
+                <input type="checkbox" name="dur-half" checked aria-label="Половинная">
+                <span class="rhythm-pick__surface">
+                  <span class="rhythm-duration-icon rhythm-duration-icon--svg" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24"><use href="#ico-note-half"/></svg>
+                  </span>
+                  <span class="rhythm-pick__title">Половинная</span>
+                </span>
               </label>
-              <label class="settings-check">
-                <input type="checkbox" name="dur-quarter" checked>
-                <span class="settings-check__icon" aria-hidden="true">♩</span>
-                <span>Четверть</span>
+              <label class="rhythm-pick rhythm-pick--duration" title="Четверть">
+                <input type="checkbox" name="dur-quarter" checked aria-label="Четверть">
+                <span class="rhythm-pick__surface">
+                  <span class="rhythm-duration-icon" aria-hidden="true">♩</span>
+                  <span class="rhythm-pick__title">Четверть</span>
+                </span>
               </label>
-              <label class="settings-check">
-                <input type="checkbox" name="dur-eighth">
-                <span class="settings-check__icon" aria-hidden="true">♪</span>
-                <span>Восьмая</span>
+              <label class="rhythm-pick rhythm-pick--duration" title="Восьмая">
+                <input type="checkbox" name="dur-eighth" aria-label="Восьмая">
+                <span class="rhythm-pick__surface">
+                  <span class="rhythm-duration-icon" aria-hidden="true">♪</span>
+                  <span class="rhythm-pick__title">Восьмая</span>
+                </span>
               </label>
-              <label class="settings-check">
-                <input type="checkbox" name="dur-sixteenth">
-                <span class="settings-check__icon" aria-hidden="true">♬</span>
-                <span>Шестнадцатая</span>
+              <label class="rhythm-pick rhythm-pick--duration" title="Шестнадцатая">
+                <input type="checkbox" name="dur-sixteenth" aria-label="Шестнадцатая">
+                <span class="rhythm-pick__surface">
+                  <span class="rhythm-duration-icon" aria-hidden="true">♬</span>
+                  <span class="rhythm-pick__title">Шестнадцатая</span>
+                </span>
               </label>
+            </div>
+            <div class="rhythm-options-row">
+              <div class="rhythm-option">
+                <label class="rhythm-option__label" for="rhythm-speed">Скорость игры</label>
+                <select id="rhythm-speed" name="rhythm-speed" class="rhythm-option__select">
+                  <option value="very_slow">Очень медленно</option>
+                  <option value="slow" selected>Медленно</option>
+                  <option value="medium">Средне</option>
+                  <option value="fast">Быстро</option>
+                </select>
+              </div>
+              <div class="rhythm-option">
+                <label class="rhythm-option__label" for="rhythm-lives">Допустимые ошибки</label>
+                <select id="rhythm-lives" name="rhythm-lives" class="rhythm-option__select">
+                  <option value="1">1 жизнь</option>
+                  <option value="2">2 жизни</option>
+                  <option value="3" selected>3 жизни</option>
+                  <option value="5">5 жизней</option>
+                  <option value="10">10 жизней</option>
+                </select>
+              </div>
             </div>
           </fieldset>
           </div>
@@ -905,8 +857,8 @@
           <div class="keyboard-mode" id="keyboard-hints-panel" hidden>
             <span class="keyboard-mode__label">Подсказки</span>
             <div class="keyboard-mode__tabs" role="group" aria-label="Режим подсказок на клавиатуре">
-              <button type="button" class="keyboard-mode__tab keyboard-mode__tab--active" data-hints="on">С подсказками</button>
-              <button type="button" class="keyboard-mode__tab" data-hints="off">Без подсказок</button>
+              <button type="button" class="keyboard-mode__tab" data-hints="on">С подсказками</button>
+              <button type="button" class="keyboard-mode__tab keyboard-mode__tab--active" data-hints="off">Без подсказок</button>
             </div>
           </div>
 
@@ -1028,7 +980,7 @@
     <!-- Итоги тренировки -->
     <div class="modal" id="session-modal" hidden>
       <div class="modal__backdrop"></div>
-      <div class="modal__card" role="dialog" aria-labelledby="modal-title">
+      <div class="modal__card modal__card--session" role="dialog" aria-labelledby="modal-title">
         <div class="modal__icon icon-badge icon-badge--success" aria-hidden="true">
           <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
         </div>
@@ -1048,10 +1000,9 @@
             <span class="modal-stat__value" id="modal-accuracy">—</span>
           </div>
         </div>
-        <div class="modal__actions">
-          <button type="button" class="btn btn--primary" id="btn-modal-retry">Ещё раз</button>
-          <button type="button" class="btn btn--secondary" id="btn-modal-done">Готово</button>
-        </div>
+        <ul class="modal-register-hint" id="modal-register-hint" hidden></ul>
+        <div class="modal-discover" id="modal-discover" hidden></div>
+        <div class="modal__actions" id="modal-actions"></div>
       </div>
     </div>
   </div>
@@ -1093,6 +1044,13 @@
     </symbol>
     <symbol id="ico-flat" viewBox="0 0 24 24">
       <path d="M14 4v16M14 4c-3 0-5 1.5-5 4s2 4 5 4v-8z" fill="currentColor"/>
+    </symbol>
+    <symbol id="ico-note-whole" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+      <ellipse cx="12" cy="14.5" rx="8" ry="5.5"/>
+    </symbol>
+    <symbol id="ico-note-half" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+      <ellipse cx="9.5" cy="15" rx="5.5" ry="4"/>
+      <path d="M14 12.5V3"/>
     </symbol>
     <symbol id="ico-session" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/>

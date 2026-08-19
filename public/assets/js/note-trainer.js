@@ -197,7 +197,7 @@ export class NoteTrainer {
     this.onFeedback = null;
     this.onNoteChange = null;
     this.onComplete = null;
-    this.showKeyboardHints = true;
+    this.showKeyboardHints = false;
     this.coverAll = false;
     this._noteQueue = [];
     this._queueIndex = 0;
