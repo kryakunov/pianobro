@@ -12,15 +12,16 @@ import {
 } from './note-settings-form.js';
 import { StaffView } from './staff.js';
 import { RunnerStaffView, measureRemainingMs } from './runner-staff.js';
-import { RhythmTrainer, DEFAULT_RHYTHM_LIVES } from './rhythm-trainer.js';
+import { RhythmTrainer, DEFAULT_RHYTHM_LIVES, normalizeRhythmLives, normalizeRhythmSpeed, tempoScaleForSpeed } from './rhythm-trainer.js';
 import {
   readRhythmSettingsFromForm,
+  applyRhythmSettingsToForm,
   selectedDurationValues,
   validateRhythmSettings,
   describeRhythmSettings,
+  DEFAULT_RHYTHM_DURATIONS,
   DEFAULT_RHYTHM_SPEED,
 } from './rhythm-settings-form.js';
-import { tempoScaleForSpeed } from './rhythm-trainer.js';
 import { normalizeLesson } from './lesson-utils.js';
 import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
@@ -60,6 +61,7 @@ import { initMetrikaPageview, trackGoal, trackVirtualScreen } from './metrika.js
 import { initAnalytics } from './analytics.js';
 
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
+const RHYTHM_PREFS_KEY = 'piano-rhythm-prefs';
 const PENDING_NOTES_PRACTICE_KEY = 'piano-pending-notes-practice';
 const PENDING_RHYTHM_PRACTICE_KEY = 'piano-pending-rhythm-practice';
 const PENDING_HOMEWORK_KEY = 'piano-pending-homework';
@@ -158,7 +160,6 @@ const els = {
   modalCorrect: $('#modal-correct'),
   modalWrong: $('#modal-wrong'),
   modalAccuracy: $('#modal-accuracy'),
-  modalSubtitle: $('#modal-subtitle'),
   modalTitle: $('#modal-title'),
   modalActions: $('#modal-actions'),
   modalDiscover: $('#modal-discover'),
@@ -204,7 +205,7 @@ let selectedLessonId = null;
 let selectedImportedId = null;
 let noteSettings = structuredClone(DEFAULT_NOTE_SETTINGS);
 let rhythmSettings = structuredClone(DEFAULT_NOTE_SETTINGS);
-let rhythmDurations = { quarter: true };
+let rhythmDurations = { ...DEFAULT_RHYTHM_DURATIONS };
 let rhythmSpeed = DEFAULT_RHYTHM_SPEED;
 let rhythmLives = DEFAULT_RHYTHM_LIVES;
 let currentPracticeTitle = '';
@@ -538,9 +539,42 @@ function updateMelodyUI(state) {
   staffView.update(state);
 }
 
+function updateSessionModalTitle(stats) {
+  if (!els.modalTitle || !stats) return;
+
+  const fromRoadmap = Boolean(stats.isRoadmapPractice && stats.roadmapStageId);
+  const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
+  const capstoneReady = fromRoadmap && lastRoadmapCapstoneReady;
+  const stage = fromRoadmap ? findStage(cachedRoadmapData, stats.roadmapStageId) : null;
+
+  if (stageCompleted) {
+    els.modalTitle.textContent = stage
+      ? `Уровень «${stage.title}» завершён!`
+      : 'Уровень завершён!';
+    return;
+  }
+
+  if (capstoneReady && stage?.capstone) {
+    els.modalTitle.textContent = 'Все ноты освоены!';
+    return;
+  }
+
+  if (fromRoadmap && stats.roadmapCapstoneFailed) {
+    els.modalTitle.textContent = 'Попробуйте ещё раз';
+    return;
+  }
+
+  if ((stats.mode ?? appMode) === 'rhythm') {
+    els.modalTitle.textContent = 'Конец игры';
+    return;
+  }
+
+  els.modalTitle.textContent = 'Тренировка завершена!';
+}
+
 function showRhythmGameOver(stats) {
   lastSessionStats = stats;
-  if (els.modalTitle) els.modalTitle.textContent = 'Конец игры';
+  updateSessionModalTitle(stats);
   els.modalCorrect.textContent = String(stats.score ?? 0);
   els.modalWrong.textContent = String(stats.bestCombo ?? 0);
   els.modalAccuracy.textContent = String(stats.highScore ?? 0);
@@ -550,14 +584,6 @@ function showRhythmGameOver(stats) {
     labels[0].textContent = 'Счёт';
     labels[1].textContent = 'Серия';
     labels[2].textContent = 'Рекорд';
-  }
-
-  if (els.modalSubtitle) {
-    const beat = stats.score >= stats.highScore && stats.score > 0 ? ' Новый рекорд!' : '';
-    const mistakes = stats.wrong ?? 0;
-    const mistakeText = mistakes > 0 ? ` Ошибок: ${mistakes}.` : '';
-    const baseText = `Вы сыграли ${stats.score} ${pluralNotes(stats.score)}.${mistakeText}${beat}`;
-    els.modalSubtitle.textContent = enhanceSessionSubtitle(baseText, stats);
   }
 
   els.sessionModal.hidden = false;
@@ -594,33 +620,10 @@ function attachRoadmapSessionContext(stats) {
 function showSessionModal(stats) {
   restoreSessionModalLabels();
   lastSessionStats = stats;
+  updateSessionModalTitle(stats);
   els.modalCorrect.textContent = String(stats.correct);
   els.modalWrong.textContent = String(stats.wrong);
   els.modalAccuracy.textContent = `${stats.accuracy}%`;
-
-  const fromRoadmap = Boolean(stats.isRoadmapPractice && stats.roadmapStageId);
-  const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
-  const capstoneReady = fromRoadmap && lastRoadmapCapstoneReady;
-  const stage = fromRoadmap ? findStage(cachedRoadmapData, stats.roadmapStageId) : null;
-
-  if (els.modalSubtitle) {
-    let baseText;
-    if (stageCompleted) {
-      baseText = stage
-        ? `Уровень «${stage.title}» завершён! +${stage.xp} XP`
-        : 'Уровень завершён!';
-    } else if (capstoneReady && stage?.capstone) {
-      baseText = `Все ноты освоены! Закрепите уровень мелодией «${getCapstoneLabel(stage)}»`;
-    } else if (fromRoadmap && stats.roadmapCapstoneFailed) {
-      baseText = `Нужна точность от ${stage?.capstone?.minAccuracy ?? 75}% — попробуйте ещё раз`;
-    } else {
-      const total = stats.total ?? stats.correct;
-      baseText = fromRoadmap && isLoggedIn()
-        ? `Сохраняем прогресс… (${total} ${pluralNotes(total)})`
-        : `Вы прошли ${total} ${pluralNotes(total)}`;
-    }
-    els.modalSubtitle.textContent = enhanceSessionSubtitle(baseText, stats);
-  }
 
   els.sessionModal.hidden = false;
   renderSessionModalUi(stats);
@@ -635,26 +638,7 @@ function showSessionModal(stats) {
 function refreshSessionModalRoadmap(stats) {
   if (!stats?.isRoadmapPractice || !stats?.roadmapStageId || els.sessionModal?.hidden) return;
 
-  const fromRoadmap = Boolean(stats.isRoadmapPractice && stats.roadmapStageId);
-  const stageCompleted = fromRoadmap && lastRoadmapStageCompleted;
-  const capstoneReady = fromRoadmap && lastRoadmapCapstoneReady;
-  const stage = findStage(cachedRoadmapData, stats.roadmapStageId);
-
-  if (els.modalSubtitle) {
-    let baseText;
-    if (stageCompleted) {
-      baseText = stage
-        ? `Уровень «${stage.title}» завершён! +${stage.xp} XP`
-        : 'Уровень завершён!';
-    } else if (capstoneReady && stage?.capstone) {
-      baseText = `Все ноты освоены! Закрепите уровень мелодией «${getCapstoneLabel(stage)}»`;
-    } else {
-      const total = stats.total ?? stats.correct;
-      baseText = `Вы прошли ${total} ${pluralNotes(total)}`;
-    }
-    els.modalSubtitle.textContent = enhanceSessionSubtitle(baseText, stats);
-  }
-
+  updateSessionModalTitle(stats);
   renderSessionModalUi(stats);
 }
 
@@ -747,27 +731,6 @@ function buildSessionModalActions(stats) {
   actions.push({ id: 'leave', label: practiceReturnLabel(practiceReturnPath), variant: 'link' });
 
   return actions;
-}
-
-function enhanceSessionSubtitle(baseText, stats) {
-  if (isLoggedIn()) return baseText;
-
-  const fromRoadmap = Boolean(stats.isRoadmapPractice && stats.roadmapStageId);
-  if (fromRoadmap && (lastRoadmapStageCompleted || lastRoadmapCapstoneReady || stats.roadmapCapstoneFailed)) {
-    return baseText;
-  }
-
-  const mode = stats.mode ?? appMode;
-  if (mode === 'rhythm') {
-    return `${baseText} Зарегистрируйтесь, чтобы сохранить рекорд.`;
-  }
-
-  const accuracy = stats.accuracy ?? 0;
-  if (accuracy >= 80) {
-    return `${baseText} Сохраните результат — откроется карта нот.`;
-  }
-
-  return `${baseText} Зарегистрируйтесь, чтобы не потерять прогресс.`;
 }
 
 function renderSessionModalUi(stats) {
@@ -918,6 +881,54 @@ function readTrainerOptionsFromPrefs() {
   return {
     soundEnabled: prefs?.soundEnabled ?? DEFAULT_TRAINER_OPTIONS.soundEnabled,
   };
+}
+
+function loadRhythmPrefs() {
+  try {
+    const raw = localStorage.getItem(RHYTHM_PREFS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveRhythmPrefs({ noteSettings, durations, speed, lives }) {
+  localStorage.setItem(RHYTHM_PREFS_KEY, JSON.stringify({
+    noteSettings,
+    durations,
+    speed,
+    lives,
+  }));
+}
+
+function applyRhythmPrefsToState(prefs) {
+  if (!prefs) return;
+
+  rhythmSettings = prefs.noteSettings ?? rhythmSettings;
+  rhythmDurations = prefs.durations ?? rhythmDurations;
+  rhythmSpeed = prefs.speed ?? rhythmSpeed;
+  rhythmLives = normalizeRhythmLives(prefs.lives ?? rhythmLives);
+  applyRhythmSettingsToForm(els.rhythmSettingsForm, {
+    noteSettings: rhythmSettings,
+    durations: rhythmDurations,
+    speed: rhythmSpeed,
+    lives: rhythmLives,
+  });
+}
+
+function currentRhythmSpeedKey() {
+  return rhythmTrainer.rhythmSpeed ?? rhythmSpeed ?? DEFAULT_RHYTHM_SPEED;
+}
+
+function applyRhythmSessionSettings({ speed, lives }) {
+  const speedKey = normalizeRhythmSpeed(speed);
+  const livesCount = normalizeRhythmLives(lives);
+  const tempoScale = tempoScaleForSpeed(speedKey);
+
+  rhythmSpeed = speedKey;
+  rhythmLives = livesCount;
+  rhythmTrainer.setTempo(speedKey, tempoScale);
+  rhythmTrainer.setMaxLives(livesCount);
 }
 
 function loadTrainerPrefs() {
@@ -1220,8 +1231,9 @@ function showNoteDrillStaff(midi, { spelling, clef } = {}) {
 }
 
 function prepareRhythmRun({ preserveEvents = false } = {}) {
-  const tempoScale = tempoScaleForSpeed(rhythmSpeed);
-  rhythmTrainer.setTempo(rhythmSpeed, tempoScale);
+  const speedKey = currentRhythmSpeedKey();
+  const tempoScale = tempoScaleForSpeed(speedKey);
+  rhythmTrainer.setTempo(speedKey, tempoScale);
   if (!preserveEvents || !rhythmTrainer.pendingEvents.length) {
     rhythmTrainer.pendingEvents = rhythmTrainer.generateBatch(48);
   }
@@ -1264,12 +1276,9 @@ function startRhythmTraining() {
 
   rhythmSettings = noteSettings;
   rhythmDurations = durations;
-  rhythmSpeed = speed;
-  rhythmLives = lives;
-  const tempoScale = tempoScaleForSpeed(speed);
-  rhythmTrainer.setTempo(speed, tempoScale);
-  rhythmTrainer.setMaxLives(lives);
+  applyRhythmSessionSettings({ speed, lives });
   rhythmTrainer.configure(noteSettings, selectedDurationValues(durations));
+  saveRhythmPrefs({ noteSettings, durations, speed: rhythmSpeed, lives: rhythmLives });
 
   sessionStorage.setItem(PENDING_RHYTHM_PRACTICE_KEY, JSON.stringify({
     noteSettings,
@@ -1293,6 +1302,10 @@ function bootRhythmFromStorage() {
     config = null;
   }
 
+  if (!config) {
+    config = loadRhythmPrefs();
+  }
+
   const noteSettingsConfig = config?.noteSettings ?? rhythmSettings;
   const durations = config?.durations ?? rhythmDurations;
   const speed = config?.speed ?? rhythmSpeed;
@@ -1301,14 +1314,16 @@ function bootRhythmFromStorage() {
 
   rhythmSettings = noteSettingsConfig;
   rhythmDurations = durations;
-  rhythmSpeed = speed;
-  rhythmLives = lives;
-  const tempoScale = tempoScaleForSpeed(speed);
-  rhythmTrainer.setTempo(speed, tempoScale);
-  rhythmTrainer.setMaxLives(lives);
+  applyRhythmSessionSettings({ speed, lives });
   rhythmTrainer.configure(noteSettingsConfig, selectedDurationValues(durations));
+  saveRhythmPrefs({
+    noteSettings: noteSettingsConfig,
+    durations,
+    speed: rhythmSpeed,
+    lives: rhythmLives,
+  });
   noteTrainer.setOptions(options);
-  enterPractice('rhythm', describeRhythmSettings(noteSettingsConfig, durations, speed, lives), {
+  enterPractice('rhythm', describeRhythmSettings(noteSettingsConfig, durations, rhythmSpeed, rhythmLives), {
     returnPath: ROUTES.rhythm,
   });
 }
@@ -2060,9 +2075,7 @@ async function afterAuthSuccess() {
 
   if (lastSessionStats && pendingSessionModalAuthRedirect === 'stats') {
     pendingSessionModalAuthRedirect = null;
-    if (els.modalSubtitle) {
-      els.modalSubtitle.textContent = 'Прогресс сохранён! Откройте карту нот или продолжайте тренировку.';
-    }
+    if (els.modalTitle) els.modalTitle.textContent = 'Прогресс сохранён!';
     if (els.sessionModal) els.sessionModal.hidden = false;
     renderSessionModalUi(lastSessionStats);
     return;
@@ -3152,7 +3165,7 @@ rhythmTrainer.onNoteState = (index, state) => {
 };
 rhythmTrainer.onAppendRequest = (count) => {
   const remaining = measureRemainingMs(runnerStaff.events);
-  const tempoScale = tempoScaleForSpeed(rhythmSpeed);
+  const tempoScale = tempoScaleForSpeed(currentRhythmSpeedKey());
   const batch = rhythmTrainer.generateBatch(count, remaining);
   const layout = runnerStaff.load(batch, rhythmSettings, { append: true, tempoScale });
   if (layout) rhythmTrainer.appendEvents(layout.events, layout);
@@ -3357,6 +3370,7 @@ initAuth().then(async () => {
 });
 applyNoteSettingsToForm(DEFAULT_NOTE_SETTINGS);
 applySessionLimitToForm(DEFAULT_NOTE_SESSION_LIMIT);
+applyRhythmPrefsToState(loadRhythmPrefs());
 noteTrainer.sessionLimit = DEFAULT_NOTE_SESSION_LIMIT;
 noteTrainer.setOptions(loadTrainerPrefs() ?? DEFAULT_TRAINER_OPTIONS);
 setPianoVisible(false);

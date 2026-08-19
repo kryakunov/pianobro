@@ -57,13 +57,33 @@ export function readRhythmSettingsFromForm(form) {
     durations[option.key] = checked(`dur-${option.key}`);
   }
 
-  const speedSelect = form.querySelector('[name="rhythm-speed"]');
-  const speed = normalizeRhythmSpeed(speedSelect?.value);
-
-  const livesSelect = form.querySelector('[name="rhythm-lives"]');
-  const lives = normalizeRhythmLives(livesSelect?.value);
+  const speed = readRhythmOption(form, 'rhythm-speed', normalizeRhythmSpeed, DEFAULT_RHYTHM_SPEED);
+  const lives = readRhythmOption(form, 'rhythm-lives', normalizeRhythmLives, DEFAULT_RHYTHM_LIVES);
 
   return { noteSettings, durations, speed, lives };
+}
+
+function readRhythmOption(form, name, normalize, fallback) {
+  if (typeof FormData !== 'undefined'
+    && typeof HTMLFormElement !== 'undefined'
+    && form instanceof HTMLFormElement) {
+    const value = new FormData(form).get(name);
+    if (value != null && value !== '') {
+      return normalize(value);
+    }
+  }
+
+  const select = form.querySelector(`select[name="${name}"]`);
+  if (select) {
+    return normalize(select.value);
+  }
+
+  const radio = form.querySelector(`[name="${name}"]:checked`);
+  if (radio) {
+    return normalize(radio.value);
+  }
+
+  return fallback;
 }
 
 export function applyRhythmSettingsToForm(form, { noteSettings, durations, speed, lives } = {}) {

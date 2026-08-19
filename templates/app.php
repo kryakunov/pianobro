@@ -985,7 +985,6 @@
           <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
         </div>
         <h2 class="modal__title" id="modal-title">Тренировка завершена!</h2>
-        <p class="modal__subtitle" id="modal-subtitle">Тренировка завершена</p>
         <div class="modal__stats">
           <div class="modal-stat">
             <span class="modal-stat__label">Верно</span>
