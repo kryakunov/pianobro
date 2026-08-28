@@ -4,7 +4,7 @@
   <?php
     use PianoTrainer\PageRegistry;
 
-    $page = $page ?? PageRegistry::match('/') ?? [
+    $page = $page ?? PageRegistry::match('/', null, null) ?? [
       'screen' => 'home',
       'path' => '/',
       'title' => 'Piano Bro',
@@ -23,6 +23,7 @@
     };
 
     require __DIR__ . '/partials/head.php';
+    require __DIR__ . '/partials/blog-render.php';
 
     $user = $user ?? null;
     $isTeacher = $isTeacher ?? false;
@@ -121,7 +122,11 @@
               <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-check"/></svg>
               Бесплатно · Без установки · В браузере
             </p>
+            <?php if (($page['screen'] ?? '') === 'home'): ?>
             <h1 class="landing-hero__title">Тренажёр нот онлайн — читайте ноты и&nbsp;играйте мелодии</h1>
+            <?php else: ?>
+            <p class="landing-hero__title">Тренажёр нот онлайн — читайте ноты и&nbsp;играйте мелодии</p>
+            <?php endif; ?>
             <p class="landing-hero__lead">
               Угадай ноту на нотном стане, тренируйте попадание в клавиши и запоминание нот.
               Скрипичный и басовый ключ, MIDI-клавиатура, микрофон — без установки и регистрации.
@@ -367,9 +372,96 @@
               <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
               Попробовать бесплатно
             </a>
+            <a href="/blog" class="landing-cta__blog">Блог о нотах и тренировках →</a>
           </div>
         </section>
+
+        <?php require __DIR__ . '/partials/social-links.php'; ?>
       </div>
+    </section>
+
+    <!-- Блог -->
+    <section class="screen<?= $screenActive('blog') ?>" id="screen-blog"<?= $screenHidden('blog') ?>>
+      <div class="screen-header">
+        <a href="/" class="btn-back" id="btn-back-blog">← На главную</a>
+        <h2 class="screen-header__title">
+          <span class="screen-header__icon icon-badge icon-badge--accent" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-session"/></svg>
+          </span>
+          Блог
+        </h2>
+      </div>
+      <div class="blog-page pick-panel">
+        <p class="blog-page__lead">Статьи о чтении нот, тренировках на фортепиано и работе с тренажёром онлайн.</p>
+        <div class="blog-list">
+          <?php foreach (($page['blogPosts'] ?? []) as $post): ?>
+            <article class="blog-card">
+              <time class="blog-card__date" datetime="<?= htmlspecialchars((string) ($post['publishedAt'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                <?= htmlspecialchars(formatBlogDate((string) ($post['publishedAt'] ?? '')), ENT_QUOTES, 'UTF-8') ?>
+              </time>
+              <h3 class="blog-card__title">
+                <a href="<?= htmlspecialchars((string) ($post['path'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                  <?= htmlspecialchars((string) ($post['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                </a>
+              </h3>
+              <p class="blog-card__excerpt"><?= htmlspecialchars((string) ($post['lead'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
+              <a class="blog-card__more" href="<?= htmlspecialchars((string) ($post['path'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">Читать →</a>
+            </article>
+          <?php endforeach; ?>
+        </div>
+        <?php require __DIR__ . '/partials/social-links.php'; ?>
+      </div>
+    </section>
+
+    <?php
+      $blogPost = is_array($page['blogPost'] ?? null) ? $page['blogPost'] : null;
+      $blogRelated = is_array($page['blogRelated'] ?? null) ? $page['blogRelated'] : [];
+    ?>
+    <section class="screen<?= $screenActive('blog-article') ?>" id="screen-blog-article"<?= $screenHidden('blog-article') ?>>
+      <div class="screen-header">
+        <a href="/blog" class="btn-back" id="btn-back-blog-article">← К блогу</a>
+        <h2 class="screen-header__title">
+          <span class="screen-header__icon icon-badge icon-badge--accent" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-session"/></svg>
+          </span>
+          Блог
+        </h2>
+      </div>
+      <?php if ($blogPost): ?>
+      <article class="blog-article pick-panel">
+        <header class="blog-article__header">
+          <time class="blog-article__date" datetime="<?= htmlspecialchars((string) ($blogPost['publishedAt'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+            <?= htmlspecialchars(formatBlogDate((string) ($blogPost['publishedAt'] ?? '')), ENT_QUOTES, 'UTF-8') ?>
+          </time>
+          <h1 class="blog-article__title"><?= htmlspecialchars((string) ($blogPost['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h1>
+          <?php if (!empty($blogPost['lead'])): ?>
+            <p class="blog-article__lead"><?= htmlspecialchars((string) $blogPost['lead'], ENT_QUOTES, 'UTF-8') ?></p>
+          <?php endif; ?>
+        </header>
+        <div class="blog-article__body">
+          <?php foreach (($blogPost['sections'] ?? []) as $section): ?>
+            <?php if (is_array($section)): ?>
+              <?= renderBlogSection($section) ?>
+            <?php endif; ?>
+          <?php endforeach; ?>
+        </div>
+        <?php if ($blogRelated !== []): ?>
+          <aside class="blog-related" aria-label="Читайте также">
+            <h2 class="blog-related__title">Читайте также</h2>
+            <ul class="blog-related__list">
+              <?php foreach ($blogRelated as $related): ?>
+                <li>
+                  <a href="<?= htmlspecialchars((string) ($related['path'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                    <?= htmlspecialchars((string) ($related['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                  </a>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </aside>
+        <?php endif; ?>
+        <?php require __DIR__ . '/partials/social-links.php'; ?>
+      </article>
+      <?php endif; ?>
     </section>
 
     <!-- Статистика -->
@@ -1127,6 +1219,15 @@
     </symbol>
     <symbol id="ico-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
       <path d="M5 12h14M13 6l6 6-6 6"/>
+    </symbol>
+    <symbol id="ico-vk" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.408 0 15.684 0zm3.692 17.123h-1.744c-.66 0-.862-.525-2.049-1.727-1.033-1-1.49-1.135-1.744-1.135-.356 0-.458.102-.458.593v1.575c0 .424-.135.678-1.253.678-1.846 0-3.896-1.118-5.335-3.202C4.624 10.857 4.03 8.57 4.03 8.096c0-.254.102-.491.593-.491h1.744c.44 0 .61.203.78.677.863 2.049 2.303 3.896 2.896 3.896.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.203.17-.407.44-.407h2.744c.373 0 .508.203.508.643v3.473c0 .373.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.254.322-.491.763-.491h1.744c.525 0 .644.271.525.643-.22 1.017-2.354 4.031-2.354 4.031-.186.305-.254.44 0 .78.186.254.796.779 1.203 1.253.745.847 1.32 1.558 1.473 2.049.17.49-.085.744-.576.744z"/>
+    </symbol>
+    <symbol id="ico-telegram" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.693-1.653-1.124-2.678-1.8-1.185-.781-.417-1.21.258-1.911.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635.099-.002.321.023.465.14.121.099.154.232.17.326.016.094.036.308.02.475z"/>
+    </symbol>
+    <symbol id="ico-instagram" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
     </symbol>
   </svg>
 

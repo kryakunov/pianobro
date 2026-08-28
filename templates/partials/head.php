@@ -27,7 +27,7 @@ $ogDescription = (string) ($page['ogDescription'] ?? $description);
 <link rel="icon" href="/assets/favicon.svg?v=<?= (int) $assetVersion ?>" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico?v=<?= (int) $assetVersion ?>" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/favicon.svg?v=<?= (int) $assetVersion ?>">
-<meta property="og:type" content="website">
+<meta property="og:type" content="<?= htmlspecialchars((string) ($page['ogType'] ?? 'website'), ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:locale" content="ru_RU">
 <meta property="og:title" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:description" content="<?= htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8') ?>">

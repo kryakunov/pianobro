@@ -4,6 +4,7 @@ export const ROUTES = {
   notes: '/noty',
   rhythm: '/ritm',
   melodies: '/melodii',
+  blog: '/blog',
   stats: '/statistika',
   homework: '/domashka',
   teacher: '/teacher',
@@ -11,6 +12,7 @@ export const ROUTES = {
   practiceRhythm: '/trenirovka/ritm',
   melody: (id) => `/melodii/${encodeURIComponent(id)}`,
   practiceMelody: (id) => `/trenirovka/melodiya/${encodeURIComponent(id)}`,
+  blogArticle: (slug) => `/blog/${encodeURIComponent(slug)}`,
 };
 
 export const SCREEN_ROUTES = {
@@ -19,6 +21,8 @@ export const SCREEN_ROUTES = {
   'notes-pick': ROUTES.notes,
   'rhythm-pick': ROUTES.rhythm,
   'melody-pick': ROUTES.melodies,
+  blog: ROUTES.blog,
+  'blog-article': ROUTES.blog,
   stats: ROUTES.stats,
   homework: ROUTES.homework,
   teacher: ROUTES.teacher,

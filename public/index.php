@@ -11,6 +11,7 @@ use PianoTrainer\MailService;
 use PianoTrainer\TeacherService;
 use PianoTrainer\Database;
 use PianoTrainer\Env;
+use PianoTrainer\BlogRepository;
 use PianoTrainer\LessonRepository;
 use PianoTrainer\MidiSearch;
 use PianoTrainer\OAuthConfig;
@@ -23,7 +24,9 @@ use PianoTrainer\StatsRepository;
 Env::load(dirname(__DIR__) . '/.env');
 
 $lessonsDir = dirname(__DIR__) . '/data/lessons';
+$blogDir = dirname(__DIR__) . '/data/blog';
 $repository = new LessonRepository($lessonsDir);
+$blogRepository = new BlogRepository($blogDir);
 $db = Database::connection();
 $auth = new AuthService($db);
 $auth->startSession();
@@ -38,7 +41,7 @@ $mail = new MailService();
 $teacher = new TeacherService($db, $roadmap, $stats, $mail, $roles);
 $auth->setTeacherService($teacher);
 $auth->setRoleService($roles);
-$router = new Router($repository, new MidiSearch(), $auth, $stats, $oauth, $roadmap, $admin, $teacher, $roles, $analytics);
+$router = new Router($repository, $blogRepository, new MidiSearch(), $auth, $stats, $oauth, $roadmap, $admin, $teacher, $roles, $analytics);
 
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';

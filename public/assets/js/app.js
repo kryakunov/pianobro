@@ -75,6 +75,8 @@ const els = {
   screenMelodyPick: $('#screen-melody-pick'),
   screenNotesPick: $('#screen-notes-pick'),
   screenRhythmPick: $('#screen-rhythm-pick'),
+  screenBlog: $('#screen-blog'),
+  screenBlogArticle: $('#screen-blog-article'),
   screenRoadmap: $('#screen-roadmap'),
   screenStats: $('#screen-stats'),
   screenHomework: $('#screen-homework'),
@@ -278,6 +280,8 @@ function showScreen(name) {
     'melody-pick': els.screenMelodyPick,
     'notes-pick': els.screenNotesPick,
     'rhythm-pick': els.screenRhythmPick,
+    blog: els.screenBlog,
+    'blog-article': els.screenBlogArticle,
     roadmap: els.screenRoadmap,
     stats: els.screenStats,
     homework: els.screenHomework,
@@ -2272,6 +2276,7 @@ const CLIENT_APP_PATHS = new Set([
   ROUTES.notes,
   ROUTES.rhythm,
   ROUTES.melodies,
+  ROUTES.blog,
   ROUTES.stats,
   ROUTES.homework,
   ROUTES.teacher,
@@ -2308,6 +2313,9 @@ async function openScreenForPath(path) {
       break;
     case ROUTES.melodies:
       showScreen('melody-pick');
+      break;
+    case ROUTES.blog:
+      showScreen('blog');
       break;
     case ROUTES.stats:
       await openStatsScreen();
@@ -3030,6 +3038,12 @@ async function bootApp() {
       break;
     case 'rhythm-pick':
       showScreen('rhythm-pick');
+      break;
+    case 'blog':
+      showScreen('blog');
+      break;
+    case 'blog-article':
+      showScreen('blog-article');
       break;
     case 'practice':
       await bootPractice(boot);

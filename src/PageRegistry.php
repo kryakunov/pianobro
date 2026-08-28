@@ -14,7 +14,7 @@ final class PageRegistry
   /**
    * @return array<string, mixed>|null
    */
-  public static function match(string $path, ?LessonRepository $lessons = null): ?array
+  public static function match(string $path, ?LessonRepository $lessons = null, ?BlogRepository $blog = null): ?array
   {
     $path = rtrim($path, '/') ?: '/';
 
@@ -29,6 +29,8 @@ final class PageRegistry
       $path === '/trenirovka/noty' => self::practiceNotes(),
       $path === '/ritm' => self::rhythm(),
       $path === '/trenirovka/ritm' => self::practiceRhythm(),
+      $path === '/blog' => self::blogIndex($blog),
+      preg_match('#^/blog/([a-z0-9\-]+)$#', $path, $m) === 1 => self::blogArticle($m[1], $blog),
       preg_match('#^/melodii/([a-z0-9\-]+)$#', $path, $m) === 1 => self::melodyDetail($m[1], $lessons),
       preg_match('#^/trenirovka/melodiya/([a-z0-9\-]+)$#', $path, $m) === 1 => self::practiceMelody($m[1], $lessons),
       default => null,
@@ -36,7 +38,7 @@ final class PageRegistry
   }
 
   /** @return list<string> */
-  public static function sitemapPaths(LessonRepository $lessons): array
+  public static function sitemapPaths(LessonRepository $lessons, ?BlogRepository $blog = null): array
   {
     $paths = [
       '/',
@@ -44,10 +46,17 @@ final class PageRegistry
       '/noty',
       '/ritm',
       '/melodii',
+      '/blog',
     ];
 
     foreach ($lessons->all() as $lesson) {
       $paths[] = '/melodii/' . $lesson->id;
+    }
+
+    if ($blog !== null) {
+      foreach ($blog->all() as $post) {
+        $paths[] = $post->path();
+      }
     }
 
     return $paths;
@@ -216,6 +225,81 @@ final class PageRegistry
   }
 
   /** @return array<string, mixed> */
+  private static function blogIndex(?BlogRepository $blog): array
+  {
+    $posts = $blog?->all() ?? [];
+
+    return self::base(
+      screen: 'blog',
+      path: '/blog',
+      title: 'Блог о нотах и обучении пианино | Piano Bro',
+      description: 'Статьи о чтении нот, тренажёрах, басовом ключе и практике на фортепиано онлайн. Советы для начинающих и педагогов.',
+      keywords: 'блог пианино, чтение нот, тренажер нот, обучение нотам, нотный стан',
+      seoIntro: [
+        'h1' => 'Блог Piano Bro',
+        'lead' => 'Полезные материалы о чтении нот, тренировках на фортепиано и работе с тренажёром онлайн.',
+      ],
+      blogPosts: array_map(static fn (BlogPost $post) => $post->toSummary(), $posts),
+    );
+  }
+
+  /**
+   * @return array<string, mixed>|null
+   */
+  private static function blogArticle(string $slug, ?BlogRepository $blog): ?array
+  {
+    if ($blog === null) {
+      return null;
+    }
+
+    $post = $blog->find($slug);
+    if ($post === null) {
+      return null;
+    }
+
+    $related = [];
+    foreach ($post->relatedSlugs as $relatedSlug) {
+      $relatedPost = $blog->find($relatedSlug);
+      if ($relatedPost !== null) {
+        $related[] = $relatedPost->toSummary();
+      }
+    }
+
+    return self::base(
+      screen: 'blog-article',
+      path: $post->path(),
+      title: "{$post->title} | Piano Bro",
+      description: $post->description,
+      keywords: $post->keywords,
+      ogType: 'article',
+      blogPost: [
+        'slug' => $post->slug,
+        'title' => $post->title,
+        'description' => $post->description,
+        'keywords' => $post->keywords,
+        'publishedAt' => $post->publishedAt,
+        'updatedAt' => $post->updatedAt,
+        'lead' => $post->lead,
+        'sections' => $post->sections,
+        'path' => $post->path(),
+      ],
+      blogRelated: $related,
+      jsonLd: [
+        '@context' => 'https://schema.org',
+        '@type' => 'Article',
+        'headline' => $post->title,
+        'description' => $post->description,
+        'datePublished' => $post->publishedAt,
+        'dateModified' => $post->updatedAt,
+        'author' => ['@type' => 'Organization', 'name' => self::SITE_NAME],
+        'publisher' => ['@type' => 'Organization', 'name' => self::SITE_NAME],
+        'inLanguage' => 'ru',
+        'mainEntityOfPage' => AppUrl::canonical($post->path()),
+      ],
+    );
+  }
+
+  /** @return array<string, mixed> */
   private static function rhythm(): array
   {
     return self::base(
@@ -356,6 +440,10 @@ final class PageRegistry
     ?array $jsonLd = null,
     ?array $lesson = null,
     ?array $seoIntro = null,
+    ?array $blogPosts = null,
+    ?array $blogPost = null,
+    ?array $blogRelated = null,
+    string $ogType = 'website',
   ): array {
     $page = [
       'screen' => $screen,
@@ -366,10 +454,14 @@ final class PageRegistry
       'robots' => $robots,
       'ogTitle' => $title,
       'ogDescription' => $description,
+      'ogType' => $ogType,
       'boot' => array_merge(['screen' => $screen], $boot ?? []),
       'jsonLd' => $jsonLd,
       'lesson' => $lesson,
       'seoIntro' => $seoIntro,
+      'blogPosts' => $blogPosts,
+      'blogPost' => $blogPost,
+      'blogRelated' => $blogRelated,
     ];
 
     return $page;

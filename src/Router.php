@@ -8,6 +8,7 @@ final class Router
 {
   public function __construct(
     private readonly LessonRepository $lessons,
+    private readonly BlogRepository $blog,
     private readonly MidiSearch $midiSearch,
     private readonly AuthService $auth,
     private readonly StatsRepository $stats,
@@ -462,7 +463,7 @@ final class Router
       return;
     }
 
-    $page = PageRegistry::match($path, $this->lessons);
+    $page = PageRegistry::match($path, $this->lessons, $this->blog);
     if ($page !== null) {
       $this->renderApp($page);
       return;
@@ -487,7 +488,7 @@ final class Router
   {
     header('Content-Type: application/xml; charset=utf-8');
     $base = $this->baseUrl();
-    $paths = PageRegistry::sitemapPaths($this->lessons);
+    $paths = PageRegistry::sitemapPaths($this->lessons, $this->blog);
 
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
     echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
