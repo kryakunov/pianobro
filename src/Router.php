@@ -18,6 +18,8 @@ final class Router
     private readonly TeacherService $teacher,
     private readonly RoleService $roles,
     private readonly AnalyticsService $analytics,
+    private readonly SubscriptionService $subscriptions,
+    private readonly PaymentService $payments,
   ) {}
 
   public function dispatch(string $uri, string $method): void
@@ -453,6 +455,65 @@ final class Router
       return;
     }
 
+    if ($path === '/api/billing/checkout' && $method === 'POST') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      try {
+        $body = $this->readJsonBody();
+        $planId = (string) ($body['planId'] ?? '');
+        $returnUrl = trim((string) ($body['returnUrl'] ?? ''));
+        if ($returnUrl === '') {
+          $returnUrl = Env::get('YOOKASSA_RETURN_URL', AppUrl::canonical('/payment'));
+        }
+
+        $this->json($this->payments->createCheckout($user['id'], $planId, $returnUrl));
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      } catch (\Throwable $e) {
+        $this->json(['error' => 'Не удалось создать платёж'], 500);
+      }
+      return;
+    }
+
+    if ($path === '/api/billing/mock-complete' && $method === 'POST') {
+      if (!$this->payments->isMockMode()) {
+        $this->json(['error' => 'Недоступно'], 403);
+        return;
+      }
+
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      try {
+        $body = $this->readJsonBody();
+        $this->payments->completeMockPayment((int) ($body['paymentId'] ?? 0), $user['id']);
+        $this->json([
+          'ok' => true,
+          'subscription' => $this->subscriptions->getForUser($user['id']),
+        ]);
+      } catch (\Throwable $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
+    if ($path === '/api/billing/webhook/yookassa' && $method === 'POST') {
+      try {
+        $this->payments->handleWebhook($this->readJsonBody());
+        $this->json(['ok' => true]);
+      } catch (\Throwable $e) {
+        $this->json(['error' => 'Webhook error'], 400);
+      }
+      return;
+    }
+
     if ($path === '/favicon.ico' && $method === 'GET') {
       $this->serveStatic('/assets/favicon.svg', 'image/svg+xml');
       return;
@@ -558,6 +619,7 @@ final class Router
     $user = $this->auth->currentUser();
     $isTeacher = $user !== null && $this->roles->hasRole((int) $user['id'], RoleService::ROLE_TEACHER);
     $isStudent = $this->roles->isStudent($user);
+    $pricing = PricingConfig::toPublicArray();
 
     include dirname(__DIR__) . '/templates/app.php';
   }

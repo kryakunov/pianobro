@@ -10,8 +10,14 @@ final class AuthService
 {
   private ?TeacherService $teacher = null;
   private ?RoleService $roles = null;
+  private ?SubscriptionService $subscriptions = null;
 
   public function __construct(private readonly PDO $db) {}
+
+  public function setSubscriptionService(SubscriptionService $subscriptions): void
+  {
+    $this->subscriptions = $subscriptions;
+  }
 
   public function setTeacherService(TeacherService $teacher): void
   {
@@ -60,6 +66,7 @@ final class AuthService
       'email' => (string) $user['email'],
       'name' => (string) $user['name'],
       'roles' => $this->roles?->getRoles($userId) ?? [],
+      'subscription' => $this->subscriptions?->getForUser($userId),
     ];
   }
 

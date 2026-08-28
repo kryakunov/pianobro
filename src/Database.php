@@ -93,6 +93,7 @@ final class Database
     self::migrateTeacherStudentExclusive($pdo);
     self::migrateHomeworkStatuses($pdo);
     self::migrateRoadmapCapstones($pdo);
+    self::migrateSubscriptions($pdo);
   }
 
   private static function migrateOAuthAccounts(PDO $pdo): void
@@ -441,6 +442,45 @@ final class Database
       UPDATE student_assignments
       SET status = 'completed'
       WHERE status = 'reviewed';
+      SQL);
+  }
+
+  private static function migrateSubscriptions(PDO $pdo): void
+  {
+    $columns = $pdo->query('PRAGMA table_info(users)')->fetchAll();
+    $names = array_column($columns, 'name');
+
+    $ensureColumn = static function (string $name, string $definition) use ($pdo, $names): void {
+      if (in_array($name, $names, true)) {
+        return;
+      }
+      $pdo->exec('ALTER TABLE users ADD COLUMN ' . $name . ' ' . $definition);
+    };
+
+    $ensureColumn('subscription_status', "TEXT NOT NULL DEFAULT 'free'");
+    $ensureColumn('subscription_plan', 'TEXT');
+    $ensureColumn('subscription_started_at', 'TEXT');
+    $ensureColumn('subscription_expires_at', 'TEXT');
+    $ensureColumn('payment_provider', 'TEXT');
+    $ensureColumn('last_payment_id', 'TEXT');
+
+    $pdo->exec(<<<'SQL'
+      CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        plan TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'RUB',
+        status TEXT NOT NULL DEFAULT 'pending',
+        provider TEXT NOT NULL,
+        provider_payment_id TEXT,
+        idempotence_key TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        paid_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_payments_user_created ON payments(user_id, created_at);
       SQL);
   }
 }

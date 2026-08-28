@@ -5,6 +5,7 @@ declare(strict_types=1);
 <footer class="site-social" aria-label="Мы в соцсетях">
   <p class="site-social__title">Piano Bro в соцсетях</p>
   <div class="site-social__links">
+    <a class="site-social__link" href="/payment">Оплата и оферта</a>
     <a class="site-social__link site-social__link--vk" href="https://vk.ru/piano_bro" target="_blank" rel="noopener noreferrer">
       <svg class="site-social__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-vk"/></svg>
       <span>ВКонтакте</span>

@@ -33,6 +33,7 @@
   <script>
     window.__BOOT__ = <?= json_encode($page['boot'] ?? ['screen' => 'home'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
     window.__USER__ = <?= json_encode($user, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    window.__PRICING__ = <?= json_encode($pricing ?? \PianoTrainer\PricingConfig::toPublicArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
   </script>
 </head>
 <body>
@@ -409,6 +410,22 @@
             </article>
           <?php endforeach; ?>
         </div>
+        <?php require __DIR__ . '/partials/social-links.php'; ?>
+      </div>
+    </section>
+
+    <section class="screen<?= $screenActive('payment') ?>" id="screen-payment"<?= $screenHidden('payment') ?>>
+      <div class="screen-header">
+        <a href="/" class="btn-back" id="btn-back-payment">← На главную</a>
+        <h2 class="screen-header__title">
+          <span class="screen-header__icon icon-badge icon-badge--accent" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-chart"/></svg>
+          </span>
+          Оплата
+        </h2>
+      </div>
+      <div class="payment-page pick-panel">
+        <?php require __DIR__ . '/partials/payment-page.php'; ?>
         <?php require __DIR__ . '/partials/social-links.php'; ?>
       </div>
     </section>

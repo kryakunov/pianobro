@@ -7229,3 +7229,136 @@ body.body--modal-open {
   }
 }
 
+/* ── Payment / YooKassa legal page ── */
+.payment-legal__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+}
+
+.payment-legal__lead {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.payment-legal__section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.payment-legal__section:last-child {
+  border-bottom: 0;
+}
+
+.payment-legal__h2 {
+  margin: 0 0 0.65rem;
+  font-size: 1.125rem;
+}
+
+.payment-legal__h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.9375rem;
+}
+
+.payment-legal__p,
+.payment-legal__meta {
+  margin: 0 0 0.65rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+.payment-legal__list {
+  margin: 0 0 0.65rem;
+  padding-left: 1.2rem;
+  line-height: 1.55;
+  font-size: 0.9375rem;
+}
+
+.payment-legal__list--ordered {
+  list-style: decimal;
+}
+
+.payment-legal__contacts li {
+  list-style: none;
+  margin-left: -1.2rem;
+}
+
+.payment-legal__plans {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.payment-legal__plan {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.payment-legal__plan--featured {
+  border-color: var(--primary);
+}
+
+.payment-legal__badge {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.payment-legal__plan-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.payment-legal__plan-price {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.payment-legal__plan-desc,
+.payment-legal__plan-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.payment-legal__buy {
+  width: 100%;
+}
+
+.payment-legal__notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.payment-legal__notice--success {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  color: var(--text);
+}
+
+.payment-legal__notice--error {
+  background: color-mix(in srgb, var(--error) 12%, var(--surface));
+  color: var(--text);
+}
+
+.payment-legal__offer {
+  font-size: 0.9375rem;
+}
+
+@media (min-width: 768px) {
+  .payment-legal__plans {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+

@@ -30,6 +30,7 @@ final class PageRegistry
       $path === '/ritm' => self::rhythm(),
       $path === '/trenirovka/ritm' => self::practiceRhythm(),
       $path === '/blog' => self::blogIndex($blog),
+      $path === '/payment' => self::payment(),
       preg_match('#^/blog/([a-z0-9\-]+)$#', $path, $m) === 1 => self::blogArticle($m[1], $blog),
       preg_match('#^/melodii/([a-z0-9\-]+)$#', $path, $m) === 1 => self::melodyDetail($m[1], $lessons),
       preg_match('#^/trenirovka/melodiya/([a-z0-9\-]+)$#', $path, $m) === 1 => self::practiceMelody($m[1], $lessons),
@@ -47,6 +48,7 @@ final class PageRegistry
       '/ritm',
       '/melodii',
       '/blog',
+      '/payment',
     ];
 
     foreach ($lessons->all() as $lesson) {
@@ -243,6 +245,29 @@ final class PageRegistry
     );
   }
 
+  /** @return array<string, mixed> */
+  private static function payment(): array
+  {
+    $seller = PricingConfig::seller();
+
+    return self::base(
+      screen: 'payment',
+      path: '/payment',
+      title: 'Оплата подписки PianoBro — тарифы и оферта | Piano Bro',
+      description: 'Цифровая подписка на онлайн-тренажёр нот PianoBro: тарифы, условия оплаты, получение доступа и публичная оферта.',
+      keywords: 'оплата piano bro, подписка тренажёр нот, оферта pianobro',
+      seoIntro: [
+        'h1' => 'Оплата подписки PianoBro',
+        'lead' => 'Цифровая услуга — доступ к персональным тренировкам нот на сайте pianobro.ru.',
+      ],
+      paymentPage: [
+        'plans' => PricingConfig::plans(),
+        'features' => PricingConfig::subscriptionFeatures(),
+        'seller' => $seller,
+      ],
+    );
+  }
+
   /**
    * @return array<string, mixed>|null
    */
@@ -427,6 +452,7 @@ final class PageRegistry
    * @param array<string, mixed>|null $jsonLd
    * @param array<string, mixed>|null $lesson
    * @param array<string, mixed>|null $seoIntro
+   * @param array<string, mixed>|null $paymentPage
    * @return array<string, mixed>
    */
   private static function base(
@@ -444,6 +470,7 @@ final class PageRegistry
     ?array $blogPost = null,
     ?array $blogRelated = null,
     string $ogType = 'website',
+    ?array $paymentPage = null,
   ): array {
     $page = [
       'screen' => $screen,
@@ -462,6 +489,7 @@ final class PageRegistry
       'blogPosts' => $blogPosts,
       'blogPost' => $blogPost,
       'blogRelated' => $blogRelated,
+      'paymentPage' => $paymentPage,
     ];
 
     return $page;

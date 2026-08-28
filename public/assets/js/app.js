@@ -59,6 +59,7 @@ import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff
 import { ROUTES, routeForScreen, navigateTo, setNavigateImpl } from './routes.js';
 import { initMetrikaPageview, trackGoal, trackVirtualScreen } from './metrika.js';
 import { initAnalytics } from './analytics.js';
+import { initPaymentPage, resumePendingCheckout } from './payment-page.js';
 
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
 const RHYTHM_PREFS_KEY = 'piano-rhythm-prefs';
@@ -77,6 +78,7 @@ const els = {
   screenRhythmPick: $('#screen-rhythm-pick'),
   screenBlog: $('#screen-blog'),
   screenBlogArticle: $('#screen-blog-article'),
+  screenPayment: $('#screen-payment'),
   screenRoadmap: $('#screen-roadmap'),
   screenStats: $('#screen-stats'),
   screenHomework: $('#screen-homework'),
@@ -282,6 +284,7 @@ function showScreen(name) {
     'rhythm-pick': els.screenRhythmPick,
     blog: els.screenBlog,
     'blog-article': els.screenBlogArticle,
+    payment: els.screenPayment,
     roadmap: els.screenRoadmap,
     stats: els.screenStats,
     homework: els.screenHomework,
@@ -305,6 +308,10 @@ function showScreen(name) {
 
   if (name === 'roadmap') {
     renderRoadmapScreen();
+  }
+
+  if (name === 'payment') {
+    initPaymentPage();
   }
 
   if (!['melody-pick', 'roadmap', 'practice'].includes(name) && isMelodyPreviewPlaying()) {
@@ -2076,6 +2083,9 @@ async function afterAuthSuccess() {
   await syncGuestProgressAfterAuth();
   sessionModalSuspendedForAuth = false;
   closeAuthModal();
+  window.pianoOpenAuth = openAuthModal;
+
+  await resumePendingCheckout();
 
   if (lastSessionStats && pendingSessionModalAuthRedirect === 'stats') {
     pendingSessionModalAuthRedirect = null;
@@ -3045,6 +3055,9 @@ async function bootApp() {
     case 'blog-article':
       showScreen('blog-article');
       break;
+    case 'payment':
+      showScreen('payment');
+      break;
     case 'practice':
       await bootPractice(boot);
       break;
@@ -3359,6 +3372,7 @@ setupOAuthProviders();
 handleOAuthRedirect();
 initMetrikaPageview();
 initAnalytics();
+window.pianoOpenAuth = openAuthModal;
 void initInviteFromUrl();
 if (window.__USER__ !== undefined) {
   updateAuthUI();
