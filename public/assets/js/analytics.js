@@ -223,6 +223,13 @@ export function trackPageView(path = window.location.pathname) {
   pageTimeSent = false;
 }
 
+export function recordAnalyticsEvent(eventType, payload = {}) {
+  enqueue({
+    type: eventType,
+    target: JSON.stringify(payload).slice(0, 500),
+  });
+}
+
 export function destroyAnalytics() {
   if (!initialized) {
     return;

@@ -59,6 +59,16 @@ import { renderStatsStaffInfographic, mountStatsStaffChart } from './stats-staff
 import { ROUTES, routeForScreen, navigateTo, setNavigateImpl } from './routes.js';
 import { initMetrikaPageview, trackGoal, trackVirtualScreen } from './metrika.js';
 import { initAnalytics } from './analytics.js';
+import {
+  initConversionFlow,
+  conversionIsDiagnostic,
+  handleDiagnosticComplete,
+  bootConversionScreen,
+  afterAuthConversionHooks,
+  gateNotesTrainingStart,
+  bootPracticeGate,
+  openPersonalPlan,
+} from './conversion-flow.js';
 
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
 const RHYTHM_PREFS_KEY = 'piano-rhythm-prefs';
@@ -77,6 +87,9 @@ const els = {
   screenRhythmPick: $('#screen-rhythm-pick'),
   screenBlog: $('#screen-blog'),
   screenBlogArticle: $('#screen-blog-article'),
+  screenPricing: $('#screen-pricing'),
+  screenPaymentSuccess: $('#screen-payment-success'),
+  screenPersonalPlan: $('#screen-personal-plan'),
   screenRoadmap: $('#screen-roadmap'),
   screenStats: $('#screen-stats'),
   screenHomework: $('#screen-homework'),
@@ -282,6 +295,9 @@ function showScreen(name) {
     'rhythm-pick': els.screenRhythmPick,
     blog: els.screenBlog,
     'blog-article': els.screenBlogArticle,
+    pricing: els.screenPricing,
+    'payment-success': els.screenPaymentSuccess,
+    'personal-plan': els.screenPersonalPlan,
     roadmap: els.screenRoadmap,
     stats: els.screenStats,
     homework: els.screenHomework,
@@ -1420,6 +1436,11 @@ function exitPractice() {
 }
 
 async function onSessionComplete(stats) {
+  if (conversionIsDiagnostic()) {
+    await handleDiagnosticComplete();
+    return;
+  }
+
   const completionGeneration = ++sessionCompleteGeneration;
 
   lastRoadmapStageCompleted = false;
@@ -2085,6 +2106,8 @@ async function afterAuthSuccess() {
     return;
   }
   pendingSessionModalAuthRedirect = null;
+
+  await afterAuthConversionHooks();
 
   if (window.location.pathname === ROUTES.stats) {
     await openStatsScreen();
@@ -2922,13 +2945,15 @@ function startNotesTraining() {
   }
 
   els.notesSettingsError.hidden = true;
-  trackGoal('start_training', { source: 'notes_settings' });
-  sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
-    settings,
-    options,
-    sessionLimit: readSessionLimitFromForm(),
-  }));
-  navigateTo(ROUTES.practiceNotes);
+  void gateNotesTrainingStart(() => {
+    trackGoal('start_training', { source: 'notes_settings' });
+    sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
+      settings,
+      options,
+      sessionLimit: readSessionLimitFromForm(),
+    }));
+    navigateTo(ROUTES.practiceNotes);
+  });
 }
 
 function readPendingHomework() {
@@ -2943,8 +2968,13 @@ function readPendingHomework() {
 }
 
 function bootNotesPractice(homework = null) {
-  activeRoadmapStageId = null;
-  let config = null;
+  void (async () => {
+    if (!(await bootPracticeGate(homework, conversionIsDiagnostic()))) {
+      return;
+    }
+
+    activeRoadmapStageId = null;
+    let config = null;
 
   if (!homework) {
     try {
@@ -2973,6 +3003,7 @@ function bootNotesPractice(homework = null) {
   noteTrainer.setOptions(options);
   noteTrainer.sessionLimit = sessionLimit;
   enterPractice('notes', describeNoteSettings(settings, options), { returnPath });
+  })();
 }
 
 async function selectLesson(id, { returnPath } = {}) {
@@ -3044,6 +3075,13 @@ async function bootApp() {
       break;
     case 'blog-article':
       showScreen('blog-article');
+      break;
+    case 'pricing':
+    case 'payment-success':
+    case 'personal-plan':
+      if (!bootConversionScreen(boot.screen)) {
+        showScreen('home');
+      }
       break;
     case 'practice':
       await bootPractice(boot);
@@ -3359,6 +3397,14 @@ setupOAuthProviders();
 handleOAuthRedirect();
 initMetrikaPageview();
 initAnalytics();
+initConversionFlow({
+  noteTrainer,
+  enterPractice,
+  showScreen,
+  openAuthModal,
+  hideSessionModal,
+  loadNoteStats,
+});
 void initInviteFromUrl();
 if (window.__USER__ !== undefined) {
   updateAuthUI();

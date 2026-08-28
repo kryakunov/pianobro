@@ -30,6 +30,9 @@ final class PageRegistry
       $path === '/ritm' => self::rhythm(),
       $path === '/trenirovka/ritm' => self::practiceRhythm(),
       $path === '/blog' => self::blogIndex($blog),
+      $path === '/pricing' => self::pricing(),
+      $path === '/payment/success' => self::paymentSuccess(),
+      $path === '/personal-plan' => self::personalPlan(),
       preg_match('#^/blog/([a-z0-9\-]+)$#', $path, $m) === 1 => self::blogArticle($m[1], $blog),
       preg_match('#^/melodii/([a-z0-9\-]+)$#', $path, $m) === 1 => self::melodyDetail($m[1], $lessons),
       preg_match('#^/trenirovka/melodiya/([a-z0-9\-]+)$#', $path, $m) === 1 => self::practiceMelody($m[1], $lessons),
@@ -47,6 +50,7 @@ final class PageRegistry
       '/ritm',
       '/melodii',
       '/blog',
+      '/pricing',
     ];
 
     foreach ($lessons->all() as $lesson) {
@@ -68,8 +72,8 @@ final class PageRegistry
     return self::base(
       screen: 'home',
       path: '/',
-      title: 'Тренажёр нот онлайн — пианино, нотный стан, MIDI | Piano Bro',
-      description: 'Бесплатный тренажёр нот и пианино онлайн: угадай ноту на нотном стане, запоминание, чтение с листа, попадание в клавиши. Скрипичный и басовый ключ, MIDI, мелодии.',
+      title: 'PianoBro — персональный тренажёр нот для пианино',
+      description: 'PianoBro запоминает ваши ошибки и подбирает персональные упражнения, чтобы вы быстрее читали ноты в скрипичном и басовом ключе.',
       keywords: self::NOTE_TRAINER_KEYWORDS . ', обучение пианино, MIDI клавиатура, игра на пианино онлайн',
       jsonLd: [
         '@context' => 'https://schema.org',
@@ -296,6 +300,46 @@ final class PageRegistry
         'inLanguage' => 'ru',
         'mainEntityOfPage' => AppUrl::canonical($post->path()),
       ],
+    );
+  }
+
+  /** @return array<string, mixed> */
+  private static function pricing(): array
+  {
+    return self::base(
+      screen: 'pricing',
+      path: '/pricing',
+      title: 'Тарифы и подписка | Piano Bro',
+      description: 'Подписка PianoBro: персональные тренировки нот, тренировка слабых мест, расширенная статистика и безлимитные занятия.',
+      keywords: 'подписка piano bro, тарифы тренажёр нот, персональные тренировки нот',
+      seoIntro: [
+        'h1' => 'Тарифы PianoBro',
+        'lead' => 'Персональные тренировки нот, тренировка слабых мест и безлимитные занятия.',
+      ],
+    );
+  }
+
+  /** @return array<string, mixed> */
+  private static function paymentSuccess(): array
+  {
+    return self::base(
+      screen: 'payment-success',
+      path: '/payment/success',
+      title: 'Подписка активирована | Piano Bro',
+      description: 'Подписка PianoBro успешно активирована.',
+      robots: 'noindex, follow',
+    );
+  }
+
+  /** @return array<string, mixed> */
+  private static function personalPlan(): array
+  {
+    return self::base(
+      screen: 'personal-plan',
+      path: '/personal-plan',
+      title: 'Персональный план тренировок | Piano Bro',
+      description: 'Персональная программа тренировок нот на PianoBro.',
+      robots: 'noindex, follow',
     );
   }
 

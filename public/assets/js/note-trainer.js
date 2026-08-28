@@ -246,6 +246,7 @@ export class NoteTrainer {
     this.streak = 0;
     this.total = 0;
     this.sessionAttempts = [];
+    this.noteShownAt = 0;
     this.running = true;
 
     if (this.coverAll) {
@@ -297,6 +298,7 @@ export class NoteTrainer {
     if (!this.running || this.currentMidi === null) return false;
 
     if (midi === this.currentMidi) {
+      const responseMs = this.noteShownAt > 0 ? Math.round(performance.now() - this.noteShownAt) : 0;
       this.correct++;
       this.streak++;
       this.bestStreak = Math.max(this.bestStreak, this.streak);
@@ -305,6 +307,8 @@ export class NoteTrainer {
         expectedMidi: this.currentMidi,
         playedMidi: midi,
         correct: true,
+        responseMs,
+        clef: this.currentClef,
       });
       this.piano.flashCorrect(midi);
       this.onFeedback?.('Верно!', 'correct');
@@ -336,6 +340,8 @@ export class NoteTrainer {
       expectedMidi: this.currentMidi,
       playedMidi: midi,
       correct: false,
+      responseMs: this.noteShownAt > 0 ? Math.round(performance.now() - this.noteShownAt) : 0,
+      clef: this.currentClef,
     });
     this.piano.flashWrong(midi);
     this.onFeedback?.('Неверно', 'wrong');
@@ -357,6 +363,7 @@ export class NoteTrainer {
 
     if (this.currentMidi === null) return;
 
+    this.noteShownAt = performance.now();
     this.currentClef = resolveClefForNote(this.currentMidi, this.settings);
     this.currentSpelling = resolveNoteSpelling(this.settings, this.currentMidi);
     this._applyKeyboardHint();

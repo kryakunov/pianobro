@@ -93,6 +93,7 @@ final class Database
     self::migrateTeacherStudentExclusive($pdo);
     self::migrateHomeworkStatuses($pdo);
     self::migrateRoadmapCapstones($pdo);
+    self::migrateSubscriptions($pdo);
   }
 
   private static function migrateOAuthAccounts(PDO $pdo): void
@@ -441,6 +442,71 @@ final class Database
       UPDATE student_assignments
       SET status = 'completed'
       WHERE status = 'reviewed';
+      SQL);
+  }
+
+  private static function migrateSubscriptions(PDO $pdo): void
+  {
+    $columns = $pdo->query('PRAGMA table_info(users)')->fetchAll();
+    $names = array_column($columns, 'name');
+
+    $ensureColumn = static function (string $name, string $definition) use ($pdo, $names): void {
+      if (in_array($name, $names, true)) {
+        return;
+      }
+      $pdo->exec('ALTER TABLE users ADD COLUMN ' . $name . ' ' . $definition);
+    };
+
+    $ensureColumn('subscription_status', "TEXT NOT NULL DEFAULT 'free'");
+    $ensureColumn('subscription_plan', 'TEXT');
+    $ensureColumn('subscription_started_at', 'TEXT');
+    $ensureColumn('subscription_expires_at', 'TEXT');
+    $ensureColumn('payment_provider', 'TEXT');
+    $ensureColumn('last_payment_id', 'TEXT');
+
+    $pdo->exec(<<<'SQL'
+      CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        plan TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'RUB',
+        status TEXT NOT NULL DEFAULT 'pending',
+        provider TEXT NOT NULL,
+        provider_payment_id TEXT,
+        idempotence_key TEXT NOT NULL UNIQUE,
+        metadata_json TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        paid_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS daily_training_usage (
+        user_id INTEGER NOT NULL,
+        usage_date TEXT NOT NULL,
+        session_count INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (user_id, usage_date),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS diagnostic_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        correct INTEGER NOT NULL DEFAULT 0,
+        total INTEGER NOT NULL DEFAULT 0,
+        accuracy INTEGER NOT NULL DEFAULT 0,
+        avg_response_ms INTEGER NOT NULL DEFAULT 0,
+        weak_notes_json TEXT,
+        clef_errors_json TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_payments_user_created
+        ON payments(user_id, created_at);
+
+      CREATE INDEX IF NOT EXISTS idx_diagnostic_results_user_created
+        ON diagnostic_results(user_id, created_at);
       SQL);
   }
 }

@@ -18,6 +18,8 @@ final class Router
     private readonly TeacherService $teacher,
     private readonly RoleService $roles,
     private readonly AnalyticsService $analytics,
+    private readonly SubscriptionService $subscriptions,
+    private readonly PaymentService $payments,
   ) {}
 
   public function dispatch(string $uri, string $method): void
@@ -453,6 +455,168 @@ final class Router
       return;
     }
 
+    if ($path === '/api/billing/status' && $method === 'GET') {
+      $user = $this->auth->currentUser();
+      $this->json([
+        'pricing' => PricingConfig::toPublicArray(),
+        'mockMode' => $this->payments->isMockMode(),
+        'subscription' => $user !== null
+          ? $this->subscriptions->getForUser($user['id'])
+          : ['status' => 'free', 'isPremium' => false, 'dailyLimit' => PricingConfig::GUEST_DAILY_SESSIONS],
+        'userId' => $user['id'] ?? null,
+      ]);
+      return;
+    }
+
+    if ($path === '/api/billing/check-session' && $method === 'POST') {
+      $body = $this->readJsonBody();
+      $type = (string) ($body['type'] ?? 'training');
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json([
+          'allowed' => $type === 'diagnostic',
+          'reason' => $type === 'diagnostic' ? null : 'auth_required',
+          'isPremium' => false,
+          'guest' => true,
+        ]);
+        return;
+      }
+
+      $this->json($this->subscriptions->canStartTraining($user['id'], $type));
+      return;
+    }
+
+    if ($path === '/api/billing/use-session' && $method === 'POST') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      $body = $this->readJsonBody();
+      $type = (string) ($body['type'] ?? 'training');
+      $check = $this->subscriptions->canStartTraining($user['id'], $type);
+      if (!$check['allowed']) {
+        $this->json(['error' => 'limit_reached', 'check' => $check], 403);
+        return;
+      }
+
+      $this->subscriptions->recordTrainingSession($user['id'], $type);
+      $this->json([
+        'ok' => true,
+        'subscription' => $this->subscriptions->getForUser($user['id']),
+      ]);
+      return;
+    }
+
+    if ($path === '/api/billing/checkout' && $method === 'POST') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      try {
+        $body = $this->readJsonBody();
+        $planId = (string) ($body['planId'] ?? '');
+        $returnUrl = trim((string) ($body['returnUrl'] ?? ''));
+        if ($returnUrl === '') {
+          $returnUrl = Env::get('YOOKASSA_RETURN_URL', AppUrl::canonical('/pricing'));
+        }
+
+        $checkout = $this->payments->createCheckout($user['id'], $planId, $returnUrl);
+        $this->json($checkout);
+      } catch (\InvalidArgumentException $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      } catch (\Throwable $e) {
+        $this->json(['error' => 'Не удалось создать платёж'], 500);
+      }
+      return;
+    }
+
+    if ($path === '/api/billing/mock-complete' && $method === 'POST') {
+      if (!$this->payments->isMockMode()) {
+        $this->json(['error' => 'Недоступно'], 403);
+        return;
+      }
+
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      try {
+        $body = $this->readJsonBody();
+        $paymentId = (int) ($body['paymentId'] ?? 0);
+        $this->payments->completeMockPayment($paymentId, $user['id']);
+        $this->json([
+          'ok' => true,
+          'subscription' => $this->subscriptions->getForUser($user['id']),
+        ]);
+      } catch (\Throwable $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
+    if (preg_match('#^/api/billing/payment/(\d+)$#', $path, $m) && $method === 'GET') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      $payment = $this->payments->getPayment((int) $m[1], $user['id']);
+      if ($payment === null) {
+        $this->json(['error' => 'Платёж не найден'], 404);
+        return;
+      }
+
+      $this->json(['payment' => $payment, 'subscription' => $this->subscriptions->getForUser($user['id'])]);
+      return;
+    }
+
+    if ($path === '/api/billing/diagnostic' && $method === 'POST') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      try {
+        $body = $this->readJsonBody();
+        $id = $this->subscriptions->saveDiagnostic($user['id'], $body);
+        $this->json(['ok' => true, 'id' => $id]);
+      } catch (\Throwable $e) {
+        $this->json(['error' => 'Не удалось сохранить диагностику'], 500);
+      }
+      return;
+    }
+
+    if ($path === '/api/billing/diagnostic/latest' && $method === 'GET') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      $latest = $this->subscriptions->latestDiagnostic($user['id']);
+      $this->json(['result' => $latest]);
+      return;
+    }
+
+    if ($path === '/api/billing/webhook/yookassa' && $method === 'POST') {
+      try {
+        $body = $this->readJsonBody();
+        $this->payments->handleWebhook($body);
+        $this->json(['ok' => true]);
+      } catch (\Throwable $e) {
+        $this->json(['error' => 'Webhook error'], 400);
+      }
+      return;
+    }
+
     if ($path === '/favicon.ico' && $method === 'GET') {
       $this->serveStatic('/assets/favicon.svg', 'image/svg+xml');
       return;
@@ -558,6 +722,7 @@ final class Router
     $user = $this->auth->currentUser();
     $isTeacher = $user !== null && $this->roles->hasRole((int) $user['id'], RoleService::ROLE_TEACHER);
     $isStudent = $this->roles->isStudent($user);
+    $pricing = PricingConfig::toPublicArray();
 
     include dirname(__DIR__) . '/templates/app.php';
   }

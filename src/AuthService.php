@@ -10,8 +10,14 @@ final class AuthService
 {
   private ?TeacherService $teacher = null;
   private ?RoleService $roles = null;
+  private ?SubscriptionService $subscriptions = null;
 
   public function __construct(private readonly PDO $db) {}
+
+  public function setSubscriptionService(SubscriptionService $subscriptions): void
+  {
+    $this->subscriptions = $subscriptions;
+  }
 
   public function setTeacherService(TeacherService $teacher): void
   {
@@ -36,7 +42,7 @@ final class AuthService
     }
   }
 
-  /** @return array{id:int,email:string,name:string,roles:list<string>}|null */
+  /** @return array{id:int,email:string,name:string,roles:list<string>,subscription?:array<string,mixed>}|null */
   public function currentUser(): ?array
   {
     $id = $_SESSION['user_id'] ?? null;
@@ -55,12 +61,18 @@ final class AuthService
 
     $this->syncRoleFromEnv($userId, (string) $user['email']);
 
-    return [
+    $result = [
       'id' => $userId,
       'email' => (string) $user['email'],
       'name' => (string) $user['name'],
       'roles' => $this->roles?->getRoles($userId) ?? [],
     ];
+
+    if ($this->subscriptions !== null) {
+      $result['subscription'] = $this->subscriptions->getForUser($userId);
+    }
+
+    return $result;
   }
 
   public function requireUser(): ?array

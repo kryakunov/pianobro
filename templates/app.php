@@ -33,6 +33,7 @@
   <script>
     window.__BOOT__ = <?= json_encode($page['boot'] ?? ['screen' => 'home'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
     window.__USER__ = <?= json_encode($user, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    window.__PRICING__ = <?= json_encode($pricing ?? \PianoTrainer\PricingConfig::toPublicArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
   </script>
 </head>
 <body>
@@ -120,34 +121,32 @@
           <div class="landing-hero__content">
             <p class="landing-badge">
               <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-check"/></svg>
-              Бесплатно · Без установки · В браузере
+              Бесплатная диагностика · Без установки · В браузере
             </p>
             <?php if (($page['screen'] ?? '') === 'home'): ?>
-            <h1 class="landing-hero__title">Тренажёр нот онлайн — читайте ноты и&nbsp;играйте мелодии</h1>
+            <h1 class="landing-hero__title">Перестаньте путаться в нотах на пианино</h1>
             <?php else: ?>
-            <p class="landing-hero__title">Тренажёр нот онлайн — читайте ноты и&nbsp;играйте мелодии</p>
+            <p class="landing-hero__title">Перестаньте путаться в нотах на пианино</p>
             <?php endif; ?>
             <p class="landing-hero__lead">
-              Угадай ноту на нотном стане, тренируйте попадание в клавиши и запоминание нот.
-              Скрипичный и басовый ключ, MIDI-клавиатура, микрофон — без установки и регистрации.
+              PianoBro запоминает ваши ошибки и подбирает персональные упражнения, чтобы вы быстрее читали ноты в скрипичном и басовом ключе.
             </p>
             <div class="landing-hero__actions">
-              <a href="/put-novichka" class="btn btn--primary btn--lg" id="btn-go-roadmap">
-                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-target"/></svg>
-                Путь новичка
-              </a>
-              <a href="/noty" class="btn btn--secondary btn--lg" id="btn-go-notes">
-                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-notes"/></svg>
-                Тренажёр нот
-              </a>
-              <a href="/ritm" class="btn btn--secondary btn--lg" id="btn-go-rhythm">
+              <button type="button" class="btn btn--primary btn--lg" id="btn-start-diagnostic">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
-                Ритм-игра
-              </a>
-              <a href="/melodii" class="btn btn--secondary btn--lg" id="btn-go-melodies">
-                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-melody"/></svg>
-                Выбрать мелодию
-              </a>
+                Пройти бесплатную тренировку
+              </button>
+              <button type="button" class="btn btn--secondary btn--lg" id="btn-show-weak-notes">
+                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-chart"/></svg>
+                Узнать, какие ноты я путаю
+              </button>
+            </div>
+            <div class="landing-hero__actions landing-hero__actions--secondary">
+              <a href="/put-novichka" class="btn btn--secondary btn--sm" id="btn-go-roadmap">Путь новичка</a>
+              <a href="/noty" class="btn btn--secondary btn--sm" id="btn-go-notes">Тренажёр нот</a>
+              <a href="/ritm" class="btn btn--secondary btn--sm" id="btn-go-rhythm">Ритм-игра</a>
+              <a href="/melodii" class="btn btn--secondary btn--sm" id="btn-go-melodies">Мелодии</a>
+              <a href="/pricing" class="btn btn--secondary btn--sm" id="btn-go-pricing">Тарифы</a>
             </div>
             <ul class="landing-hero__pills" aria-label="Возможности">
               <li class="landing-pill">
@@ -193,6 +192,32 @@
             </div>
           </div>
         </div>
+
+        <section class="landing-compare pick-panel" aria-labelledby="landing-compare-title">
+          <h2 class="landing-compare__title" id="landing-compare-title">Чем PianoBro отличается от обычных бесплатных тренажёров</h2>
+          <div class="landing-compare__grid">
+            <div class="landing-compare__col">
+              <h3 class="landing-compare__subtitle">Обычный тренажёр</h3>
+              <ul class="landing-compare__list">
+                <li>даёт случайные упражнения</li>
+                <li>не помнит ошибки</li>
+                <li>не показывает слабые места</li>
+                <li>не строит программу</li>
+                <li>быстро надоедает</li>
+              </ul>
+            </div>
+            <div class="landing-compare__col landing-compare__col--accent">
+              <h3 class="landing-compare__subtitle">PianoBro</h3>
+              <ul class="landing-compare__list">
+                <li>запоминает ваши ошибки</li>
+                <li>чаще повторяет сложные ноты</li>
+                <li>показывает прогресс</li>
+                <li>составляет персональные тренировки</li>
+                <li>помогает заниматься регулярно</li>
+              </ul>
+            </div>
+          </div>
+        </section>
 
         <section class="landing-showcase" aria-labelledby="landing-show-roadmap">
           <div class="landing-showcase__art" aria-hidden="true">
@@ -462,6 +487,74 @@
         <?php require __DIR__ . '/partials/social-links.php'; ?>
       </article>
       <?php endif; ?>
+    </section>
+
+    <!-- Тарифы -->
+    <section class="screen<?= $screenActive('pricing') ?>" id="screen-pricing"<?= $screenHidden('pricing') ?>>
+      <div class="screen-header">
+        <a href="/" class="btn-back" id="btn-back-pricing">← На главную</a>
+        <h2 class="screen-header__title">
+          <span class="screen-header__icon icon-badge icon-badge--accent" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-chart"/></svg>
+          </span>
+          Тарифы
+        </h2>
+      </div>
+      <div class="pricing-page pick-panel">
+        <p class="pricing-page__lead">PianoBro запоминает ваши ошибки и подбирает персональные упражнения для чтения нот.</p>
+        <div class="pricing-plans" id="pricing-plans"></div>
+        <section class="pricing-features" aria-labelledby="pricing-features-title">
+          <h3 class="pricing-features__title" id="pricing-features-title">Что входит в подписку</h3>
+          <ul class="pricing-features__list" id="pricing-features"></ul>
+        </section>
+        <section class="pricing-faq" aria-labelledby="pricing-faq-title">
+          <h3 class="pricing-faq__title" id="pricing-faq-title">Частые вопросы</h3>
+          <details class="pricing-faq__item">
+            <summary>Подходит ли PianoBro для начинающих?</summary>
+            <p>Да. Можно начать с простых упражнений, даже если вы только знакомитесь с нотами.</p>
+          </details>
+          <details class="pricing-faq__item">
+            <summary>Подойдёт ли ребёнку?</summary>
+            <p>Да, если ребёнок уже начал изучать ноты или занимается музыкой. Тренировки короткие и понятные.</p>
+          </details>
+          <details class="pricing-faq__item">
+            <summary>Заменяет ли PianoBro преподавателя?</summary>
+            <p>Нет. PianoBro тренирует конкретный навык — быстро узнавать ноты и связывать их с клавиатурой. Его можно использовать самостоятельно или вместе с уроками.</p>
+          </details>
+          <details class="pricing-faq__item">
+            <summary>Зачем платить, если есть бесплатные тренажёры?</summary>
+            <p>Бесплатные тренажёры обычно дают случайные задания. PianoBro запоминает, какие ноты вы путаете, и строит тренировку под ваши слабые места.</p>
+          </details>
+          <details class="pricing-faq__item">
+            <summary>Можно ли отменить подписку?</summary>
+            <p>Оплата разовая за выбранный период (1 месяц, 3 месяца или год). Автопродление не подключается — по окончании срока доступ к платным функциям завершится, продлить можно в любой момент на этой странице.</p>
+          </details>
+        </section>
+      </div>
+    </section>
+
+    <!-- Успешная оплата -->
+    <section class="screen<?= $screenActive('payment-success') ?>" id="screen-payment-success"<?= $screenHidden('payment-success') ?>>
+      <div class="payment-success pick-panel">
+        <div class="payment-success__icon icon-badge icon-badge--success" aria-hidden="true">
+          <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
+        </div>
+        <h2 class="payment-success__title">Подписка активирована</h2>
+        <p class="payment-success__text">Теперь PianoBro будет сохранять ваш прогресс, находить слабые ноты и подбирать персональные тренировки.</p>
+        <button type="button" class="btn btn--primary btn--lg" id="btn-payment-success-start">Начать тренировку</button>
+        <a href="/pricing" class="payment-success__link">Посмотреть тарифы</a>
+      </div>
+    </section>
+
+    <!-- Персональный план -->
+    <section class="screen<?= $screenActive('personal-plan') ?>" id="screen-personal-plan"<?= $screenHidden('personal-plan') ?>>
+      <div class="screen-header">
+        <a href="/" class="btn-back" id="btn-back-personal-plan">← На главную</a>
+        <h2 class="screen-header__title">Персональный план</h2>
+      </div>
+      <div class="personal-plan pick-panel" id="personal-plan-panel">
+        <p class="personal-plan__loading">Загрузка…</p>
+      </div>
     </section>
 
     <!-- Статистика -->
@@ -1066,6 +1159,32 @@
           <p class="auth-error" id="auth-error-register" hidden></p>
           <button type="submit" class="btn btn--primary auth-form__submit">Зарегистрироваться</button>
         </form>
+      </div>
+    </div>
+
+    <!-- Paywall -->
+    <div class="modal" id="paywall-modal" hidden>
+      <div class="modal__backdrop" data-close-paywall></div>
+      <div class="modal__card modal__card--paywall" role="dialog" aria-labelledby="paywall-title">
+        <button type="button" class="modal__close" id="paywall-close" aria-label="Закрыть">×</button>
+        <h2 class="modal__title" id="paywall-title">Откройте персональные тренировки</h2>
+        <p class="modal__text">PianoBro будет запоминать ваши ошибки, чаще повторять сложные ноты и показывать прогресс, чтобы вы быстрее читали ноты на пианино.</p>
+        <button type="button" class="btn btn--primary" id="paywall-choose-plan">Выбрать тариф</button>
+      </div>
+    </div>
+
+    <!-- Результат диагностики -->
+    <div class="modal" id="diagnostic-modal" hidden>
+      <div class="modal__backdrop" data-close-diagnostic></div>
+      <div class="modal__card modal__card--diagnostic" role="dialog" aria-labelledby="diagnostic-title">
+        <h2 class="modal__title" id="diagnostic-title">Результат диагностики</h2>
+        <p class="modal__text" id="diagnostic-summary"></p>
+        <p class="modal__text modal__text--muted" id="diagnostic-weak"></p>
+        <p class="modal__text modal__text--muted" id="diagnostic-offer"></p>
+        <div class="modal__actions">
+          <button type="button" class="btn btn--primary" id="diagnostic-open-plan">Открыть персональный план</button>
+          <button type="button" class="btn btn--secondary" id="diagnostic-close">Закрыть</button>
+        </div>
       </div>
     </div>
 
