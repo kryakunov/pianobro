@@ -608,6 +608,37 @@ final class Router
       return;
     }
 
+    if ($path === '/api/billing/sync-payment' && $method === 'POST') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      try {
+        $body = $this->readJsonBody();
+        $paymentId = (int) ($body['paymentId'] ?? 0);
+        $result = $paymentId > 0
+          ? $this->payments->syncPaymentForUser($paymentId, $user['id'])
+          : ($this->payments->syncRecentPendingPayments($user['id']) ?? [
+            'payment' => null,
+            'subscription' => $this->subscriptions->getForUser($user['id']),
+            'activated' => false,
+          ]);
+
+        $this->json([
+          'ok' => true,
+          'activated' => (bool) ($result['activated'] ?? false),
+          'providerStatus' => $result['providerStatus'] ?? null,
+          'payment' => $result['payment'] ?? null,
+          'subscription' => $result['subscription'] ?? $this->subscriptions->getForUser($user['id']),
+        ]);
+      } catch (\Throwable $e) {
+        $this->json(['error' => $e->getMessage()], 400);
+      }
+      return;
+    }
+
     if (preg_match('#^/api/billing/payment/(\d+)$#', $path, $m) && $method === 'GET') {
       $user = $this->auth->currentUser();
       if ($user === null) {

@@ -502,6 +502,7 @@ function updatePracticeQuotaBanner() {
 }
 
 window.pianoUpdateNotesQuota = updatePracticeQuotaBanner;
+window.pianoUpdateSubscription = updateSubscriptionUi;
 
 function renderSubscriptionBadgeHtml(display) {
   if (!display) return '';

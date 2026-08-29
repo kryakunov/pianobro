@@ -88,28 +88,14 @@ final class SubscriptionService
   /** @return array{allowed:bool, reason?:string, remaining?:int|null, isPremium?:bool} */
   public function canStartTraining(int $userId, string $type = 'training'): array
   {
-    if ($type === 'diagnostic') {
-      return ['allowed' => true, 'isPremium' => $this->isPremium($userId)];
-    }
-
     if ($this->isPremium($userId)) {
       return ['allowed' => true, 'isPremium' => true, 'remaining' => null];
     }
 
-    $used = $this->getDailyUsage($userId);
-    $limit = PricingConfig::FREE_DAILY_SESSIONS;
-    if ($used >= $limit) {
-      return [
-        'allowed' => false,
-        'reason' => 'daily_limit',
-        'remaining' => 0,
-        'isPremium' => false,
-      ];
-    }
-
+    // Free tier: only daily note count is limited, not session count.
     return [
       'allowed' => true,
-      'remaining' => $limit - $used,
+      'remaining' => null,
       'isPremium' => false,
     ];
   }

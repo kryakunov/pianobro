@@ -260,8 +260,7 @@ async function renderPersonalPlan() {
     const midis = weakNotes.map((n) => n.midi);
     deps.noteTrainer?.setCustomPool(midis);
     deps.noteTrainer.sessionLimit = Math.min(20, midis.length * 3);
-    if (!(await ensureTrainingAllowed('training'))) return;
-    await recordTrainingStart('training');
+    if (!(await ensureNotesQuota(1))) return;
     sessionStorage.setItem('piano-pending-notes-practice', JSON.stringify({
       settings: deps.noteTrainer.settings,
       options: { soundEnabled: true },
@@ -321,15 +320,10 @@ export async function afterAuthConversionHooks() {
 
 export async function bootPracticeGate(homework, isDiagnostic = false) {
   if (homework || isDiagnostic) return true;
-  if (!(await ensureTrainingAllowed('training'))) {
-    navigateTo(ROUTES.notes);
-    return false;
-  }
   if (!(await ensureNotesQuota(1))) {
     navigateTo(ROUTES.notes);
     return false;
   }
-  await recordTrainingStart('training');
   return true;
 }
 
@@ -351,7 +345,7 @@ export async function getWeakNotesForPersonalization(loadNoteStats) {
 }
 
 export async function gateNotesTrainingStart(onAllowed) {
-  if (!(await ensureTrainingAllowed('training'))) return false;
+  if (!(await ensureNotesQuota(1))) return false;
   onAllowed?.();
   return true;
 }

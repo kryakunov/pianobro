@@ -156,13 +156,8 @@ export async function refreshBillingState() {
 export function canGuestStartTraining(isLoggedIn, type = 'training') {
   if (type === 'diagnostic') return { allowed: true, remaining: null };
   if (isLoggedIn) return null;
-
-  const limit = getPricing().guestDailySessions ?? 1;
-  const used = readGuestUsage().count;
-  if (used >= limit) {
-    return { allowed: false, reason: 'guest_daily_limit', remaining: 0 };
-  }
-  return { allowed: true, remaining: limit - used };
+  // Free tier: only daily note count is limited, not session count.
+  return { allowed: true, remaining: null };
 }
 
 export function recordGuestTrainingSession() {

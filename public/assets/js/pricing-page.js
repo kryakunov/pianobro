@@ -43,6 +43,53 @@ function setBuyButtonLoading(btn, loading) {
   }
 }
 
+const PENDING_PAYMENT_KEY = 'piano-pending-payment-id';
+
+async function syncPaymentAfterReturn(paymentId = null) {
+  const res = await fetch('/api/billing/sync-payment', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(paymentId ? { paymentId } : {}),
+  });
+  return readJsonResponse(res);
+}
+
+async function handlePaymentReturn(planId) {
+  showPaymentStatus('Проверяем статус оплаты…', 'info');
+
+  const storedId = sessionStorage.getItem(PENDING_PAYMENT_KEY);
+  sessionStorage.removeItem(PENDING_PAYMENT_KEY);
+  const paymentId = storedId ? Number(storedId) : null;
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      const data = await syncPaymentAfterReturn(paymentId && Number.isFinite(paymentId) ? paymentId : null);
+      if (data.subscription?.isPremium) {
+        await refreshBillingState();
+        window.pianoUpdateSubscription?.();
+        trackConversion('payment_success', { tariff: planId, source: 'return_sync' });
+        trackConversion('subscription_activated', { tariff: planId });
+        navigateTo('/payment/success');
+        return;
+      }
+    } catch {
+      // retry below
+    }
+
+    if (attempt < 7) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1500));
+    }
+  }
+
+  await refreshBillingState();
+  window.pianoUpdateSubscription?.();
+  showPaymentStatus(
+    'Оплата обрабатывается. Если тариф не обновится в течение нескольких минут, обновите страницу или напишите на support@pianobro.ru.',
+    'info',
+  );
+}
+
 async function startCheckout(planId, triggerBtn = null) {
   if (checkoutLoading) return;
   if (isPremiumUser()) {
@@ -98,6 +145,7 @@ async function startCheckout(planId, triggerBtn = null) {
           throw new Error('mock complete failed');
         }
         await refreshBillingState();
+        window.pianoUpdateSubscription?.();
         trackConversion('payment_success', { tariff: planId, mock: true });
         trackConversion('subscription_activated', { tariff: planId, mock: true });
         navigateTo('/payment/success');
@@ -106,6 +154,9 @@ async function startCheckout(planId, triggerBtn = null) {
     }
 
     if (data.confirmationUrl) {
+      if (data.paymentId) {
+        sessionStorage.setItem(PENDING_PAYMENT_KEY, String(data.paymentId));
+      }
       showPaymentStatus('Переход на страницу оплаты ЮKassa…', 'info');
       window.location.href = data.confirmationUrl;
       return;
@@ -145,11 +196,7 @@ export function initPaymentPage() {
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('payment') === 'return') {
-    trackConversion('payment_success', { tariff: params.get('plan') ?? null, source: 'return_url' });
-    showPaymentStatus(
-      'Если оплата прошла успешно, подписка активируется в течение нескольких минут. Обновите страницу или войдите в аккаунт снова.',
-      'success',
-    );
+    void handlePaymentReturn(params.get('plan'));
   }
 }
 

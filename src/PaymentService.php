@@ -103,6 +103,96 @@ final class PaymentService
     $this->markPaymentSucceeded($paymentId, $userId, $providerPaymentId);
   }
 
+  /** @return array{payment: array<string, mixed>, subscription: array<string, mixed>, activated: bool, providerStatus?: string} */
+  public function syncPaymentForUser(int $paymentId, int $userId): array
+  {
+    $payment = $this->getPayment($paymentId, $userId);
+    if ($payment === null) {
+      throw new \InvalidArgumentException('Платёж не найден');
+    }
+
+    if ((string) $payment['status'] === 'succeeded') {
+      return [
+        'payment' => $payment,
+        'subscription' => $this->subscriptions->getForUser($userId),
+        'activated' => false,
+      ];
+    }
+
+    if ($this->isMockMode()) {
+      throw new \RuntimeException('Синхронизация YooKassa недоступна в mock-режиме');
+    }
+
+    $providerPaymentId = $payment['providerPaymentId'];
+    if ($providerPaymentId === null || $providerPaymentId === '') {
+      throw new \RuntimeException('Платёж ещё не создан в YooKassa');
+    }
+
+    $providerPayment = $this->fetchYooKassaPayment($providerPaymentId);
+    $providerStatus = (string) ($providerPayment['status'] ?? '');
+
+    if ($providerStatus === 'succeeded') {
+      $this->markPaymentSucceeded($paymentId, $userId, $providerPaymentId);
+      $payment = $this->getPayment($paymentId, $userId);
+      if ($payment === null) {
+        throw new \RuntimeException('Платёж не найден после активации');
+      }
+
+      return [
+        'payment' => $payment,
+        'subscription' => $this->subscriptions->getForUser($userId),
+        'activated' => true,
+        'providerStatus' => $providerStatus,
+      ];
+    }
+
+    return [
+      'payment' => $payment,
+      'subscription' => $this->subscriptions->getForUser($userId),
+      'activated' => false,
+      'providerStatus' => $providerStatus,
+    ];
+  }
+
+  /** @return array{payment: array<string, mixed>, subscription: array<string, mixed>, activated: bool, providerStatus?: string}|null} */
+  public function syncRecentPendingPayments(int $userId): ?array
+  {
+    $stmt = $this->db->prepare(
+      'SELECT id FROM payments
+       WHERE user_id = :user_id AND status = :status
+       ORDER BY id DESC
+       LIMIT 5',
+    );
+    $stmt->execute(['user_id' => $userId, 'status' => 'pending']);
+    $rows = $stmt->fetchAll();
+    if ($rows === false || $rows === []) {
+      return null;
+    }
+
+    foreach ($rows as $row) {
+      try {
+        $result = $this->syncPaymentForUser((int) $row['id'], $userId);
+        if ($result['activated'] || ($result['subscription']['isPremium'] ?? false)) {
+          return $result;
+        }
+      } catch (\Throwable) {
+        continue;
+      }
+    }
+
+    $paymentId = (int) $rows[0]['id'];
+    $payment = $this->getPayment($paymentId, $userId);
+    if ($payment === null) {
+      return null;
+    }
+
+    return [
+      'payment' => $payment,
+      'subscription' => $this->subscriptions->getForUser($userId),
+      'activated' => false,
+    ];
+  }
+
   /** @return array<string, mixed>|null */
   public function getPayment(int $paymentId, int $userId): ?array
   {
@@ -215,6 +305,43 @@ final class PaymentService
     $stmt->execute(['provider_payment_id' => $providerPaymentId, 'id' => $paymentId]);
 
     return $confirmationUrl;
+  }
+
+  /** @return array<string, mixed> */
+  private function fetchYooKassaPayment(string $providerPaymentId): array
+  {
+    $shopId = trim(Env::get('YOOKASSA_SHOP_ID', ''));
+    $secret = trim(Env::get('YOOKASSA_SECRET_KEY', ''));
+    if ($shopId === '' || $secret === '') {
+      throw new \RuntimeException('YooKassa не настроена');
+    }
+
+    $ch = curl_init('https://api.yookassa.ru/v3/payments/' . rawurlencode($providerPaymentId));
+    if ($ch === false) {
+      throw new \RuntimeException('Не удалось инициализировать HTTP-клиент');
+    }
+
+    curl_setopt_array($ch, [
+      CURLOPT_RETURNTRANSFER => true,
+      CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+      CURLOPT_USERPWD => $shopId . ':' . $secret,
+      CURLOPT_TIMEOUT => 20,
+    ]);
+
+    $response = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    unset($ch);
+
+    if (!is_string($response) || $status < 200 || $status >= 300) {
+      throw new \RuntimeException('YooKassa вернула ошибку (HTTP ' . $status . ')');
+    }
+
+    $data = json_decode($response, true);
+    if (!is_array($data)) {
+      throw new \RuntimeException('Некорректный ответ YooKassa');
+    }
+
+    return $data;
   }
 
   private function markPaymentSucceeded(int $paymentId, int $userId, string $providerPaymentId): void
