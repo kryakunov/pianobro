@@ -64,7 +64,7 @@ $stageStatusLabel = static function (array $stage): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Админ-панель | Piano Bro</title>
-  <link rel="stylesheet" href="/assets/css/style.css?v=<?= (int) $assetVersion ?>">
+  <link rel="stylesheet" href="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/assets/css/style.css'), ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body class="admin-page">
   <div class="admin">
@@ -287,7 +287,8 @@ $stageStatusLabel = static function (array $stage): string {
   </div>
 
   <?php if (($isAdmin ?? false) && ($adminConfigured ?? false)): ?>
-  <script type="module" src="/assets/js/admin.js?v=<?= (int) $assetVersion ?>"></script>
+  <?php require __DIR__ . '/partials/js-import-map.php'; ?>
+  <script type="module" src="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/assets/js/admin.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
   <?php endif; ?>
 </body>
 </html>

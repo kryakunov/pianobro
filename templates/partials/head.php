@@ -24,9 +24,9 @@ $ogDescription = (string) ($page['ogDescription'] ?? $description);
 <meta name="robots" content="<?= htmlspecialchars($robots, ENT_QUOTES, 'UTF-8') ?>">
 <meta name="theme-color" content="#6c8cff">
 <link rel="canonical" href="<?= htmlspecialchars($canonical, ENT_QUOTES, 'UTF-8') ?>">
-<link rel="icon" href="/assets/favicon.svg?v=<?= (int) $assetVersion ?>" type="image/svg+xml">
-<link rel="icon" href="/favicon.ico?v=<?= (int) $assetVersion ?>" sizes="32x32">
-<link rel="apple-touch-icon" href="/assets/favicon.svg?v=<?= (int) $assetVersion ?>">
+<link rel="icon" href="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/assets/favicon.svg'), ENT_QUOTES, 'UTF-8') ?>" type="image/svg+xml">
+<link rel="icon" href="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/favicon.ico'), ENT_QUOTES, 'UTF-8') ?>" sizes="32x32">
+<link rel="apple-touch-icon" href="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/assets/favicon.svg'), ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:type" content="<?= htmlspecialchars((string) ($page['ogType'] ?? 'website'), ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:locale" content="ru_RU">
 <meta property="og:title" content="<?= htmlspecialchars($ogTitle, ENT_QUOTES, 'UTF-8') ?>">
@@ -44,5 +44,5 @@ $ogDescription = (string) ($page['ogDescription'] ?? $description);
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/style.css?v=<?= (int) $assetVersion ?>">
+<link rel="stylesheet" href="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/assets/css/style.css'), ENT_QUOTES, 'UTF-8') ?>">
 <?php require __DIR__ . '/yandex-metrika.php'; ?>

@@ -35,6 +35,7 @@
     window.__USER__ = <?= json_encode($user, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     window.__PRICING__ = <?= json_encode($pricing ?? \PianoTrainer\PricingConfig::toPublicArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
     window.__BILLING_BOOT__ = <?= json_encode($billingBoot ?? ['mockMode' => true], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
+    window.__ASSET_VERSION__ = <?= (int) $assetVersion ?>;
   </script>
 </head>
 <body>
@@ -1340,6 +1341,7 @@
   </svg>
 
   <?php require __DIR__ . '/partials/cookie-banner.php'; ?>
-  <script type="module" src="/assets/js/app.js?v=<?= (int) $assetVersion ?>"></script>
+  <?php require __DIR__ . '/partials/js-import-map.php'; ?>
+  <script type="module" src="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/assets/js/app.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
 </body>
 </html>

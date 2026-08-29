@@ -15,4 +15,4 @@ declare(strict_types=1);
     </button>
   </div>
 </div>
-<script src="/assets/js/cookie-consent.js?v=<?= (int) $assetVersion ?>" defer></script>
+<script src="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/assets/js/cookie-consent.js'), ENT_QUOTES, 'UTF-8') ?>" defer></script>

@@ -754,13 +754,14 @@ final class Router
     if ($ext === 'js' || $ext === 'css') {
       $mtime = (int) filemtime($file);
       $requestedVersion = isset($_GET['v']) ? (int) $_GET['v'] : null;
-      if ($requestedVersion !== $mtime) {
-        header('Location: ' . $path . '?v=' . $mtime, true, 302);
-        return;
-      }
 
-      header('Cache-Control: public, max-age=31536000, immutable');
       header('ETag: "' . $mtime . '"');
+
+      if ($requestedVersion === $mtime) {
+        header('Cache-Control: public, max-age=31536000, immutable');
+      } else {
+        header('Cache-Control: no-cache, must-revalidate');
+      }
     }
 
     header('Content-Type: ' . ($contentType ?? $types[$ext] ?? 'application/octet-stream'));
@@ -771,6 +772,8 @@ final class Router
   {
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
 
     $user = $this->auth->currentUser();
     $isTeacher = $user !== null && $this->roles->hasRole((int) $user['id'], RoleService::ROLE_TEACHER);
