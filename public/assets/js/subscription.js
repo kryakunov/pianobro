@@ -1,5 +1,4 @@
 import { trackGoal } from './metrika.js';
-import { recordAnalyticsEvent } from './analytics.js';
 import { getPlan } from './pricing-config.js';
 
 const GUEST_USAGE_KEY = 'piano-guest-daily-usage';
@@ -318,7 +317,9 @@ export function trackConversion(eventName, params = {}) {
   };
 
   trackGoal(eventName, payload);
-  recordAnalyticsEvent(eventName, payload);
+  void import('./analytics.js')
+    .then((mod) => mod.recordAnalyticsEvent?.(eventName, payload))
+    .catch(() => {});
 }
 
 function renderPaywallWeakNotes(weakNotes = []) {
