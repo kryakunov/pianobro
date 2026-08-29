@@ -1,11 +1,7 @@
 import { NOTE_SESSION_LIMITS } from './note-trainer.js';
 import { midiToName } from './notes.js';
 
-export const DIAGNOSTIC_SETTINGS = {
-  treble: { enabled: true, first: true, second: false },
-  bass: { enabled: true, small: true, great: false },
-  alteration: { sharp: false, flat: false },
-};
+export const DIAGNOSTIC_NOTE_COUNT = 15;
 
 /** @param {Array<{expectedMidi:number, playedMidi:number|null, correct:boolean, responseMs?:number, clef?:string}>} attempts */
 export function analyzeDiagnosticAttempts(attempts) {

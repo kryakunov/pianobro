@@ -138,12 +138,8 @@
             </p>
             <div class="landing-hero__actions">
               <button type="button" class="btn btn--primary btn--lg" id="btn-start-diagnostic">
-                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
-                Пройти бесплатную тренировку
-              </button>
-              <button type="button" class="btn btn--secondary btn--lg" id="btn-show-weak-notes">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-chart"/></svg>
-                Узнать, какие ноты я путаю
+                Узнать, какие ноты путаю
               </button>
             </div>
             <div class="landing-hero__actions landing-hero__actions--secondary">
@@ -726,7 +722,7 @@
           <span class="screen-header__icon icon-badge icon-badge--notes" aria-hidden="true">
             <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-notes"/></svg>
           </span>
-          Настройки тренажёра
+          <span id="notes-pick-title">Настройки тренажёра</span>
         </h2>
       </div>
       <div class="pick-panel">
@@ -785,7 +781,7 @@
             </div>
           </fieldset>
 
-          <fieldset class="settings-group settings-group--session">
+          <fieldset class="settings-group settings-group--session" id="notes-session-group">
             <legend class="settings-group__head">
               <span class="settings-group__icon icon-badge icon-badge--session"><svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-session"/></svg></span>
               <span class="settings-group__title">Длина сессии</span>
@@ -803,12 +799,15 @@
           </div>
 
           <div class="notes-settings__footer">
-            <p class="settings-hint">Отметьте, что хотите тренировать, и нажмите «Начать».</p>
+            <p class="settings-hint notes-free-tier-hint" id="notes-free-tier-hint" hidden></p>
             <p class="settings-error" id="notes-settings-error" hidden></p>
-            <button type="submit" class="btn btn--primary notes-settings__submit" id="btn-start-notes">
-              <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
-              Начать тренировку
-            </button>
+            <div class="notes-settings__footer-actions">
+              <p class="settings-hint" id="notes-pick-hint">Отметьте, что хотите тренировать, и нажмите «Начать».</p>
+              <button type="submit" class="btn btn--primary notes-settings__submit" id="btn-start-notes">
+                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
+                Начать тренировку
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -952,12 +951,14 @@
           </div>
 
           <div class="notes-settings__footer">
-            <p class="settings-hint">Ноты движутся по стану, синяя линия ползёт слева направо — нажимайте клавишу, когда нота доходит до линии. Каждая ошибка отнимает жизнь.</p>
             <p class="settings-error" id="rhythm-settings-error" hidden></p>
-            <button type="submit" class="btn btn--primary notes-settings__submit" id="btn-start-rhythm">
-              <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
-              Начать игру
-            </button>
+            <div class="notes-settings__footer-actions">
+              <p class="settings-hint">Ноты движутся по стану, синяя линия ползёт слева направо — нажимайте клавишу, когда нота доходит до линии. Каждая ошибка отнимает жизнь.</p>
+              <button type="submit" class="btn btn--primary notes-settings__submit" id="btn-start-rhythm">
+                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
+                Начать игру
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -1199,6 +1200,10 @@
             <span class="modal-stat__label">Точность</span>
             <span class="modal-stat__value" id="modal-accuracy">—</span>
           </div>
+        </div>
+        <div class="modal-weak-notes" id="modal-weak-notes" hidden>
+          <p class="modal-weak-notes__title" id="modal-weak-notes-title">Сложнее всего давались:</p>
+          <div class="modal-weak-notes__tags" id="modal-weak-notes-tags"></div>
         </div>
         <ul class="modal-register-hint" id="modal-register-hint" hidden></ul>
         <div class="modal-discover" id="modal-discover" hidden></div>

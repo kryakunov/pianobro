@@ -15,7 +15,6 @@ import {
   getNotesQuota,
 } from './subscription.js';
 import {
-  DIAGNOSTIC_SETTINGS,
   analyzeDiagnosticAttempts,
   formatWeakNotesList,
   getDiagnosticSessionLimit,
@@ -26,9 +25,23 @@ import { isLoggedIn } from './auth.js';
 
 let deps = {};
 let isDiagnosticSession = false;
+let diagnosticPickMode = false;
 
 export function conversionIsDiagnostic() {
   return isDiagnosticSession;
+}
+
+export function isDiagnosticPickMode() {
+  return diagnosticPickMode;
+}
+
+export function clearDiagnosticPickMode() {
+  diagnosticPickMode = false;
+}
+
+export function openDiagnosticPick() {
+  diagnosticPickMode = true;
+  navigateTo(ROUTES.notes);
 }
 
 export function initConversionFlow(appDeps) {
@@ -43,20 +56,7 @@ export function initConversionFlow(appDeps) {
 
 function bindUi() {
   document.getElementById('btn-start-diagnostic')?.addEventListener('click', () => {
-    void startDiagnostic();
-  });
-
-  document.getElementById('btn-show-weak-notes')?.addEventListener('click', () => {
-    const saved = loadDiagnosticResult();
-    if (saved) {
-      showDiagnosticResult(saved);
-      return;
-    }
-    if (isLoggedIn()) {
-      void openPersonalPlan();
-      return;
-    }
-    void startDiagnostic();
+    openDiagnosticPick();
   });
 
   document.getElementById('diagnostic-close')?.addEventListener('click', hideDiagnosticModal);
@@ -144,14 +144,15 @@ export async function recordTrainingStart(type = 'training') {
   await refreshBillingState();
 }
 
-export async function startDiagnostic() {
+export async function startDiagnostic(settings) {
   trackConversion('diagnostic_started');
   if (!(await ensureTrainingAllowed('diagnostic'))) return;
 
   isDiagnosticSession = true;
+  clearDiagnosticPickMode();
   const { noteTrainer, enterPractice } = deps;
 
-  noteTrainer.setConfig(structuredClone(DIAGNOSTIC_SETTINGS));
+  noteTrainer.setConfig(structuredClone(settings));
   noteTrainer.sessionLimit = getDiagnosticSessionLimit();
   noteTrainer.setOptions({ soundEnabled: true });
 
@@ -237,7 +238,7 @@ async function renderPersonalPlan() {
       <button type="button" class="btn btn--primary" id="personal-plan-start-diagnostic">Пройти диагностику</button>
     `;
     document.getElementById('personal-plan-start-diagnostic')?.addEventListener('click', () => {
-      void startDiagnostic();
+      openDiagnosticPick();
     });
     return;
   }

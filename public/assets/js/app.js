@@ -71,6 +71,9 @@ import {
   openPersonalPlan,
   handleNoteAttemptConsumption,
   getWeakNotesForPersonalization,
+  isDiagnosticPickMode,
+  clearDiagnosticPickMode,
+  startDiagnostic,
 } from './conversion-flow.js';
 import {
   isPremiumUser,
@@ -155,6 +158,11 @@ const els = {
   difficultyTabs: document.querySelectorAll('.difficulty-tab'),
   notesSettingsForm: $('#notes-settings-form'),
   notesSettingsError: $('#notes-settings-error'),
+  notesFreeTierHint: $('#notes-free-tier-hint'),
+  notesPickTitle: $('#notes-pick-title'),
+  notesPickHint: $('#notes-pick-hint'),
+  notesSessionGroup: $('#notes-session-group'),
+  btnStartNotes: $('#btn-start-notes'),
   rhythmSettingsForm: $('#rhythm-settings-form'),
   rhythmSettingsError: $('#rhythm-settings-error'),
   practiceTitle: $('#practice-title'),
@@ -189,6 +197,9 @@ const els = {
   modalWrong: $('#modal-wrong'),
   modalAccuracy: $('#modal-accuracy'),
   modalTitle: $('#modal-title'),
+  modalWeakNotes: $('#modal-weak-notes'),
+  modalWeakNotesTitle: $('#modal-weak-notes-title'),
+  modalWeakNotesTags: $('#modal-weak-notes-tags'),
   modalActions: $('#modal-actions'),
   modalDiscover: $('#modal-discover'),
   modalRegisterHint: $('#modal-register-hint'),
@@ -340,6 +351,7 @@ function showScreen(name) {
 
   if (name === 'notes-pick') {
     updateNotesPickMonetizationUi();
+    updateNotesPickModeUi();
   }
 
   if (!['melody-pick', 'roadmap', 'practice'].includes(name) && isMelodyPreviewPlaying()) {
@@ -564,37 +576,76 @@ function updateSubscriptionUi() {
   }
 }
 
-function updateNotesPickMonetizationUi() {
-  const form = els.notesSettingsForm;
-  if (!form) return;
+function updateNotesPickModeUi() {
+  const diagnostic = isDiagnosticPickMode();
+  const diagnosticNoteCount = window.__PRICING__?.diagnosticNoteCount ?? 15;
 
-  let hint = form.querySelector('.notes-free-tier-hint');
+  if (els.notesPickTitle) {
+    els.notesPickTitle.textContent = diagnostic
+      ? 'Какие ноты путаю?'
+      : 'Настройки тренажёра';
+  }
+
+  if (els.notesPickHint) {
+    els.notesPickHint.textContent = diagnostic
+      ? `Отметьте ноты, которые уже знаете. Покажем около ${diagnosticNoteCount} заданий и скажем, где чаще всего ошибки.`
+      : 'Отметьте, что хотите тренировать, и нажмите «Начать».';
+  }
+
+  if (els.notesSessionGroup) {
+    els.notesSessionGroup.hidden = diagnostic;
+  }
+
+  if (els.btnStartNotes) {
+    els.btnStartNotes.innerHTML = diagnostic
+      ? '<svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-chart"/></svg> Начать проверку'
+      : '<svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg> Начать тренировку';
+  }
+
+  if (diagnostic) {
+    applyNoteSettingsToForm(structuredClone(DEFAULT_NOTE_SETTINGS));
+  }
+
+  const quotaHint = els.notesFreeTierHint;
+  if (quotaHint) {
+    quotaHint.hidden = diagnostic || isPremiumUser();
+  }
+}
+
+function updateNotesPickMonetizationUi() {
+  const hint = els.notesFreeTierHint;
+  if (!hint) return;
+
+  if (isDiagnosticPickMode()) {
+    hint.hidden = true;
+    return;
+  }
+
   if (isPremiumUser()) {
-    if (hint) hint.hidden = true;
+    hint.hidden = true;
     return;
   }
 
   const quotaLabel = formatNotesQuotaLabel(getNotesQuota(isLoggedIn()));
-  if (!hint) {
-    hint = document.createElement('p');
-    hint.className = 'notes-free-tier-hint settings-hint';
-    form.querySelector('.notes-settings__grid')?.after(hint);
-  }
   hint.hidden = false;
   hint.textContent = quotaLabel
     ? `${quotaLabel}. Подписка снимает лимит и добавляет персональные тренировки по вашим ошибкам.`
     : 'Подписка снимает лимит нот в день и добавляет персональные тренировки по вашим ошибкам.';
 }
 
-function weakNotesFromSessionStats(stats) {
-  if (!stats?.attempts?.length) return loadDiagnosticResult()?.weakNotes ?? [];
+function weakNotesFromSessionStats(stats, { allowDiagnosticFallback = true } = {}) {
+  if (!stats?.attempts?.length) {
+    return allowDiagnosticFallback ? (loadDiagnosticResult()?.weakNotes ?? []) : [];
+  }
   const wrongByMidi = new Map();
   for (const attempt of stats.attempts) {
     if (attempt.correct) continue;
     const midi = attempt.expectedMidi;
     wrongByMidi.set(midi, (wrongByMidi.get(midi) ?? 0) + 1);
   }
-  if (!wrongByMidi.size) return loadDiagnosticResult()?.weakNotes ?? [];
+  if (!wrongByMidi.size) {
+    return allowDiagnosticFallback ? (loadDiagnosticResult()?.weakNotes ?? []) : [];
+  }
   return [...wrongByMidi.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
@@ -603,6 +654,40 @@ function weakNotesFromSessionStats(stats) {
       name: noteNameFromMidi(midi),
       count,
     }));
+}
+
+function renderSessionModalWeakNotes(stats) {
+  if (!els.modalWeakNotes || !els.modalWeakNotesTags || !els.modalWeakNotesTitle) return;
+
+  const mode = stats?.mode ?? appMode;
+  if (mode !== 'notes') {
+    els.modalWeakNotes.hidden = true;
+    els.modalWeakNotesTags.innerHTML = '';
+    return;
+  }
+
+  const weakNotes = weakNotesFromSessionStats(stats, { allowDiagnosticFallback: false });
+  if (weakNotes.length) {
+    els.modalWeakNotes.hidden = false;
+    els.modalWeakNotesTitle.textContent = 'Сложнее всего давались:';
+    els.modalWeakNotesTags.innerHTML = weakNotes
+      .map((note) => {
+        const suffix = note.count > 1 ? `<span class="modal-weak-notes__count">×${note.count}</span>` : '';
+        return `<span class="weak-notes-offer__tag">${escapeHtml(note.name)}${suffix}</span>`;
+      })
+      .join('');
+    return;
+  }
+
+  if ((stats?.wrong ?? 0) === 0 && (stats?.total ?? 0) > 0) {
+    els.modalWeakNotes.hidden = false;
+    els.modalWeakNotesTitle.textContent = 'В этой тренировке ошибок не было — отличный результат!';
+    els.modalWeakNotesTags.innerHTML = '';
+    return;
+  }
+
+  els.modalWeakNotes.hidden = true;
+  els.modalWeakNotesTags.innerHTML = '';
 }
 
 function noteNameFromMidi(midi) {
@@ -798,6 +883,7 @@ function showSessionModal(stats) {
   els.modalWrong.textContent = String(stats.wrong);
   els.modalAccuracy.textContent = `${stats.accuracy}%`;
 
+  renderSessionModalWeakNotes(stats);
   els.sessionModal.hidden = false;
   renderSessionModalUi(stats);
   trackGoal('finish_training', {
@@ -1329,6 +1415,12 @@ function hideSessionModal() {
     els.modalDiscover.innerHTML = '';
   }
   if (els.modalActions) els.modalActions.innerHTML = '';
+  if (els.modalWeakNotes) {
+    els.modalWeakNotes.hidden = true;
+  }
+  if (els.modalWeakNotesTags) {
+    els.modalWeakNotesTags.innerHTML = '';
+  }
 }
 
 function suspendSessionModalForAuth() {
@@ -1793,6 +1885,7 @@ function bindCriticalUi() {
 
   els.btnGoNotes?.addEventListener('click', (event) => {
     event.preventDefault();
+    clearDiagnosticPickMode();
     navigateTo(ROUTES.notes);
   });
 
@@ -3134,6 +3227,20 @@ async function startRoadmapMelody(stageId) {
   }
 }
 
+function startDiagnosticFromForm() {
+  const settings = readNoteSettingsFromForm();
+  const error = validateNoteSettings(settings);
+
+  if (error) {
+    els.notesSettingsError.textContent = error;
+    els.notesSettingsError.hidden = false;
+    return;
+  }
+
+  els.notesSettingsError.hidden = true;
+  void startDiagnostic(settings);
+}
+
 function startNotesTraining() {
   activeRoadmapStageId = null;
   const settings = readNoteSettingsFromForm();
@@ -3463,6 +3570,10 @@ rhythmTrainer.onAppendRequest = (count) => {
 
 els.notesSettingsForm?.addEventListener('submit', (e) => {
   e.preventDefault();
+  if (isDiagnosticPickMode()) {
+    startDiagnosticFromForm();
+    return;
+  }
   startNotesTraining();
 });
 
@@ -3516,6 +3627,7 @@ els.btnBackMelody?.addEventListener('click', (event) => {
 });
 els.btnBackNotes?.addEventListener('click', (event) => {
   event.preventDefault();
+  clearDiagnosticPickMode();
   navigateTo(ROUTES.home);
 });
 els.btnBackRoadmap?.addEventListener('click', (event) => {
