@@ -462,7 +462,12 @@ final class Router
         'mockMode' => $this->payments->isMockMode(),
         'subscription' => $user !== null
           ? $this->subscriptions->getForUser($user['id'])
-          : ['status' => 'free', 'isPremium' => false, 'dailyLimit' => PricingConfig::GUEST_DAILY_SESSIONS],
+          : [
+            'status' => 'free',
+            'isPremium' => false,
+            'dailyLimit' => PricingConfig::GUEST_DAILY_SESSIONS,
+            'dailyNotesLimit' => PricingConfig::GUEST_DAILY_NOTES,
+          ],
         'userId' => $user['id'] ?? null,
       ]);
       return;
@@ -509,6 +514,46 @@ final class Router
       return;
     }
 
+    if ($path === '/api/billing/check-notes' && $method === 'POST') {
+      $body = $this->readJsonBody();
+      $count = max(1, (int) ($body['count'] ?? 1));
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json([
+          'allowed' => true,
+          'guest' => true,
+          'isPremium' => false,
+        ]);
+        return;
+      }
+
+      $this->json($this->subscriptions->canPlayNotes($user['id'], $count));
+      return;
+    }
+
+    if ($path === '/api/billing/use-notes' && $method === 'POST') {
+      $user = $this->auth->currentUser();
+      if ($user === null) {
+        $this->json(['error' => 'Требуется вход'], 401);
+        return;
+      }
+
+      $body = $this->readJsonBody();
+      $count = max(1, (int) ($body['count'] ?? 1));
+      $check = $this->subscriptions->canPlayNotes($user['id'], $count);
+      if (!$check['allowed']) {
+        $this->json(['error' => 'limit_reached', 'check' => $check], 403);
+        return;
+      }
+
+      $this->subscriptions->recordNoteAttempts($user['id'], $count);
+      $this->json([
+        'ok' => true,
+        'subscription' => $this->subscriptions->getForUser($user['id']),
+      ]);
+      return;
+    }
+
     if ($path === '/api/billing/checkout' && $method === 'POST') {
       $user = $this->auth->currentUser();
       if ($user === null) {
@@ -521,7 +566,7 @@ final class Router
         $planId = (string) ($body['planId'] ?? '');
         $returnUrl = trim((string) ($body['returnUrl'] ?? ''));
         if ($returnUrl === '') {
-          $returnUrl = Env::get('YOOKASSA_RETURN_URL', AppUrl::canonical('/pricing'));
+          $returnUrl = Env::get('YOOKASSA_RETURN_URL', AppUrl::canonical('/payment?payment=return'));
         }
 
         $checkout = $this->payments->createCheckout($user['id'], $planId, $returnUrl);
@@ -529,7 +574,10 @@ final class Router
       } catch (\InvalidArgumentException $e) {
         $this->json(['error' => $e->getMessage()], 400);
       } catch (\Throwable $e) {
-        $this->json(['error' => 'Не удалось создать платёж'], 500);
+        $this->json([
+          'error' => 'Не удалось создать платёж',
+          'detail' => $e->getMessage(),
+        ], 500);
       }
       return;
     }
@@ -624,6 +672,11 @@ final class Router
 
     if (str_starts_with($path, '/assets/')) {
       $this->serveStatic($path);
+      return;
+    }
+
+    if ($path === '/pricing' && $method === 'GET') {
+      header('Location: ' . AppUrl::canonical('/payment'), true, 301);
       return;
     }
 
@@ -723,6 +776,9 @@ final class Router
     $isTeacher = $user !== null && $this->roles->hasRole((int) $user['id'], RoleService::ROLE_TEACHER);
     $isStudent = $this->roles->isStudent($user);
     $pricing = PricingConfig::toPublicArray();
+    $billingBoot = [
+      'mockMode' => $this->payments->isMockMode(),
+    ];
 
     include dirname(__DIR__) . '/templates/app.php';
   }

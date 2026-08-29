@@ -508,5 +508,11 @@ final class Database
       CREATE INDEX IF NOT EXISTS idx_diagnostic_results_user_created
         ON diagnostic_results(user_id, created_at);
       SQL);
+
+    $usageColumns = $pdo->query('PRAGMA table_info(daily_training_usage)')->fetchAll();
+    $usageNames = array_column($usageColumns, 'name');
+    if (!in_array('note_count', $usageNames, true)) {
+      $pdo->exec('ALTER TABLE daily_training_usage ADD COLUMN note_count INTEGER NOT NULL DEFAULT 0');
+    }
   }
 }

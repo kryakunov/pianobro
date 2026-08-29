@@ -18,4 +18,9 @@ declare(strict_types=1);
       <span>Instagram</span>
     </a>
   </div>
+  <p class="site-social__legal">
+    <a href="/payment">Оплата</a>
+    ·
+    <a href="/oferta">Публичная оферта</a>
+  </p>
 </footer>

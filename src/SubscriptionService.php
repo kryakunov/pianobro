@@ -30,6 +30,7 @@ final class SubscriptionService
     $status = (string) ($row['subscription_status'] ?? 'free');
     $expiresAt = $row['subscription_expires_at'] !== null ? (string) $row['subscription_expires_at'] : null;
     $isPremium = $status === 'active' && $expiresAt !== null && strtotime($expiresAt) > time();
+    $notesUsed = $isPremium ? 0 : $this->getDailyNoteUsage($userId);
 
     return [
       'status' => $isPremium ? 'active' : ($status === 'active' ? 'expired' : $status),
@@ -42,6 +43,9 @@ final class SubscriptionService
       'dailyLimit' => $isPremium ? null : PricingConfig::FREE_DAILY_SESSIONS,
       'dailyUsed' => $isPremium ? 0 : $this->getDailyUsage($userId),
       'dailyRemaining' => $isPremium ? null : max(0, PricingConfig::FREE_DAILY_SESSIONS - $this->getDailyUsage($userId)),
+      'dailyNotesLimit' => $isPremium ? null : PricingConfig::FREE_DAILY_NOTES,
+      'dailyNotesUsed' => $notesUsed,
+      'dailyNotesRemaining' => $isPremium ? null : max(0, PricingConfig::FREE_DAILY_NOTES - $notesUsed),
     ];
   }
 
@@ -128,14 +132,81 @@ final class SubscriptionService
 
   public function getDailyUsage(int $userId): int
   {
+    $row = $this->getDailyUsageRow($userId);
+
+    return $row !== null ? (int) $row['session_count'] : 0;
+  }
+
+  public function getDailyNoteUsage(int $userId): int
+  {
+    $row = $this->getDailyUsageRow($userId);
+
+    return $row !== null ? (int) ($row['note_count'] ?? 0) : 0;
+  }
+
+  /** @return array{allowed:bool, reason?:string, remaining?:int|null, limit?:int|null, used?:int, isPremium?:bool} */
+  public function canPlayNotes(int $userId, int $count = 1): array
+  {
+    if ($this->isPremium($userId)) {
+      return ['allowed' => true, 'isPremium' => true, 'remaining' => null, 'limit' => null];
+    }
+
+    $used = $this->getDailyNoteUsage($userId);
+    $limit = PricingConfig::FREE_DAILY_NOTES;
+    $remaining = max(0, $limit - $used);
+
+    if ($used + $count > $limit) {
+      return [
+        'allowed' => false,
+        'reason' => 'daily_notes_limit',
+        'remaining' => $remaining,
+        'limit' => $limit,
+        'used' => $used,
+        'isPremium' => false,
+      ];
+    }
+
+    return [
+      'allowed' => true,
+      'remaining' => $remaining - $count,
+      'limit' => $limit,
+      'used' => $used,
+      'isPremium' => false,
+    ];
+  }
+
+  public function recordNoteAttempts(int $userId, int $count = 1): void
+  {
+    if ($count <= 0 || $this->isPremium($userId)) {
+      return;
+    }
+
     $date = gmdate('Y-m-d');
     $stmt = $this->db->prepare(
-      'SELECT session_count FROM daily_training_usage WHERE user_id = :user_id AND usage_date = :usage_date',
+      'INSERT INTO daily_training_usage (user_id, usage_date, session_count, note_count)
+       VALUES (:user_id, :usage_date, 0, :insert_note_count)
+       ON CONFLICT(user_id, usage_date)
+       DO UPDATE SET note_count = note_count + :update_note_count',
+    );
+    $stmt->execute([
+      'user_id' => $userId,
+      'usage_date' => $date,
+      'insert_note_count' => $count,
+      'update_note_count' => $count,
+    ]);
+  }
+
+  /** @return array<string, mixed>|null */
+  private function getDailyUsageRow(int $userId): ?array
+  {
+    $date = gmdate('Y-m-d');
+    $stmt = $this->db->prepare(
+      'SELECT session_count, note_count FROM daily_training_usage WHERE user_id = :user_id AND usage_date = :usage_date',
     );
     $stmt->execute(['user_id' => $userId, 'usage_date' => $date]);
     $row = $stmt->fetch();
 
-    return $row !== false ? (int) $row['session_count'] : 0;
+    return $row !== false ? $row : null;
   }
 
   /** @param array<string, mixed> $result */
@@ -229,6 +300,9 @@ final class SubscriptionService
       'dailyLimit' => PricingConfig::FREE_DAILY_SESSIONS,
       'dailyUsed' => 0,
       'dailyRemaining' => PricingConfig::FREE_DAILY_SESSIONS,
+      'dailyNotesLimit' => PricingConfig::FREE_DAILY_NOTES,
+      'dailyNotesUsed' => 0,
+      'dailyNotesRemaining' => PricingConfig::FREE_DAILY_NOTES,
     ];
   }
 }

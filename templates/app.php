@@ -34,6 +34,7 @@
     window.__BOOT__ = <?= json_encode($page['boot'] ?? ['screen' => 'home'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
     window.__USER__ = <?= json_encode($user, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     window.__PRICING__ = <?= json_encode($pricing ?? \PianoTrainer\PricingConfig::toPublicArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
+    window.__BILLING_BOOT__ = <?= json_encode($billingBoot ?? ['mockMode' => true], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) ?>;
   </script>
 </head>
 <body>
@@ -56,7 +57,10 @@
           Войти
         </button>
         <div class="auth-user" id="auth-user"<?= $isLoggedIn ? '' : ' hidden' ?>>
-          <span class="auth-user__name" id="auth-user-name"><?= $isLoggedIn ? htmlspecialchars((string) $user['name'], ENT_QUOTES, 'UTF-8') : '' ?></span>
+          <div class="auth-user__identity">
+            <span class="auth-user__name" id="auth-user-name"><?= $isLoggedIn ? htmlspecialchars((string) $user['name'], ENT_QUOTES, 'UTF-8') : '' ?></span>
+            <span class="auth-user__plan" id="auth-user-plan"<?= $isLoggedIn ? '' : ' hidden' ?>></span>
+          </div>
           <a href="/statistika" class="btn btn--secondary btn--sm" id="btn-go-stats">
             <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-stats"/></svg>
             Статистика
@@ -146,7 +150,7 @@
               <a href="/noty" class="btn btn--secondary btn--sm" id="btn-go-notes">Тренажёр нот</a>
               <a href="/ritm" class="btn btn--secondary btn--sm" id="btn-go-rhythm">Ритм-игра</a>
               <a href="/melodii" class="btn btn--secondary btn--sm" id="btn-go-melodies">Мелодии</a>
-              <a href="/pricing" class="btn btn--secondary btn--sm" id="btn-go-pricing">Тарифы</a>
+              <a href="/payment" class="btn btn--secondary btn--sm" id="btn-go-payment">Тарифы</a>
             </div>
             <ul class="landing-hero__pills" aria-label="Возможности">
               <li class="landing-pill">
@@ -489,47 +493,25 @@
       <?php endif; ?>
     </section>
 
-    <!-- Тарифы -->
-    <section class="screen<?= $screenActive('pricing') ?>" id="screen-pricing"<?= $screenHidden('pricing') ?>>
+    <!-- Оплата -->
+    <section class="screen<?= $screenActive('payment') ?>" id="screen-payment"<?= $screenHidden('payment') ?>>
       <div class="screen-header">
-        <a href="/" class="btn-back" id="btn-back-pricing">← На главную</a>
-        <h2 class="screen-header__title">
-          <span class="screen-header__icon icon-badge icon-badge--accent" aria-hidden="true">
-            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-chart"/></svg>
-          </span>
-          Тарифы
-        </h2>
+        <a href="/" class="btn-back" id="btn-back-payment">← На главную</a>
       </div>
-      <div class="pricing-page pick-panel">
-        <p class="pricing-page__lead">PianoBro запоминает ваши ошибки и подбирает персональные упражнения для чтения нот.</p>
-        <div class="pricing-plans" id="pricing-plans"></div>
-        <section class="pricing-features" aria-labelledby="pricing-features-title">
-          <h3 class="pricing-features__title" id="pricing-features-title">Что входит в подписку</h3>
-          <ul class="pricing-features__list" id="pricing-features"></ul>
-        </section>
-        <section class="pricing-faq" aria-labelledby="pricing-faq-title">
-          <h3 class="pricing-faq__title" id="pricing-faq-title">Частые вопросы</h3>
-          <details class="pricing-faq__item">
-            <summary>Подходит ли PianoBro для начинающих?</summary>
-            <p>Да. Можно начать с простых упражнений, даже если вы только знакомитесь с нотами.</p>
-          </details>
-          <details class="pricing-faq__item">
-            <summary>Подойдёт ли ребёнку?</summary>
-            <p>Да, если ребёнок уже начал изучать ноты или занимается музыкой. Тренировки короткие и понятные.</p>
-          </details>
-          <details class="pricing-faq__item">
-            <summary>Заменяет ли PianoBro преподавателя?</summary>
-            <p>Нет. PianoBro тренирует конкретный навык — быстро узнавать ноты и связывать их с клавиатурой. Его можно использовать самостоятельно или вместе с уроками.</p>
-          </details>
-          <details class="pricing-faq__item">
-            <summary>Зачем платить, если есть бесплатные тренажёры?</summary>
-            <p>Бесплатные тренажёры обычно дают случайные задания. PianoBro запоминает, какие ноты вы путаете, и строит тренировку под ваши слабые места.</p>
-          </details>
-          <details class="pricing-faq__item">
-            <summary>Можно ли отменить подписку?</summary>
-            <p>Оплата разовая за выбранный период (1 месяц, 3 месяца или год). Автопродление не подключается — по окончании срока доступ к платным функциям завершится, продлить можно в любой момент на этой странице.</p>
-          </details>
-        </section>
+      <div class="payment-page pick-panel">
+        <?php require __DIR__ . '/partials/payment-page.php'; ?>
+        <?php require __DIR__ . '/partials/social-links.php'; ?>
+      </div>
+    </section>
+
+    <!-- Публичная оферта -->
+    <section class="screen<?= $screenActive('offer') ?>" id="screen-offer"<?= $screenHidden('offer') ?>>
+      <div class="screen-header">
+        <a href="/payment" class="btn-back" id="btn-back-offer">← К оплате</a>
+      </div>
+      <div class="payment-page pick-panel">
+        <?php require __DIR__ . '/partials/offer-page.php'; ?>
+        <?php require __DIR__ . '/partials/social-links.php'; ?>
       </div>
     </section>
 
@@ -542,7 +524,7 @@
         <h2 class="payment-success__title">Подписка активирована</h2>
         <p class="payment-success__text">Теперь PianoBro будет сохранять ваш прогресс, находить слабые ноты и подбирать персональные тренировки.</p>
         <button type="button" class="btn btn--primary btn--lg" id="btn-payment-success-start">Начать тренировку</button>
-        <a href="/pricing" class="payment-success__link">Посмотреть тарифы</a>
+        <a href="/payment" class="payment-success__link">Посмотреть тарифы</a>
       </div>
     </section>
 
@@ -1017,6 +999,8 @@
         <div class="practice-session-progress__fill" id="practice-session-progress-fill"></div>
       </div>
 
+      <p class="practice-quota" id="practice-quota" hidden></p>
+
       <div class="practice-feedback-wrap">
         <div class="practice-feedback" id="practice-feedback" aria-live="polite"></div>
       </div>
@@ -1168,7 +1152,12 @@
       <div class="modal__card modal__card--paywall" role="dialog" aria-labelledby="paywall-title">
         <button type="button" class="modal__close" id="paywall-close" aria-label="Закрыть">×</button>
         <h2 class="modal__title" id="paywall-title">Откройте персональные тренировки</h2>
-        <p class="modal__text">PianoBro будет запоминать ваши ошибки, чаще повторять сложные ноты и показывать прогресс, чтобы вы быстрее читали ноты на пианино.</p>
+        <div class="paywall-weak" id="paywall-weak" hidden>
+          <p class="paywall-weak__label">Сложные ноты:</p>
+          <div class="paywall-weak__tags" id="paywall-weak-tags"></div>
+        </div>
+        <p class="modal__text modal__text--muted" id="paywall-quota" hidden></p>
+        <p class="modal__text" id="paywall-message">PianoBro будет запоминать ваши ошибки, чаще повторять сложные ноты и показывать прогресс, чтобы вы быстрее читали ноты на пианино.</p>
         <button type="button" class="btn btn--primary" id="paywall-choose-plan">Выбрать тариф</button>
       </div>
     </div>

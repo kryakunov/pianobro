@@ -3,6 +3,7 @@ import { MidiInput } from './midi.js';
 import { MicPitchInput } from './mic-pitch.js';
 import { MelodyTrainer } from './trainer.js';
 import { NoteTrainer, DEFAULT_NOTE_SETTINGS, DEFAULT_NOTE_SESSION_LIMIT, DEFAULT_TRAINER_OPTIONS, describeNoteSettings, usesBothClefs } from './note-trainer.js';
+import { loadDiagnosticResult } from './subscription.js';
 import {
   readNoteSettingsFromForm as readNoteSettingsFromFormElement,
   applyNoteSettingsToForm as applyNoteSettingsToFormElement,
@@ -68,7 +69,17 @@ import {
   gateNotesTrainingStart,
   bootPracticeGate,
   openPersonalPlan,
+  handleNoteAttemptConsumption,
+  getWeakNotesForPersonalization,
 } from './conversion-flow.js';
+import {
+  isPremiumUser,
+  showPaywall,
+  getNotesQuota,
+  formatNotesQuotaLabel,
+  refreshBillingState,
+  getSubscriptionDisplay,
+} from './subscription.js';
 
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
 const RHYTHM_PREFS_KEY = 'piano-rhythm-prefs';
@@ -87,7 +98,8 @@ const els = {
   screenRhythmPick: $('#screen-rhythm-pick'),
   screenBlog: $('#screen-blog'),
   screenBlogArticle: $('#screen-blog-article'),
-  screenPricing: $('#screen-pricing'),
+  screenPayment: $('#screen-payment'),
+  screenOffer: $('#screen-offer'),
   screenPaymentSuccess: $('#screen-payment-success'),
   screenPersonalPlan: $('#screen-personal-plan'),
   screenRoadmap: $('#screen-roadmap'),
@@ -121,6 +133,7 @@ const els = {
   btnOpenAuth: $('#btn-open-auth'),
   authUser: $('#auth-user'),
   authUserName: $('#auth-user-name'),
+  authUserPlan: $('#auth-user-plan'),
   btnLogout: $('#btn-logout'),
   authModal: $('#auth-modal'),
   authTabs: document.querySelectorAll('[data-auth-tab]'),
@@ -179,6 +192,7 @@ const els = {
   modalActions: $('#modal-actions'),
   modalDiscover: $('#modal-discover'),
   modalRegisterHint: $('#modal-register-hint'),
+  practiceQuota: $('#practice-quota'),
 };
 
 let practiceWidgetsReady = true;
@@ -295,7 +309,8 @@ function showScreen(name) {
     'rhythm-pick': els.screenRhythmPick,
     blog: els.screenBlog,
     'blog-article': els.screenBlogArticle,
-    pricing: els.screenPricing,
+    payment: els.screenPayment,
+    offer: els.screenOffer,
     'payment-success': els.screenPaymentSuccess,
     'personal-plan': els.screenPersonalPlan,
     roadmap: els.screenRoadmap,
@@ -321,6 +336,10 @@ function showScreen(name) {
 
   if (name === 'roadmap') {
     renderRoadmapScreen();
+  }
+
+  if (name === 'notes-pick') {
+    updateNotesPickMonetizationUi();
   }
 
   if (!['melody-pick', 'roadmap', 'practice'].includes(name) && isMelodyPreviewPlaying()) {
@@ -458,6 +477,139 @@ async function fetchJson(url, options = {}) {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
+}
+
+function updatePracticeQuotaBanner() {
+  const el = els.practiceQuota;
+  if (!el) return;
+
+  if (currentScreen !== 'practice' || appMode !== 'notes' || isPremiumUser() || conversionIsDiagnostic()) {
+    el.hidden = true;
+    return;
+  }
+
+  const quota = getNotesQuota(isLoggedIn());
+  const label = formatNotesQuotaLabel(quota);
+  if (!label) {
+    el.hidden = true;
+    return;
+  }
+
+  el.hidden = false;
+  el.textContent = label;
+  el.classList.toggle('practice-quota--low', (quota.remaining ?? 99) <= 5);
+  updateSubscriptionUi();
+}
+
+window.pianoUpdateNotesQuota = updatePracticeQuotaBanner;
+
+function renderSubscriptionBadgeHtml(display) {
+  if (!display) return '';
+  return `
+    <span class="subscription-badge ${display.badgeClass}">${escapeHtml(display.badgeText)}</span>
+    ${display.meta ? `<span class="auth-user__plan-meta">${escapeHtml(display.meta)}</span>` : ''}
+  `;
+}
+
+function renderStatsProfileCard(user, display) {
+  if (!user || !display) return '';
+
+  const initials = String(user.name ?? '?')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || '?';
+
+  return `
+    <section class="profile-user stats-profile" aria-label="Профиль">
+      <div class="profile-user__info">
+        <div class="profile-user__avatar icon-badge icon-badge--primary" aria-hidden="true">${escapeHtml(initials)}</div>
+        <div>
+          <span class="profile-user__name">${escapeHtml(user.name ?? '')}</span>
+          <span class="profile-user__email">${escapeHtml(user.email ?? '')}</span>
+        </div>
+      </div>
+      <div class="subscription-card">
+        <div class="subscription-card__head">
+          <span class="subscription-card__label">Тариф</span>
+          <span class="subscription-badge ${display.badgeClass}">${escapeHtml(display.badgeText)}</span>
+        </div>
+        <p class="subscription-card__title">${escapeHtml(display.title)}</p>
+        <p class="subscription-card__detail">${escapeHtml(display.detail)}</p>
+        ${display.showUpgradeCta ? '<a href="/payment" class="btn btn--secondary btn--sm subscription-card__cta">Выбрать тариф</a>' : ''}
+      </div>
+    </section>
+  `;
+}
+
+function updateSubscriptionUi() {
+  const user = getUser();
+  const display = getSubscriptionDisplay(Boolean(user));
+
+  if (els.authUserPlan) {
+    if (!user || !display) {
+      els.authUserPlan.hidden = true;
+      els.authUserPlan.innerHTML = '';
+    } else {
+      els.authUserPlan.hidden = false;
+      els.authUserPlan.innerHTML = renderSubscriptionBadgeHtml(display);
+    }
+  }
+
+  const statsProfile = els.statsPanel?.querySelector('.stats-profile');
+  if (statsProfile && user && display) {
+    statsProfile.outerHTML = renderStatsProfileCard(user, display);
+  }
+}
+
+function updateNotesPickMonetizationUi() {
+  const form = els.notesSettingsForm;
+  if (!form) return;
+
+  let hint = form.querySelector('.notes-free-tier-hint');
+  if (isPremiumUser()) {
+    if (hint) hint.hidden = true;
+    return;
+  }
+
+  const quotaLabel = formatNotesQuotaLabel(getNotesQuota(isLoggedIn()));
+  if (!hint) {
+    hint = document.createElement('p');
+    hint.className = 'notes-free-tier-hint settings-hint';
+    form.querySelector('.notes-settings__grid')?.after(hint);
+  }
+  hint.hidden = false;
+  hint.textContent = quotaLabel
+    ? `${quotaLabel}. Подписка снимает лимит и добавляет персональные тренировки по вашим ошибкам.`
+    : 'Подписка снимает лимит нот в день и добавляет персональные тренировки по вашим ошибкам.';
+}
+
+function weakNotesFromSessionStats(stats) {
+  if (!stats?.attempts?.length) return loadDiagnosticResult()?.weakNotes ?? [];
+  const wrongByMidi = new Map();
+  for (const attempt of stats.attempts) {
+    if (attempt.correct) continue;
+    const midi = attempt.expectedMidi;
+    wrongByMidi.set(midi, (wrongByMidi.get(midi) ?? 0) + 1);
+  }
+  if (!wrongByMidi.size) return loadDiagnosticResult()?.weakNotes ?? [];
+  return [...wrongByMidi.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([midi, count]) => ({
+      midi,
+      name: noteNameFromMidi(midi),
+      count,
+    }));
+}
+
+function noteNameFromMidi(midi) {
+  try {
+    return midiToName(midi);
+  } catch {
+    return `MIDI ${midi}`;
+  }
 }
 
 function syncPracticeProgressBar() {
@@ -723,6 +875,16 @@ function buildSessionModalActions(stats) {
     actions.push({ id: 'stats', label: 'Моя карта нот', variant: 'primary', path: ROUTES.stats });
   }
 
+  if (loggedIn && !isPremiumUser() && mode === 'notes') {
+    actions.unshift({
+      id: 'premium',
+      label: 'Открыть персональные тренировки',
+      variant: 'primary',
+    });
+    const statsAction = actions.find((action) => action.id === 'stats');
+    if (statsAction) statsAction.variant = 'secondary';
+  }
+
   if (fromRoadmap) {
     if (stageCompleted && stats.nextRoadmapStage) {
       actions.push({
@@ -838,6 +1000,11 @@ function handleSessionModalAction(actionId, dataset) {
     case 'stats':
       trackGoal('modal_stats_click', { mode: appMode });
       leavePracticeTo(ROUTES.stats);
+      break;
+    case 'premium':
+      hideSessionModal();
+      trackGoal('modal_premium_click', { mode: appMode });
+      showPaywall('session_complete', { weakNotes: weakNotesFromSessionStats(lastSessionStats) });
       break;
     case 'roadmap':
       trackGoal('modal_roadmap_click', { mode: appMode });
@@ -1385,6 +1552,9 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
   showScreen('practice');
   resetPracticeProgress();
   setPianoVisible(true);
+  if (mode === 'notes') {
+    updatePracticeQuotaBanner();
+  }
   trackVirtualScreen('practice', {
     mode,
     title,
@@ -1559,6 +1729,7 @@ function updateAuthUI() {
   if (els.authUserName) els.authUserName.textContent = user?.name ?? '';
   if (els.btnGoHomework) els.btnGoHomework.hidden = !isStudent;
   if (els.btnGoTeacher) els.btnGoTeacher.hidden = !isTeacher;
+  updateSubscriptionUi();
 }
 
 function updateRegisterTeacherOptionVisibility() {
@@ -1945,6 +2116,13 @@ function startLearningNotesTraining(notes) {
   const learningNotes = getLearningNotes(notes);
   if (!learningNotes.length) return;
 
+  if (!isPremiumUser()) {
+    showPaywall('stats_learning', {
+      weakNotes: learningNotes.map((note) => ({ name: note.name, midi: note.midi })),
+    });
+    return;
+  }
+
   trackGoal('start_training', { source: 'stats_learning_notes' });
 
   activeRoadmapStageId = null;
@@ -2039,9 +2217,13 @@ function renderStatsPanel(data) {
   const offerHtml = renderLearningNotesOffer(notes);
   const staffHtml = renderStatsStaffInfographic(displayNotes);
   const chartHtml = renderStatsChart(dailyProgress);
+  const user = getUser();
+  const subscriptionDisplay = getSubscriptionDisplay(true);
+  const profileHtml = renderStatsProfileCard(user, subscriptionDisplay);
 
   els.statsPanel.innerHTML = `
     <div class="stats-page">
+      ${profileHtml}
       <nav class="stats-tabs" role="tablist" aria-label="Разделы статистики">
         <button type="button" class="stats-tab stats-tab--active" data-stats-tab="map" role="tab" aria-selected="true">
           <span class="stats-tab__inner">${icon('treble', 'icon icon--btn stats-tab__icon')}<span>Карта нот</span></span>
@@ -2094,6 +2276,9 @@ async function openStatsScreen() {
 
 async function afterAuthSuccess() {
   updateAuthUI();
+  await refreshBillingState();
+  updateNotesPickMonetizationUi();
+  updateSubscriptionUi();
   await syncGuestProgressAfterAuth();
   sessionModalSuspendedForAuth = false;
   closeAuthModal();
@@ -2303,6 +2488,10 @@ const CLIENT_APP_PATHS = new Set([
   ROUTES.stats,
   ROUTES.homework,
   ROUTES.teacher,
+  ROUTES.payment,
+  ROUTES.offer,
+  ROUTES.paymentSuccess,
+  ROUTES.personalPlan,
 ]);
 
 function normalizeAppPath(path) {
@@ -2339,6 +2528,18 @@ async function openScreenForPath(path) {
       break;
     case ROUTES.blog:
       showScreen('blog');
+      break;
+    case ROUTES.payment:
+      bootConversionScreen('payment');
+      break;
+    case ROUTES.offer:
+      bootConversionScreen('offer');
+      break;
+    case ROUTES.paymentSuccess:
+      bootConversionScreen('payment-success');
+      break;
+    case ROUTES.personalPlan:
+      bootConversionScreen('personal-plan');
       break;
     case ROUTES.stats:
       await openStatsScreen();
@@ -2935,7 +3136,9 @@ async function startRoadmapMelody(stageId) {
 function startNotesTraining() {
   activeRoadmapStageId = null;
   const settings = readNoteSettingsFromForm();
+  const sessionLimit = readSessionLimitFromForm();
   const options = readTrainerOptionsFromPrefs();
+
   const error = validateNoteSettings(settings);
 
   if (error) {
@@ -2950,7 +3153,7 @@ function startNotesTraining() {
     sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
       settings,
       options,
-      sessionLimit: readSessionLimitFromForm(),
+      sessionLimit,
     }));
     navigateTo(ROUTES.practiceNotes);
   });
@@ -3002,7 +3205,16 @@ function bootNotesPractice(homework = null) {
   noteTrainer.setConfig(settings);
   noteTrainer.setOptions(options);
   noteTrainer.sessionLimit = sessionLimit;
-  enterPractice('notes', describeNoteSettings(settings, options), { returnPath });
+
+  if (isPremiumUser() && !homework && !conversionIsDiagnostic()) {
+    const weakNotes = await getWeakNotesForPersonalization(loadNoteStats);
+    noteTrainer.setPersonalization(weakNotes.map((note) => note.midi));
+  } else {
+    noteTrainer.setPersonalization([]);
+  }
+
+  enterPractice('notes', describeNoteSettings(settings), { returnPath });
+  updatePracticeQuotaBanner();
   })();
 }
 
@@ -3076,7 +3288,8 @@ async function bootApp() {
     case 'blog-article':
       showScreen('blog-article');
       break;
-    case 'pricing':
+    case 'payment':
+    case 'offer':
     case 'payment-success':
     case 'personal-plan':
       if (!bootConversionScreen(boot.screen)) {
@@ -3193,6 +3406,15 @@ noteTrainer.onComplete = (stats) => {
 };
 noteTrainer.onNoteChange = (midiNote, { spelling, clef } = {}) => {
   showNoteDrillStaff(midiNote, { spelling, clef });
+};
+noteTrainer.onAttempt = async () => {
+  if (appMode !== 'notes' || conversionIsDiagnostic() || activeHomeworkSubmissionId) return;
+  const ok = await handleNoteAttemptConsumption();
+  updatePracticeQuotaBanner();
+  if (!ok) {
+    noteTrainer.stop();
+    showFeedback('Дневной лимит бесплатных нот исчерпан', 'wrong');
+  }
 };
 
 rhythmTrainer.onUpdate = (state) => {
@@ -3404,6 +3626,10 @@ initConversionFlow({
   openAuthModal,
   hideSessionModal,
   loadNoteStats,
+});
+void refreshBillingState().then(() => {
+  updateNotesPickMonetizationUi();
+  updateSubscriptionUi();
 });
 void initInviteFromUrl();
 if (window.__USER__ !== undefined) {

@@ -180,10 +180,22 @@ final class PaymentService
 
     $response = curl_exec($ch);
     $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
 
     if (!is_string($response) || $status < 200 || $status >= 300) {
-      throw new \RuntimeException('YooKassa вернула ошибку');
+      $detail = is_string($response) ? trim($response) : '';
+      if ($detail !== '') {
+        $decoded = json_decode($detail, true);
+        if (is_array($decoded)) {
+          $description = (string) ($decoded['description'] ?? '');
+          $code = (string) ($decoded['code'] ?? '');
+          $detail = trim($code . ($description !== '' ? ': ' . $description : ''));
+        }
+      }
+
+      throw new \RuntimeException(
+        $detail !== '' ? 'YooKassa: ' . $detail : 'YooKassa вернула ошибку (HTTP ' . $status . ')',
+      );
     }
 
     $data = json_decode($response, true);

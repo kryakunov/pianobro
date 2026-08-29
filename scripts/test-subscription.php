@@ -27,8 +27,16 @@ $subscriptions->recordTrainingSession($userId, 'training');
 $used = $subscriptions->getDailyUsage($userId);
 assert($used === 1, 'usage should be 1');
 
+$notesCheck = $subscriptions->canPlayNotes($userId, 1);
+assert($notesCheck['allowed'] === true, 'free user should play first note');
+
+$subscriptions->recordNoteAttempts($userId, 80);
+$notesBlocked = $subscriptions->canPlayNotes($userId, 1);
+assert($notesBlocked['allowed'] === false, 'free user should hit daily notes limit');
+assert($notesBlocked['reason'] === 'daily_notes_limit', 'notes limit reason');
+
 $payments->completeMockPayment(
-  (int) $payments->createCheckout($userId, 'monthly', 'http://localhost/pricing')['paymentId'],
+  (int) $payments->createCheckout($userId, 'monthly', 'http://localhost/payment')['paymentId'],
   $userId,
 );
 

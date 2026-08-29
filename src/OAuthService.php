@@ -269,7 +269,7 @@ final class OAuthService
 
     $raw = curl_exec($ch);
     $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    curl_close($ch);
+    unset($ch);
 
     if ($raw === false || $status >= 400) {
       throw new \RuntimeException('OAuth request failed');

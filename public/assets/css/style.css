@@ -2835,6 +2835,37 @@ a.btn--secondary:visited {
   box-shadow: inset 0 0 0 1px rgba(108, 140, 255, 0.15);
 }
 
+.settings-check--locked {
+  cursor: pointer;
+  opacity: 0.72;
+  position: relative;
+}
+
+.settings-check--locked:hover {
+  border-color: rgba(108, 140, 255, 0.35);
+  background: rgba(108, 140, 255, 0.08);
+}
+
+.settings-check--locked::after {
+  content: 'Подписка';
+  position: absolute;
+  top: 0.35rem;
+  right: 0.4rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(108, 140, 255, 0.18);
+  color: var(--primary);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.settings-check--locked input {
+  cursor: not-allowed;
+}
+
 .settings-check input {
   width: 1rem;
   height: 1rem;
@@ -2920,6 +2951,12 @@ a.btn--secondary:visited {
   width: 3rem;
   height: 3rem;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 700;
 }
 
 .profile-user__name {
@@ -4172,14 +4209,108 @@ a.btn--secondary:visited {
   flex-wrap: wrap;
 }
 
+.auth-user__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  max-width: 12rem;
+}
+
 .auth-user__name {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text);
-  max-width: 10rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.auth-user__plan {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.auth-user__plan-meta {
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subscription-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.subscription-badge--free {
+  background: rgba(139, 146, 168, 0.16);
+  color: var(--text-muted);
+}
+
+.subscription-badge--premium {
+  background: rgba(34, 197, 94, 0.16);
+  color: #86efac;
+}
+
+.subscription-badge--expired {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fca5a5;
+}
+
+.subscription-card {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.subscription-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.subscription-card__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.subscription-card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.subscription-card__detail {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.subscription-card__cta {
+  margin-top: 0.85rem;
+}
+
+.stats-profile {
+  margin-bottom: 1rem;
 }
 
 .header__auth .btn--sm .icon--btn {
@@ -7379,6 +7510,233 @@ body.body--modal-open {
   font-size: 0.875rem;
 }
 
+.payment-page {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.payment-legal__header {
+  margin-bottom: 1.5rem;
+}
+
+.payment-legal__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+
+.payment-legal__lead {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.payment-legal__section {
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.payment-legal__section:last-of-type {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.payment-legal__h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+
+.payment-legal__h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1rem;
+}
+
+.payment-legal__p {
+  margin: 0 0 0.65rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.payment-legal__meta {
+  font-size: 0.875rem;
+}
+
+.payment-legal__plans {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.payment-legal__plan {
+  position: relative;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.payment-legal__plan--featured {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.payment-legal__badge {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.payment-legal__plan-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.payment-legal__plan-price {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.payment-legal__plan-desc,
+.payment-legal__plan-note {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.payment-legal__buy {
+  width: 100%;
+}
+
+.payment-legal__list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.payment-legal__list li + li {
+  margin-top: 0.35rem;
+}
+
+.payment-legal__list--ordered {
+  list-style: decimal;
+}
+
+.payment-legal__contacts {
+  list-style: none;
+  padding-left: 0;
+}
+
+.payment-legal__contacts li + li {
+  margin-top: 0.25rem;
+}
+
+.payment-legal__notice {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.payment-legal__notice--success {
+  border-color: color-mix(in srgb, var(--success, #22c55e) 45%, var(--border));
+  background: color-mix(in srgb, var(--success, #22c55e) 10%, var(--surface));
+}
+
+.payment-legal__notice--error {
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger, #ef4444) 8%, var(--surface));
+}
+
+.payment-legal__notice--info {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+}
+
+.payment-faq__item {
+  border-top: 1px solid var(--border);
+  padding: 0.65rem 0;
+}
+
+.payment-faq__item summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.payment-faq__item p {
+  margin: 0.45rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.site-social__legal {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+}
+
+.site-social__legal a {
+  color: var(--text-muted);
+}
+
+.practice-quota {
+  margin: 0.35rem 0.75rem 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.practice-quota--low {
+  color: var(--text);
+  background: color-mix(in srgb, var(--warning, #d97706) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warning, #d97706) 35%, var(--border));
+}
+
+.paywall-weak {
+  margin: 0 0 0.75rem;
+}
+
+.paywall-weak__label {
+  margin: 0 0 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.paywall-weak__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.paywall-weak__tag {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-2));
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.notes-free-tier-hint {
+  margin: 0 0 0.75rem;
+}
+
 .modal__card--paywall,
 .modal__card--diagnostic {
   max-width: 26rem;
@@ -7421,12 +7779,14 @@ body.body--modal-open {
     grid-template-columns: 1fr 1fr;
   }
 
-  .pricing-plans {
+  .pricing-plans,
+  .payment-legal__plans {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: stretch;
   }
 
-  .pricing-card--featured {
+  .pricing-card--featured,
+  .payment-legal__plan--featured {
     transform: translateY(-4px);
   }
 }

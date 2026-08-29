@@ -30,7 +30,8 @@ final class PageRegistry
       $path === '/ritm' => self::rhythm(),
       $path === '/trenirovka/ritm' => self::practiceRhythm(),
       $path === '/blog' => self::blogIndex($blog),
-      $path === '/pricing' => self::pricing(),
+      $path === '/payment' => self::payment(),
+      $path === '/oferta' => self::offer(),
       $path === '/payment/success' => self::paymentSuccess(),
       $path === '/personal-plan' => self::personalPlan(),
       preg_match('#^/blog/([a-z0-9\-]+)$#', $path, $m) === 1 => self::blogArticle($m[1], $blog),
@@ -50,7 +51,8 @@ final class PageRegistry
       '/ritm',
       '/melodii',
       '/blog',
-      '/pricing',
+      '/payment',
+      '/oferta',
     ];
 
     foreach ($lessons->all() as $lesson) {
@@ -304,18 +306,26 @@ final class PageRegistry
   }
 
   /** @return array<string, mixed> */
-  private static function pricing(): array
+  private static function payment(): array
   {
     return self::base(
-      screen: 'pricing',
-      path: '/pricing',
-      title: 'Тарифы и подписка | Piano Bro',
-      description: 'Подписка PianoBro: персональные тренировки нот, тренировка слабых мест, расширенная статистика и безлимитные занятия.',
-      keywords: 'подписка piano bro, тарифы тренажёр нот, персональные тренировки нот',
-      seoIntro: [
-        'h1' => 'Тарифы PianoBro',
-        'lead' => 'Персональные тренировки нот, тренировка слабых мест и безлимитные занятия.',
-      ],
+      screen: 'payment',
+      path: '/payment',
+      title: 'Оплата подписки PianoBro — услуги и цены | Piano Bro',
+      description: 'Оплата подписки PianoBro: фиксированные цены, порядок получения цифрового доступа и способы оплаты через ЮKassa.',
+      keywords: 'оплата piano bro, подписка тренажёр нот, юkassa piano bro',
+    );
+  }
+
+  /** @return array<string, mixed> */
+  private static function offer(): array
+  {
+    return self::base(
+      screen: 'offer',
+      path: '/oferta',
+      title: 'Публичная оферта | Piano Bro',
+      description: 'Публичная оферта на оказание услуг PianoBro: условия подписки, порядок оплаты, возврат средств и реквизиты исполнителя.',
+      keywords: 'публичная оферта piano bro, договор оферты, условия подписки',
     );
   }
 

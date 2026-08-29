@@ -2,6 +2,8 @@ import {
   refreshBillingState,
   checkTrainingSession,
   consumeTrainingSession,
+  checkNotesAllowed,
+  consumeNoteAttempt,
   showPaywall,
   bindPaywallUi,
   trackConversion,
@@ -10,6 +12,7 @@ import {
   setPendingAuthAction,
   consumePendingAuthAction,
   isPremiumUser,
+  getNotesQuota,
 } from './subscription.js';
 import {
   DIAGNOSTIC_SETTINGS,
@@ -17,7 +20,7 @@ import {
   formatWeakNotesList,
   getDiagnosticSessionLimit,
 } from './diagnostic.js';
-import { initPricingPage, startCheckout } from './pricing-page.js';
+import { initPaymentPage, startCheckout, resumePendingCheckout } from './pricing-page.js';
 import { navigateTo, ROUTES } from './routes.js';
 import { isLoggedIn } from './auth.js';
 
@@ -69,15 +72,58 @@ function bindUi() {
     navigateTo(isPremiumUser() ? '/noty' : '/');
   });
 
-  document.getElementById('btn-back-pricing')?.addEventListener('click', (e) => {
+  document.getElementById('btn-back-payment')?.addEventListener('click', (e) => {
     e.preventDefault();
     navigateTo('/');
+  });
+
+  document.getElementById('btn-back-offer')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('/payment');
   });
 
   document.getElementById('btn-back-personal-plan')?.addEventListener('click', (e) => {
     e.preventDefault();
     navigateTo('/');
   });
+}
+
+export async function ensureNotesQuota(minCount = 1) {
+  if (isPremiumUser()) return true;
+
+  const check = await checkNotesAllowed(minCount, isLoggedIn());
+  if (check?.allowed) return true;
+
+  const quota = getNotesQuota(isLoggedIn());
+  showPaywall(check?.reason ?? 'daily_notes_limit', {
+    weakNotes: loadDiagnosticResult()?.weakNotes ?? [],
+    limit: quota.limit,
+    used: quota.used,
+    remaining: quota.remaining,
+  });
+  return false;
+}
+
+export async function handleNoteAttemptConsumption() {
+  if (isPremiumUser() || conversionIsDiagnostic()) return true;
+
+  const result = await consumeNoteAttempt(1, isLoggedIn());
+  if (result.ok) {
+    window.pianoUpdateNotesQuota?.();
+    if ((result.quota?.remaining ?? 99) <= 5) {
+      window.pianoUpdateNotesQuota?.();
+    }
+    return true;
+  }
+
+  const quota = getNotesQuota(isLoggedIn());
+  showPaywall(result.check?.reason ?? 'mid_session', {
+    weakNotes: loadDiagnosticResult()?.weakNotes ?? [],
+    limit: quota.limit,
+    used: quota.used,
+    remaining: quota.remaining,
+  });
+  return false;
 }
 
 export async function ensureTrainingAllowed(type = 'training') {
@@ -145,7 +191,7 @@ export async function handleDiagnosticComplete() {
   deps.hideSessionModal?.();
   showDiagnosticResult(result);
   if (!isPremiumUser()) {
-    showPaywall('diagnostic_complete');
+    showPaywall('diagnostic_complete', { weakNotes: result.weakNotes ?? [] });
   }
 }
 
@@ -158,7 +204,7 @@ export async function openPersonalPlan() {
   }
 
   if (!isPremiumUser()) {
-    showPaywall('personal_plan');
+    showPaywall('personal_plan', { weakNotes: loadDiagnosticResult()?.weakNotes ?? [] });
     return;
   }
 
@@ -236,9 +282,13 @@ function extractWeakNotesFromStats(stats) {
 }
 
 export function bootConversionScreen(screen) {
-  if (screen === 'pricing') {
-    deps.showScreen?.('pricing');
-    initPricingPage();
+  if (screen === 'payment') {
+    deps.showScreen?.('payment');
+    initPaymentPage();
+    return true;
+  }
+  if (screen === 'offer') {
+    deps.showScreen?.('offer');
     return true;
   }
   if (screen === 'payment-success') {
@@ -257,15 +307,16 @@ export async function afterAuthConversionHooks() {
   trackConversion('registration_completed');
 
   const pending = consumePendingAuthAction();
-  if (!pending) return;
-
-  if (pending.type === 'checkout' && pending.planId) {
+  if (pending?.type === 'checkout' && pending.planId) {
     await startCheckout(pending.planId);
     return;
   }
-  if (pending.type === 'personal_plan') {
+  if (pending?.type === 'personal_plan') {
     await openPersonalPlan();
+    return;
   }
+
+  await resumePendingCheckout();
 }
 
 export async function bootPracticeGate(homework, isDiagnostic = false) {
@@ -274,8 +325,29 @@ export async function bootPracticeGate(homework, isDiagnostic = false) {
     navigateTo(ROUTES.notes);
     return false;
   }
+  if (!(await ensureNotesQuota(1))) {
+    navigateTo(ROUTES.notes);
+    return false;
+  }
   await recordTrainingStart('training');
   return true;
+}
+
+export async function getWeakNotesForPersonalization(loadNoteStats) {
+  const diagnostic = loadDiagnosticResult();
+  let weakNotes = diagnostic?.weakNotes ?? [];
+
+  if (isLoggedIn() && loadNoteStats) {
+    try {
+      const stats = await loadNoteStats();
+      const fromStats = extractWeakNotesFromStats(stats);
+      if (fromStats.length) weakNotes = fromStats;
+    } catch {
+      /* use diagnostic */
+    }
+  }
+
+  return weakNotes;
 }
 
 export async function gateNotesTrainingStart(onAllowed) {

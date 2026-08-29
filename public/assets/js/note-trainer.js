@@ -166,6 +166,12 @@ function pickRandom(pool, exclude) {
   return note;
 }
 
+function pickPersonalized(pool, weakMidis, exclude) {
+  const weakInPool = pool.filter((midi) => weakMidis.includes(midi));
+  const source = weakInPool.length > 0 && Math.random() < 0.7 ? weakInPool : pool;
+  return pickRandom(source, exclude);
+}
+
 function shuffleArray(items) {
   const arr = [...items];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -197,11 +203,21 @@ export class NoteTrainer {
     this.onFeedback = null;
     this.onNoteChange = null;
     this.onComplete = null;
+    this.onAttempt = null;
     this.showKeyboardHints = false;
+    this.personalizedMode = false;
+    this.weakMidis = [];
     this.coverAll = false;
     this._noteQueue = [];
     this._queueIndex = 0;
     this.setConfig(DEFAULT_NOTE_SETTINGS);
+  }
+
+  setPersonalization(weakMidis = []) {
+    this.weakMidis = [...new Set(
+      weakMidis.map((midi) => Number(midi)).filter((midi) => Number.isFinite(midi)),
+    )];
+    this.personalizedMode = this.weakMidis.length > 0;
   }
 
   setOptions(options = {}) {
@@ -217,6 +233,8 @@ export class NoteTrainer {
     this.pool = buildPoolFromSettings(this.settings, { poolMode });
     this.spelling = resolveSpelling(this.settings);
     this.customPool = false;
+    this.personalizedMode = false;
+    this.weakMidis = [];
     this.coverAll = coverAll;
     this.reset();
   }
@@ -231,6 +249,8 @@ export class NoteTrainer {
     this.pool = unique;
     this.spelling = resolveSpelling(this.settings);
     this.customPool = true;
+    this.personalizedMode = false;
+    this.weakMidis = [];
     this.coverAll = coverAll;
     this.reset();
   }
@@ -312,6 +332,12 @@ export class NoteTrainer {
       });
       this.piano.flashCorrect(midi);
       this.onFeedback?.('Верно!', 'correct');
+      this.onAttempt?.({
+        correct: this.correct,
+        wrong: this.wrong,
+        total: this.total,
+        wasCorrect: true,
+      });
       this._emitUpdate();
 
       if (this.coverAll) {
@@ -345,6 +371,12 @@ export class NoteTrainer {
     });
     this.piano.flashWrong(midi);
     this.onFeedback?.('Неверно', 'wrong');
+    this.onAttempt?.({
+      correct: this.correct,
+      wrong: this.wrong,
+      total: this.total,
+      wasCorrect: false,
+    });
     this._emitUpdate();
 
     return false;
@@ -357,6 +389,8 @@ export class NoteTrainer {
   _showCurrentNote() {
     if (this.coverAll) {
       this.currentMidi = this._noteQueue[this._queueIndex] ?? null;
+    } else if (this.personalizedMode && this.weakMidis.length) {
+      this.currentMidi = pickPersonalized(this.pool, this.weakMidis, this.currentMidi);
     } else {
       this.currentMidi = pickRandom(this.pool, this.currentMidi);
     }
