@@ -3171,6 +3171,21 @@ function readPendingHomework() {
   }
 }
 
+function applyNoteTrainerPersonalization(weakMidis = []) {
+  const normalized = [...new Set(
+    weakMidis.map((midi) => Number(midi)).filter((midi) => Number.isFinite(midi)),
+  )];
+
+  if (typeof noteTrainer.setPersonalization === 'function') {
+    noteTrainer.setPersonalization(normalized);
+    return;
+  }
+
+  // Fallback for cached note-trainer builds without setPersonalization().
+  noteTrainer.weakMidis = normalized;
+  noteTrainer.personalizedMode = normalized.length > 0;
+}
+
 function bootNotesPractice(homework = null) {
   void (async () => {
     if (!(await bootPracticeGate(homework, conversionIsDiagnostic()))) {
@@ -3209,9 +3224,9 @@ function bootNotesPractice(homework = null) {
 
   if (isPremiumUser() && !homework && !conversionIsDiagnostic()) {
     const weakNotes = await getWeakNotesForPersonalization(loadNoteStats);
-    noteTrainer.setPersonalization(weakNotes.map((note) => note.midi));
+    applyNoteTrainerPersonalization(weakNotes.map((note) => note.midi));
   } else {
-    noteTrainer.setPersonalization([]);
+    applyNoteTrainerPersonalization([]);
   }
 
   enterPractice('notes', describeNoteSettings(settings), { returnPath });
