@@ -58,9 +58,27 @@
           Войти
         </button>
         <div class="auth-user" id="auth-user"<?= $isLoggedIn ? '' : ' hidden' ?>>
-          <div class="auth-user__identity">
-            <span class="auth-user__name" id="auth-user-name"><?= $isLoggedIn ? htmlspecialchars((string) $user['name'], ENT_QUOTES, 'UTF-8') : '' ?></span>
-            <span class="auth-user__plan" id="auth-user-plan"<?= $isLoggedIn ? '' : ' hidden' ?>></span>
+          <div class="auth-user__profile">
+            <?php
+              $avatar = $headerAvatar ?? null;
+              $avatarClass = 'auth-user__avatar auth-user__avatar--rank-' . (int) ($avatar['rankIndex'] ?? 0);
+              if (!empty($avatar['isPremium'])) {
+                $avatarClass .= ' auth-user__avatar--premium';
+              }
+              $avatarStyle = '--avatar-hue: ' . (int) (($avatar['userId'] ?? 1) * 47 % 360);
+            ?>
+            <div
+              class="<?= htmlspecialchars($avatarClass, ENT_QUOTES, 'UTF-8') ?>"
+              id="auth-user-avatar"
+              style="<?= htmlspecialchars($avatarStyle, ENT_QUOTES, 'UTF-8') ?>"
+              title="<?= $isLoggedIn ? htmlspecialchars((string) (($avatar['rankTitle'] ?? 'Новичок') . (!empty($avatar['isPremium']) ? ' · Premium' : '')), ENT_QUOTES, 'UTF-8') : '' ?>"
+              aria-hidden="true"
+            ><?= $isLoggedIn ? htmlspecialchars((string) ($avatar['emoji'] ?? '🎹'), ENT_QUOTES, 'UTF-8') : '' ?></div>
+            <div class="auth-user__identity">
+              <span class="auth-user__name" id="auth-user-name"><?= $isLoggedIn ? htmlspecialchars((string) $user['name'], ENT_QUOTES, 'UTF-8') : '' ?></span>
+              <span class="auth-user__rank" id="auth-user-rank"<?= $isLoggedIn ? '' : ' hidden' ?>><?= $isLoggedIn ? htmlspecialchars((string) ($avatar['rankTitle'] ?? ''), ENT_QUOTES, 'UTF-8') : '' ?></span>
+              <span class="auth-user__plan" id="auth-user-plan"<?= $isLoggedIn ? '' : ' hidden' ?>></span>
+            </div>
           </div>
           <a href="/statistika" class="btn btn--secondary btn--sm" id="btn-go-stats">
             <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-stats"/></svg>
@@ -137,33 +155,40 @@
               PianoBro запоминает ваши ошибки и подбирает персональные упражнения, чтобы вы быстрее читали ноты в скрипичном и басовом ключе.
             </p>
             <div class="landing-hero__actions">
-              <button type="button" class="btn btn--primary btn--lg" id="btn-start-diagnostic">
+              <button type="button" class="btn btn--secondary btn--lg landing-hero__cta" id="btn-start-diagnostic">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-chart"/></svg>
                 Узнать, какие ноты путаю
               </button>
             </div>
-            <div class="landing-hero__actions landing-hero__actions--secondary">
-              <a href="/put-novichka" class="btn btn--secondary btn--sm" id="btn-go-roadmap">Путь новичка</a>
-              <a href="/noty" class="btn btn--secondary btn--sm" id="btn-go-notes">Тренажёр нот</a>
-              <a href="/ritm" class="btn btn--secondary btn--sm" id="btn-go-rhythm">Ритм-игра</a>
-              <a href="/melodii" class="btn btn--secondary btn--sm" id="btn-go-melodies">Мелодии</a>
-              <a href="/payment" class="btn btn--secondary btn--sm" id="btn-go-payment">Тарифы</a>
-            </div>
-            <ul class="landing-hero__pills" aria-label="Возможности">
+            <nav class="landing-nav" aria-label="Разделы тренажёра">
+              <a href="/put-novichka" class="landing-nav__item landing-nav__item--roadmap" id="btn-go-roadmap">
+                <span class="landing-nav__icon icon-badge icon-badge--roadmap" aria-hidden="true">
+                  <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-leaf"/></svg>
+                </span>
+                <span class="landing-nav__label">Путь новичка</span>
+              </a>
+              <a href="/noty" class="landing-nav__item landing-nav__item--notes" id="btn-go-notes">
+                <span class="landing-nav__icon icon-badge icon-badge--notes" aria-hidden="true">
+                  <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-notes"/></svg>
+                </span>
+                <span class="landing-nav__label">Тренажёр нот</span>
+              </a>
+              <a href="/ritm" class="landing-nav__item landing-nav__item--rhythm" id="btn-go-rhythm">
+                <span class="landing-nav__icon icon-badge icon-badge--session" aria-hidden="true">
+                  <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-note-half"/></svg>
+                </span>
+                <span class="landing-nav__label">Ритм-игра</span>
+              </a>
+              <a href="/melodii" class="landing-nav__item landing-nav__item--melody" id="btn-go-melodies">
+                <span class="landing-nav__icon icon-badge icon-badge--melody" aria-hidden="true">
+                  <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-melody"/></svg>
+                </span>
+                <span class="landing-nav__label">Мелодии</span>
+              </a>
+            </nav>
+            <ul class="landing-hero__pills" aria-label="Для педагогов">
               <li class="landing-pill">
-                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-midi"/></svg>
-                MIDI · микрофон · экран
-              </li>
-              <li class="landing-pill">
-                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-treble"/></svg>
-                Скрипичный и басовый ключ
-              </li>
-              <li class="landing-pill">
-                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-chart"/></svg>
-                Прогресс по каждой ноте
-              </li>
-              <li class="landing-pill">
-                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-user"/></svg>
+                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-users"/></svg>
                 Для педагогов — домашка и ученики
               </li>
             </ul>
@@ -195,28 +220,82 @@
         </div>
 
         <section class="landing-compare pick-panel" aria-labelledby="landing-compare-title">
+          <p class="landing-compare__eyebrow">Персонализация</p>
           <h2 class="landing-compare__title" id="landing-compare-title">Чем PianoBro отличается от обычных бесплатных тренажёров</h2>
           <div class="landing-compare__grid">
-            <div class="landing-compare__col">
-              <h3 class="landing-compare__subtitle">Обычный тренажёр</h3>
+            <article class="landing-compare__card landing-compare__card--plain">
+              <header class="landing-compare__head">
+                <span class="landing-compare__head-icon landing-compare__head-icon--plain" aria-hidden="true">
+                  <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-note-half"/></svg>
+                </span>
+                <h3 class="landing-compare__subtitle">Обычный тренажёр</h3>
+              </header>
               <ul class="landing-compare__list">
-                <li>даёт случайные упражнения</li>
-                <li>не помнит ошибки</li>
-                <li>не показывает слабые места</li>
-                <li>не строит программу</li>
-                <li>быстро надоедает</li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--no" aria-hidden="true">×</span>
+                  <span>Даёт случайные упражнения</span>
+                </li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--no" aria-hidden="true">×</span>
+                  <span>Не помнит ошибки</span>
+                </li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--no" aria-hidden="true">×</span>
+                  <span>Не показывает слабые места</span>
+                </li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--no" aria-hidden="true">×</span>
+                  <span>Не строит программу</span>
+                </li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--no" aria-hidden="true">×</span>
+                  <span>Быстро надоедает</span>
+                </li>
               </ul>
-            </div>
-            <div class="landing-compare__col landing-compare__col--accent">
-              <h3 class="landing-compare__subtitle">PianoBro</h3>
+            </article>
+
+            <div class="landing-compare__vs" aria-hidden="true"><span>vs</span></div>
+
+            <article class="landing-compare__card landing-compare__card--accent">
+              <header class="landing-compare__head">
+                <span class="landing-compare__head-icon landing-compare__head-icon--accent" aria-hidden="true">
+                  <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-brand"/></svg>
+                </span>
+                <h3 class="landing-compare__subtitle">PianoBro</h3>
+              </header>
               <ul class="landing-compare__list">
-                <li>запоминает ваши ошибки</li>
-                <li>чаще повторяет сложные ноты</li>
-                <li>показывает прогресс</li>
-                <li>составляет персональные тренировки</li>
-                <li>помогает заниматься регулярно</li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--yes" aria-hidden="true">
+                    <svg class="icon icon--sm" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
+                  </span>
+                  <span>Запоминает ваши ошибки</span>
+                </li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--yes" aria-hidden="true">
+                    <svg class="icon icon--sm" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
+                  </span>
+                  <span>Чаще повторяет сложные ноты</span>
+                </li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--yes" aria-hidden="true">
+                    <svg class="icon icon--sm" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
+                  </span>
+                  <span>Показывает прогресс</span>
+                </li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--yes" aria-hidden="true">
+                    <svg class="icon icon--sm" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
+                  </span>
+                  <span>Составляет персональные тренировки</span>
+                </li>
+                <li class="landing-compare__item">
+                  <span class="landing-compare__mark landing-compare__mark--yes" aria-hidden="true">
+                    <svg class="icon icon--sm" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
+                  </span>
+                  <span>Помогает заниматься регулярно</span>
+                </li>
               </ul>
-            </div>
+            </article>
           </div>
         </section>
 
@@ -442,6 +521,7 @@
     <?php
       $blogPost = is_array($page['blogPost'] ?? null) ? $page['blogPost'] : null;
       $blogRelated = is_array($page['blogRelated'] ?? null) ? $page['blogRelated'] : [];
+      $blogHeadingTag = ($page['screen'] ?? '') === 'blog-article' ? 'h1' : 'h2';
     ?>
     <section class="screen<?= $screenActive('blog-article') ?>" id="screen-blog-article"<?= $screenHidden('blog-article') ?>>
       <div class="screen-header">
@@ -459,7 +539,7 @@
           <time class="blog-article__date" datetime="<?= htmlspecialchars((string) ($blogPost['publishedAt'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
             <?= htmlspecialchars(formatBlogDate((string) ($blogPost['publishedAt'] ?? '')), ENT_QUOTES, 'UTF-8') ?>
           </time>
-          <h1 class="blog-article__title"><?= htmlspecialchars((string) ($blogPost['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h1>
+          <<?= $blogHeadingTag ?> class="blog-article__title"><?= htmlspecialchars((string) ($blogPost['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?></<?= $blogHeadingTag ?>>
           <?php if (!empty($blogPost['lead'])): ?>
             <p class="blog-article__lead"><?= htmlspecialchars((string) $blogPost['lead'], ENT_QUOTES, 'UTF-8') ?></p>
           <?php endif; ?>
@@ -680,7 +760,7 @@
         <a href="/" class="btn-back" id="btn-back-roadmap">← Назад</a>
         <h2 class="screen-header__title">
           <span class="screen-header__icon icon-badge icon-badge--roadmap" aria-hidden="true">
-            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-target"/></svg>
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-leaf"/></svg>
           </span>
           Путь новичка
         </h2>
@@ -1169,9 +1249,33 @@
       <div class="modal__backdrop" data-close-diagnostic></div>
       <div class="modal__card modal__card--diagnostic" role="dialog" aria-labelledby="diagnostic-title">
         <h2 class="modal__title" id="diagnostic-title">Результат диагностики</h2>
-        <p class="modal__text" id="diagnostic-summary"></p>
-        <p class="modal__text modal__text--muted" id="diagnostic-weak"></p>
-        <p class="modal__text modal__text--muted" id="diagnostic-offer"></p>
+        <div class="modal__stats modal__stats--diagnostic">
+          <div class="modal-stat">
+            <span class="modal-stat__label">Верно</span>
+            <span class="modal-stat__value modal-stat__value--success" id="diagnostic-correct">0</span>
+          </div>
+          <div class="modal-stat">
+            <span class="modal-stat__label">Ошибки</span>
+            <span class="modal-stat__value modal-stat__value--error" id="diagnostic-wrong">0</span>
+          </div>
+          <div class="modal-stat">
+            <span class="modal-stat__label">Точность</span>
+            <span class="modal-stat__value" id="diagnostic-accuracy">—</span>
+          </div>
+        </div>
+        <div class="diagnostic-result__weak weak-notes-offer" id="diagnostic-weak-notes">
+          <div class="weak-notes-offer__content">
+            <div class="weak-notes-offer__text">
+              <strong id="diagnostic-weak-title">Сложнее всего давались</strong>
+              <p id="diagnostic-weak-hint">PianoBro чаще будет повторять эти ноты в тренировках:</p>
+            </div>
+            <div class="weak-notes-offer__tags" id="diagnostic-weak-tags"></div>
+          </div>
+        </div>
+        <div class="diagnostic-offer" id="diagnostic-offer">
+          <strong>Персональный план</strong>
+          <p>Сервис составит программу тренировок и будет чаще показывать ноты, которые пока путаются.</p>
+        </div>
         <div class="modal__actions">
           <button type="button" class="btn btn--primary" id="diagnostic-open-plan">Открыть персональный план</button>
           <button type="button" class="btn btn--secondary" id="diagnostic-close">Закрыть</button>
@@ -1181,13 +1285,15 @@
 
     <!-- Итоги тренировки -->
     <div class="modal" id="session-modal" hidden>
-      <div class="modal__backdrop"></div>
-      <div class="modal__card modal__card--session" role="dialog" aria-labelledby="modal-title">
-        <div class="modal__icon icon-badge icon-badge--success" aria-hidden="true">
-          <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
+      <div class="modal__backdrop" data-close-session></div>
+      <div class="modal__card modal__card--session" id="session-modal-card" role="dialog" aria-labelledby="modal-title">
+        <div class="session-modal-classic" id="session-modal-classic">
+          <div class="modal__icon icon-badge icon-badge--success" aria-hidden="true">
+            <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
+          </div>
         </div>
         <h2 class="modal__title" id="modal-title">Тренировка завершена!</h2>
-        <div class="modal__stats">
+        <div class="modal__stats" id="session-modal-stats">
           <div class="modal-stat">
             <span class="modal-stat__label">Верно</span>
             <span class="modal-stat__value modal-stat__value--success" id="modal-correct">0</span>
@@ -1201,9 +1307,24 @@
             <span class="modal-stat__value" id="modal-accuracy">—</span>
           </div>
         </div>
-        <div class="modal-weak-notes" id="modal-weak-notes" hidden>
-          <p class="modal-weak-notes__title" id="modal-weak-notes-title">Сложнее всего давались:</p>
-          <div class="modal-weak-notes__tags" id="modal-weak-notes-tags"></div>
+        <div class="session-modal-training-result" id="session-modal-training-result" hidden>
+          <div class="diagnostic-result__weak weak-notes-offer" id="modal-weak-notes">
+            <div class="weak-notes-offer__content">
+              <div class="weak-notes-offer__text">
+                <strong id="modal-weak-notes-title">Сложнее всего давались</strong>
+                <p id="modal-weak-notes-hint">PianoBro чаще будет повторять эти ноты в тренировках:</p>
+              </div>
+              <div class="weak-notes-offer__tags" id="modal-weak-notes-tags"></div>
+            </div>
+          </div>
+          <div class="diagnostic-offer" id="modal-session-offer">
+            <strong>Персональный план</strong>
+            <p>Сервис составит программу тренировок и будет чаще показывать ноты, которые пока путаются.</p>
+          </div>
+          <div class="modal__actions">
+            <button type="button" class="btn btn--primary" id="modal-open-plan">Открыть персональный план</button>
+            <button type="button" class="btn btn--secondary" id="modal-close-training">Закрыть</button>
+          </div>
         </div>
         <ul class="modal-register-hint" id="modal-register-hint" hidden></ul>
         <div class="modal-discover" id="modal-discover" hidden></div>
@@ -1283,6 +1404,11 @@
     </symbol>
     <symbol id="ico-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/>
+    </symbol>
+    <symbol id="ico-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 21c-5.5-4.5-8.5-8.5-8.5-13.5C3.5 4 7 2 12 2s8.5 2 8.5 5.5C20.5 12.5 17.5 16.5 12 21z"/>
+      <path d="M12 21V9"/>
+      <path d="M8.5 10.5C10 12 12 12.5 12 12.5s2-.5 3.5-2"/>
     </symbol>
     <symbol id="ico-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>

@@ -375,4 +375,42 @@ final class PaymentService
 
     $this->subscriptions->activate($userId, (string) $payment['plan'], self::PROVIDER, $providerPaymentId);
   }
+
+  /** @return array{totalBuyers:int,today:int,yesterday:int} */
+  public function getPurchaseStats(): array
+  {
+    $totalBuyers = (int) $this->db->query(
+      "SELECT COUNT(DISTINCT user_id) FROM payments WHERE status = 'succeeded'",
+    )->fetchColumn();
+
+    $tz = new \DateTimeZone(trim(Env::get('APP_TIMEZONE', 'Europe/Moscow')) ?: 'Europe/Moscow');
+    $todayStart = new \DateTimeImmutable('today', $tz);
+    $todayEnd = $todayStart->modify('+1 day');
+    $yesterdayStart = $todayStart->modify('-1 day');
+
+    return [
+      'totalBuyers' => $totalBuyers,
+      'today' => $this->countSucceededPaymentsBetween(
+        $todayStart->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+        $todayEnd->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+      ),
+      'yesterday' => $this->countSucceededPaymentsBetween(
+        $yesterdayStart->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+        $todayStart->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+      ),
+    ];
+  }
+
+  private function countSucceededPaymentsBetween(string $start, string $end): int
+  {
+    $stmt = $this->db->prepare(
+      "SELECT COUNT(*) FROM payments
+       WHERE status = 'succeeded'
+         AND COALESCE(paid_at, created_at) >= :start
+         AND COALESCE(paid_at, created_at) < :end",
+    );
+    $stmt->execute(['start' => $start, 'end' => $end]);
+
+    return (int) $stmt->fetchColumn();
+  }
 }

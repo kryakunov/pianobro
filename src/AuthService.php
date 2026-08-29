@@ -42,6 +42,25 @@ final class AuthService
     }
   }
 
+  public function adminCsrfToken(): string
+  {
+    $this->startSession();
+    if (!isset($_SESSION['admin_csrf']) || !is_string($_SESSION['admin_csrf']) || $_SESSION['admin_csrf'] === '') {
+      $_SESSION['admin_csrf'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['admin_csrf'];
+  }
+
+  public function validateAdminCsrf(string $token): void
+  {
+    $this->startSession();
+    $expected = $_SESSION['admin_csrf'] ?? '';
+    if (!is_string($expected) || $expected === '' || $token === '' || !hash_equals($expected, $token)) {
+      throw new \InvalidArgumentException('Недействительный CSRF-токен');
+    }
+  }
+
   /** @return array{id:int,email:string,name:string,roles:list<string>,subscription?:array<string,mixed>}|null */
   public function currentUser(): ?array
   {

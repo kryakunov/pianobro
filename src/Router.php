@@ -291,19 +291,71 @@ final class Router
     }
 
     if (preg_match('#^/api/admin/users/(\d+)/teacher$#', $path, $m) && $method === 'POST') {
-      $admin = $this->requireAdmin();
+      $body = $this->readJsonBody();
+      $admin = $this->requireAdminMutation($body);
       if ($admin === null) {
         return;
       }
 
-      $body = $this->readJsonBody();
       $enabled = (bool) ($body['teacher'] ?? false);
 
       try {
-        $result = $this->admin->setUserTeacherRole((int) $m[1], $enabled);
+        $userId = $this->parseAdminUserId($m[1]);
+        $result = $this->admin->setUserTeacherRole($userId, $enabled);
         $this->json($result);
       } catch (\InvalidArgumentException $e) {
-        $this->json(['error' => $e->getMessage()], 400);
+        $this->respondAdminError($e);
+      }
+      return;
+    }
+
+    if (preg_match('#^/api/admin/users/(\d+)/subscription$#', $path, $m) && $method === 'POST') {
+      $body = $this->readJsonBody();
+      $admin = $this->requireAdminMutation($body);
+      if ($admin === null) {
+        return;
+      }
+
+      $planId = trim((string) ($body['planId'] ?? ''));
+
+      try {
+        $userId = $this->parseAdminUserId($m[1]);
+        $subscription = $this->admin->grantSubscription($userId, $planId);
+        $this->json(['subscription' => $subscription]);
+      } catch (\InvalidArgumentException $e) {
+        $this->respondAdminError($e);
+      }
+      return;
+    }
+
+    if (preg_match('#^/api/admin/users/(\d+)/subscription$#', $path, $m) && $method === 'DELETE') {
+      $admin = $this->requireAdminMutation();
+      if ($admin === null) {
+        return;
+      }
+
+      try {
+        $userId = $this->parseAdminUserId($m[1]);
+        $subscription = $this->admin->revokeSubscription($userId);
+        $this->json(['subscription' => $subscription]);
+      } catch (\InvalidArgumentException $e) {
+        $this->respondAdminError($e);
+      }
+      return;
+    }
+
+    if (preg_match('#^/api/admin/users/(\d+)$#', $path, $m) && $method === 'DELETE') {
+      $admin = $this->requireAdminMutation();
+      if ($admin === null) {
+        return;
+      }
+
+      try {
+        $userId = $this->parseAdminUserId($m[1]);
+        $this->admin->deleteUser($userId, $admin['id']);
+        $this->json(['ok' => true]);
+      } catch (\InvalidArgumentException $e) {
+        $this->respondAdminError($e);
       }
       return;
     }
@@ -813,8 +865,39 @@ final class Router
     $billingBoot = [
       'mockMode' => $this->payments->isMockMode(),
     ];
+    $headerAvatar = $this->buildHeaderAvatar($user);
 
     include dirname(__DIR__) . '/templates/app.php';
+  }
+
+  /** @return array{emoji:string,rankTitle:string,rankIndex:int,isPremium:bool,userId:int}|null */
+  private function buildHeaderAvatar(?array $user): ?array
+  {
+    if ($user === null) {
+      return null;
+    }
+
+    $userId = (int) $user['id'];
+    $roadmap = $this->roadmap->getRoadmap($userId);
+    $progress = is_array($roadmap['progress'] ?? null) ? $roadmap['progress'] : [];
+    $ranks = is_array($roadmap['ranks'] ?? null) ? $roadmap['ranks'] : [];
+    $totalXp = (int) ($progress['totalXp'] ?? 0);
+    $rank = is_array($progress['rank'] ?? null) ? $progress['rank'] : ['emoji' => '🌱', 'title' => 'Новичок'];
+
+    $rankIndex = 0;
+    foreach ($ranks as $index => $item) {
+      if ($totalXp >= (int) ($item['minXp'] ?? 0)) {
+        $rankIndex = (int) $index;
+      }
+    }
+
+    return [
+      'emoji' => (string) ($rank['emoji'] ?? '🌱'),
+      'rankTitle' => (string) ($rank['title'] ?? 'Новичок'),
+      'rankIndex' => $rankIndex,
+      'isPremium' => (bool) ($user['subscription']['isPremium'] ?? false),
+      'userId' => $userId,
+    ];
   }
 
   private function renderAdmin(): void
@@ -827,8 +910,13 @@ final class Router
     $isAdmin = $this->admin->isAdmin($user);
     $users = $isAdmin ? $this->admin->listUsersWithRoadmap() : [];
     $onlineStats = $isAdmin ? $this->admin->getDailyOnlineCounts() : ['today' => 0, 'yesterday' => 0];
-    $analyticsStats = $isAdmin ? $this->analytics->getDashboard(30) : null;
+    $purchaseStats = $isAdmin ? $this->payments->getPurchaseStats() : ['totalBuyers' => 0, 'today' => 0, 'yesterday' => 0];
     $adminConfigured = AdminService::adminEmails() !== [];
+    $plans = PricingConfig::plans();
+    $adminCsrf = '';
+    if ($isAdmin && $user !== null) {
+      $adminCsrf = $this->auth->adminCsrfToken();
+    }
     $assetVersion = AssetVersion::compute();
 
     include dirname(__DIR__) . '/templates/admin.php';
@@ -880,6 +968,77 @@ final class Router
     }
 
     return $user;
+  }
+
+  /** @param array<string, mixed>|null $body */
+  private function requireAdminMutation(?array $body = null): ?array
+  {
+    $admin = $this->requireAdmin();
+    if ($admin === null) {
+      return null;
+    }
+
+    if (!$this->isSameOriginAdminRequest()) {
+      $this->json(['error' => 'Запрос отклонён'], 403);
+      return null;
+    }
+
+    $token = trim((string) ($_SERVER['HTTP_X_ADMIN_CSRF'] ?? ''));
+    if ($token === '' && $body !== null) {
+      $token = trim((string) ($body['csrfToken'] ?? ''));
+    }
+
+    try {
+      $this->auth->validateAdminCsrf($token);
+    } catch (\InvalidArgumentException $e) {
+      $this->json(['error' => $e->getMessage()], 403);
+      return null;
+    }
+
+    return $admin;
+  }
+
+  private function parseAdminUserId(string $raw): int
+  {
+    if ($raw === '' || !ctype_digit($raw)) {
+      throw new \InvalidArgumentException('Некорректный ID пользователя');
+    }
+
+    $userId = (int) $raw;
+    if ($userId <= 0) {
+      throw new \InvalidArgumentException('Некорректный ID пользователя');
+    }
+
+    return $userId;
+  }
+
+  private function respondAdminError(\InvalidArgumentException $e): void
+  {
+    $message = $e->getMessage();
+    $status = match ($message) {
+      'Пользователь не найден', 'Некорректный ID пользователя' => 404,
+      'Нельзя удалить свой аккаунт',
+      'Нельзя удалить аккаунт администратора',
+      'Недействительный CSRF-токен' => 403,
+      default => 400,
+    };
+
+    $this->json(['error' => $message], $status);
+  }
+
+  private function isSameOriginAdminRequest(): bool
+  {
+    $origin = trim((string) ($_SERVER['HTTP_ORIGIN'] ?? ''));
+    if ($origin !== '' && !AppUrl::hostMatchesRequest($origin)) {
+      return false;
+    }
+
+    $referer = trim((string) ($_SERVER['HTTP_REFERER'] ?? ''));
+    if ($referer !== '' && !AppUrl::hostMatchesRequest($referer)) {
+      return false;
+    }
+
+    return true;
   }
 
   /** @return array{id:int,email:string,name:string,roles:list<string>}|null */

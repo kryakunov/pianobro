@@ -1,5 +1,6 @@
 import { getPlan } from './pricing-config.js';
 import { trackConversion, refreshBillingState, isPremiumUser, setPendingAuthAction } from './subscription.js';
+import { trackGoal } from './metrika.js';
 import { navigateTo } from './routes.js';
 import { isLoggedIn } from './auth.js';
 
@@ -185,7 +186,10 @@ function bindPaymentClickDelegation() {
     const btn = event.target.closest('.payment-legal__buy[data-plan-id]');
     if (!btn || btn.disabled) return;
     const planId = btn.getAttribute('data-plan-id');
-    if (planId) void startCheckout(planId, btn);
+    if (planId) {
+      trackGoal('payment_click', { tariff: planId });
+      void startCheckout(planId, btn);
+    }
   });
 }
 

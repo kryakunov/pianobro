@@ -11,10 +11,11 @@ $seller = PricingConfig::seller();
 $sellerEmail = htmlspecialchars($seller['email'], ENT_QUOTES, 'UTF-8');
 $siteUrl = htmlspecialchars(AppUrl::canonical('/'), ENT_QUOTES, 'UTF-8');
 $offerUrl = htmlspecialchars(AppUrl::canonical('/oferta'), ENT_QUOTES, 'UTF-8');
+$pageHeadingTag = (($page['screen'] ?? '') === 'payment') ? 'h1' : 'h2';
 ?>
 <article class="payment-legal">
   <header class="payment-legal__header">
-    <h1 class="payment-legal__title">Оплата подписки PianoBro</h1>
+    <<?= $pageHeadingTag ?> class="payment-legal__title">Оплата подписки PianoBro</<?= $pageHeadingTag ?>>
     <p class="payment-legal__lead">
       На этой странице размещены сведения об услугах, фиксированных ценах и порядке получения цифрового доступа
       для приёма платежей через ЮKassa. Условия оказания услуг — в
@@ -32,19 +33,41 @@ $offerUrl = htmlspecialchars(AppUrl::canonical('/oferta'), ENT_QUOTES, 'UTF-8');
     <p class="payment-legal__notice" id="payment-status" hidden role="status" aria-live="polite"></p>
     <div class="payment-legal__plans">
       <?php foreach ($plans as $plan): ?>
-        <article class="payment-legal__plan<?= !empty($plan['featured']) ? ' payment-legal__plan--featured' : '' ?>">
-          <?php if (!empty($plan['badge'])): ?>
-            <span class="payment-legal__badge"><?= htmlspecialchars((string) $plan['badge'], ENT_QUOTES, 'UTF-8') ?></span>
-          <?php endif; ?>
-          <h3 class="payment-legal__plan-title"><?= htmlspecialchars((string) $plan['name'], ENT_QUOTES, 'UTF-8') ?></h3>
-          <p class="payment-legal__plan-price"><?= (int) $plan['priceRub'] ?>&nbsp;₽</p>
-          <p class="payment-legal__plan-desc"><?= htmlspecialchars((string) $plan['description'], ENT_QUOTES, 'UTF-8') ?></p>
-          <?php if (($plan['id'] ?? '') === 'yearly'): ?>
-            <p class="payment-legal__plan-note">≈<?= (int) $plan['monthlyEquivalentRub'] ?>&nbsp;₽ в месяц</p>
-          <?php endif; ?>
-          <button type="button" class="btn <?= !empty($plan['featured']) ? 'btn--primary' : 'btn--secondary' ?> payment-legal__buy" data-plan-id="<?= htmlspecialchars((string) $plan['id'], ENT_QUOTES, 'UTF-8') ?>">
-            <?= htmlspecialchars((string) $plan['buttonLabel'], ENT_QUOTES, 'UTF-8') ?>
-          </button>
+        <?php
+          $isFeatured = !empty($plan['featured']);
+          $planId = htmlspecialchars((string) $plan['id'], ENT_QUOTES, 'UTF-8');
+          $shortName = htmlspecialchars((string) ($plan['shortName'] ?? $plan['name']), ENT_QUOTES, 'UTF-8');
+          $priceRub = (int) $plan['priceRub'];
+          $monthlyRub = (int) ($plan['monthlyEquivalentRub'] ?? $priceRub);
+          $durationDays = (int) ($plan['durationDays'] ?? 30);
+        ?>
+        <article class="payment-legal__plan<?= $isFeatured ? ' payment-legal__plan--featured' : '' ?>">
+          <div class="payment-legal__plan-top">
+            <?php if (!empty($plan['badge'])): ?>
+              <span class="payment-legal__badge"><?= htmlspecialchars((string) $plan['badge'], ENT_QUOTES, 'UTF-8') ?></span>
+            <?php else: ?>
+              <span class="payment-legal__badge payment-legal__badge--spacer" aria-hidden="true"></span>
+            <?php endif; ?>
+            <h3 class="payment-legal__plan-title"><?= $shortName ?></h3>
+            <p class="payment-legal__plan-period"><?= $durationDays ?> дней доступа</p>
+            <div class="payment-legal__plan-price-wrap">
+              <span class="payment-legal__plan-price"><?= $priceRub ?></span>
+              <span class="payment-legal__plan-currency">₽</span>
+            </div>
+            <p class="payment-legal__plan-note">≈ <?= $monthlyRub ?>&nbsp;₽ в месяц</p>
+          </div>
+          <div class="payment-legal__plan-body">
+            <p class="payment-legal__plan-desc"><?= htmlspecialchars((string) $plan['description'], ENT_QUOTES, 'UTF-8') ?></p>
+          </div>
+          <div class="payment-legal__plan-foot">
+            <button
+              type="button"
+              class="btn <?= $isFeatured ? 'btn--primary' : 'btn--secondary' ?> payment-legal__buy"
+              data-plan-id="<?= $planId ?>"
+            >
+              <?= htmlspecialchars((string) $plan['buttonLabel'], ENT_QUOTES, 'UTF-8') ?>
+            </button>
+          </div>
         </article>
       <?php endforeach; ?>
     </div>

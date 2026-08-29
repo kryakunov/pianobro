@@ -68,6 +68,73 @@ final class AppUrl
     return (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
   }
 
+  public static function hostMatchesRequest(string $urlOrHost): bool
+  {
+    $expected = self::normalizeHostKey(self::requestHost());
+    if ($expected === '') {
+      return false;
+    }
+
+    $actual = self::normalizeHostKey($urlOrHost);
+    if ($actual === '') {
+      return true;
+    }
+
+    if ($expected === $actual) {
+      return true;
+    }
+
+    return self::hostnameOnly($expected) === self::hostnameOnly($actual);
+  }
+
+  private static function normalizeHostKey(string $hostOrUrl): string
+  {
+    $hostOrUrl = trim($hostOrUrl);
+    if ($hostOrUrl === '') {
+      return '';
+    }
+
+    if (str_contains($hostOrUrl, '://')) {
+      $host = strtolower((string) (parse_url($hostOrUrl, PHP_URL_HOST) ?? ''));
+      $port = parse_url($hostOrUrl, PHP_URL_PORT);
+    } else {
+      $hostOrUrl = strtolower($hostOrUrl);
+      if (preg_match('#^\[([^\]]+)\](?::(\d+))?$#', $hostOrUrl, $matches) === 1) {
+        $host = '[' . $matches[1] . ']';
+        $port = isset($matches[2]) ? (int) $matches[2] : null;
+      } elseif (preg_match('#^([^:]+)(?::(\d+))?$#', $hostOrUrl, $matches) === 1) {
+        $host = $matches[1];
+        $port = isset($matches[2]) ? (int) $matches[2] : null;
+      } else {
+        return '';
+      }
+    }
+
+    if ($host === '') {
+      return '';
+    }
+
+    if ($port !== null && $port !== 80 && $port !== 443) {
+      return $host . ':' . $port;
+    }
+
+    return $host;
+  }
+
+  private static function hostnameOnly(string $key): string
+  {
+    if (str_starts_with($key, '[')) {
+      return $key;
+    }
+
+    $pos = strrpos($key, ':');
+    if ($pos === false) {
+      return $key;
+    }
+
+    return substr($key, 0, $pos);
+  }
+
   private static function isLocalUrl(string $url): bool
   {
     $host = parse_url($url, PHP_URL_HOST);

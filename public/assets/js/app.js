@@ -82,7 +82,10 @@ import {
   formatNotesQuotaLabel,
   refreshBillingState,
   getSubscriptionDisplay,
+  getSubscription,
 } from './subscription.js';
+import { applyHeaderAvatar, buildHeaderAvatarState } from './user-avatar.js';
+import { renderTrainingResultWeakNotes } from './training-result-ui.js';
 
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
 const RHYTHM_PREFS_KEY = 'piano-rhythm-prefs';
@@ -135,7 +138,9 @@ const els = {
   authPanel: $('#auth-panel'),
   btnOpenAuth: $('#btn-open-auth'),
   authUser: $('#auth-user'),
+  authUserAvatar: $('#auth-user-avatar'),
   authUserName: $('#auth-user-name'),
+  authUserRank: $('#auth-user-rank'),
   authUserPlan: $('#auth-user-plan'),
   btnLogout: $('#btn-logout'),
   authModal: $('#auth-modal'),
@@ -193,13 +198,19 @@ const els = {
   keyboardHintTabs: document.querySelectorAll('#keyboard-hints-panel [data-hints]'),
   piano: $('#piano'),
   sessionModal: $('#session-modal'),
+  sessionModalCard: $('#session-modal-card'),
+  sessionModalClassic: $('#session-modal-classic'),
+  sessionModalTrainingResult: $('#session-modal-training-result'),
+  sessionModalStats: $('#session-modal-stats'),
   modalCorrect: $('#modal-correct'),
   modalWrong: $('#modal-wrong'),
   modalAccuracy: $('#modal-accuracy'),
   modalTitle: $('#modal-title'),
   modalWeakNotes: $('#modal-weak-notes'),
   modalWeakNotesTitle: $('#modal-weak-notes-title'),
+  modalWeakNotesHint: $('#modal-weak-notes-hint'),
   modalWeakNotesTags: $('#modal-weak-notes-tags'),
+  modalSessionOffer: $('#modal-session-offer'),
   modalActions: $('#modal-actions'),
   modalDiscover: $('#modal-discover'),
   modalRegisterHint: $('#modal-register-hint'),
@@ -556,6 +567,28 @@ function renderStatsProfileCard(user, display) {
   `;
 }
 
+function updateHeaderAvatar() {
+  const user = getUser();
+  if (!user || !els.authUserAvatar) {
+    return;
+  }
+
+  const progress = cachedRoadmapData?.progress ?? null;
+  const state = buildHeaderAvatarState({
+    userId: user.id,
+    totalXp: progress?.totalXp ?? 0,
+    rank: progress?.rank ?? null,
+    ranks: cachedRoadmapData?.ranks ?? null,
+    isPremium: Boolean(getSubscription().isPremium ?? isPremiumUser()),
+  });
+
+  applyHeaderAvatar(els.authUserAvatar, state);
+  if (els.authUserRank) {
+    els.authUserRank.textContent = state.rankTitle;
+    els.authUserRank.hidden = false;
+  }
+}
+
 function updateSubscriptionUi() {
   const user = getUser();
   const display = getSubscriptionDisplay(Boolean(user));
@@ -574,6 +607,8 @@ function updateSubscriptionUi() {
   if (statsProfile && user && display) {
     statsProfile.outerHTML = renderStatsProfileCard(user, display);
   }
+
+  updateHeaderAvatar();
 }
 
 function updateNotesPickModeUi() {
@@ -656,38 +691,54 @@ function weakNotesFromSessionStats(stats, { allowDiagnosticFallback = true } = {
     }));
 }
 
-function renderSessionModalWeakNotes(stats) {
-  if (!els.modalWeakNotes || !els.modalWeakNotesTags || !els.modalWeakNotesTitle) return;
-
+function isNotesTrainingResultLayout(stats) {
   const mode = stats?.mode ?? appMode;
-  if (mode !== 'notes') {
-    els.modalWeakNotes.hidden = true;
-    els.modalWeakNotesTags.innerHTML = '';
+  return mode === 'notes' && !stats?.isRoadmapPractice;
+}
+
+function applySessionModalLayout(stats) {
+  const notesResult = isNotesTrainingResultLayout(stats);
+  els.sessionModalCard?.classList.toggle('modal__card--diagnostic', notesResult);
+  els.sessionModalStats?.classList.toggle('modal__stats--diagnostic', notesResult);
+
+  if (els.sessionModalClassic) {
+    els.sessionModalClassic.hidden = notesResult;
+  }
+  if (els.sessionModalTrainingResult) {
+    els.sessionModalTrainingResult.hidden = !notesResult;
+  }
+  if (els.modalActions) {
+    els.modalActions.hidden = notesResult;
+  }
+  if (notesResult) {
+    if (els.modalRegisterHint) {
+      els.modalRegisterHint.hidden = true;
+      els.modalRegisterHint.innerHTML = '';
+    }
+    if (els.modalDiscover) {
+      els.modalDiscover.hidden = true;
+      els.modalDiscover.innerHTML = '';
+    }
+  }
+}
+
+function renderSessionModalWeakNotes(stats) {
+  if (!isNotesTrainingResultLayout(stats)) {
+    if (els.modalWeakNotes) {
+      els.modalWeakNotes.hidden = true;
+    }
+    if (els.modalWeakNotesTags) {
+      els.modalWeakNotesTags.innerHTML = '';
+    }
     return;
   }
 
   const weakNotes = weakNotesFromSessionStats(stats, { allowDiagnosticFallback: false });
-  if (weakNotes.length) {
-    els.modalWeakNotes.hidden = false;
-    els.modalWeakNotesTitle.textContent = 'Сложнее всего давались:';
-    els.modalWeakNotesTags.innerHTML = weakNotes
-      .map((note) => {
-        const suffix = note.count > 1 ? `<span class="modal-weak-notes__count">×${note.count}</span>` : '';
-        return `<span class="weak-notes-offer__tag">${escapeHtml(note.name)}${suffix}</span>`;
-      })
-      .join('');
-    return;
-  }
-
-  if ((stats?.wrong ?? 0) === 0 && (stats?.total ?? 0) > 0) {
-    els.modalWeakNotes.hidden = false;
-    els.modalWeakNotesTitle.textContent = 'В этой тренировке ошибок не было — отличный результат!';
-    els.modalWeakNotesTags.innerHTML = '';
-    return;
-  }
-
-  els.modalWeakNotes.hidden = true;
-  els.modalWeakNotesTags.innerHTML = '';
+  renderTrainingResultWeakNotes({
+    title: els.modalWeakNotesTitle,
+    hint: els.modalWeakNotesHint,
+    tags: els.modalWeakNotesTags,
+  }, weakNotes);
 }
 
 function noteNameFromMidi(midi) {
@@ -844,8 +895,10 @@ function showRhythmGameOver(stats) {
     labels[2].textContent = 'Рекорд';
   }
 
+  applySessionModalLayout({ ...stats, mode: 'rhythm' });
+  renderSessionModalWeakNotes({ ...stats, mode: 'rhythm' });
   els.sessionModal.hidden = false;
-  renderSessionModalUi(stats);
+  renderSessionModalUi({ ...stats, mode: 'rhythm' });
   trackGoal('finish_training', {
     mode: stats.mode ?? appMode,
     accuracy: stats.accuracy,
@@ -883,9 +936,12 @@ function showSessionModal(stats) {
   els.modalWrong.textContent = String(stats.wrong);
   els.modalAccuracy.textContent = `${stats.accuracy}%`;
 
+  applySessionModalLayout(stats);
   renderSessionModalWeakNotes(stats);
   els.sessionModal.hidden = false;
-  renderSessionModalUi(stats);
+  if (!isNotesTrainingResultLayout(stats)) {
+    renderSessionModalUi(stats);
+  }
   trackGoal('finish_training', {
     mode: stats.mode ?? appMode,
     accuracy: stats.accuracy,
@@ -910,7 +966,7 @@ function pluralNotes(count) {
 }
 
 const SESSION_MODAL_DISCOVER = [
-  { id: 'roadmap', path: ROUTES.roadmap, icon: 'target', title: 'Путь новичка', text: '8 уровней с нуля' },
+  { id: 'roadmap', path: ROUTES.roadmap, icon: 'leaf', title: 'Путь новичка', text: '8 уровней с нуля' },
   { id: 'melodies', path: ROUTES.melodies, icon: 'melody', title: 'Мелодии', text: 'Играйте музыку' },
   { id: 'notes', path: ROUTES.notes, icon: 'notes', title: 'Тренажёр нот', text: 'Свои настройки' },
   { id: 'rhythm', path: ROUTES.rhythm, icon: 'play', title: 'Ритм-игра', text: 'Ноты в темпе' },
@@ -962,10 +1018,10 @@ function buildSessionModalActions(stats) {
     actions.push({ id: 'stats', label: 'Моя карта нот', variant: 'primary', path: ROUTES.stats });
   }
 
-  if (loggedIn && !isPremiumUser() && mode === 'notes') {
+  if (loggedIn && !isPremiumUser() && mode === 'notes' && !isNotesTrainingResultLayout(stats)) {
     actions.unshift({
-      id: 'premium',
-      label: 'Открыть персональные тренировки',
+      id: 'personal-plan',
+      label: 'Открыть персональный план',
       variant: 'primary',
     });
     const statsAction = actions.find((action) => action.id === 'stats');
@@ -1088,10 +1144,11 @@ function handleSessionModalAction(actionId, dataset) {
       trackGoal('modal_stats_click', { mode: appMode });
       leavePracticeTo(ROUTES.stats);
       break;
+    case 'personal-plan':
     case 'premium':
       hideSessionModal();
       trackGoal('modal_premium_click', { mode: appMode });
-      showPaywall('session_complete', { weakNotes: weakNotesFromSessionStats(lastSessionStats) });
+      void openPersonalPlan();
       break;
     case 'roadmap':
       trackGoal('modal_roadmap_click', { mode: appMode });
@@ -1127,6 +1184,26 @@ function handleSessionModalAction(actionId, dataset) {
 }
 
 function bindSessionModalUi() {
+  document.getElementById('modal-open-plan')?.addEventListener('click', () => {
+    hideSessionModal();
+    trackGoal('modal_premium_click', { mode: appMode });
+    void openPersonalPlan();
+  });
+
+  document.getElementById('modal-close-training')?.addEventListener('click', () => {
+    trackGoal('modal_leave', { mode: appMode });
+    leavePractice();
+  });
+
+  els.sessionModal?.querySelector('[data-close-session]')?.addEventListener('click', () => {
+    if (lastSessionStats && isNotesTrainingResultLayout(lastSessionStats)) {
+      trackGoal('modal_leave', { mode: appMode });
+      leavePractice();
+      return;
+    }
+    hideSessionModal();
+  });
+
   els.sessionModal?.addEventListener('click', (event) => {
     const actionBtn = event.target.closest('[data-modal-action]');
     if (actionBtn) {
@@ -1406,6 +1483,24 @@ function hideSessionModal() {
   els.sessionModal.hidden = true;
   sessionModalSuspendedForAuth = false;
   restoreSessionModalLabels();
+  els.sessionModalCard?.classList.remove('modal__card--diagnostic');
+  els.sessionModalStats?.classList.remove('modal__stats--diagnostic');
+  if (els.sessionModalClassic) {
+    els.sessionModalClassic.hidden = false;
+  }
+  if (els.sessionModalTrainingResult) {
+    els.sessionModalTrainingResult.hidden = true;
+  }
+  if (els.modalActions) {
+    els.modalActions.hidden = false;
+    els.modalActions.innerHTML = '';
+  }
+  if (els.modalWeakNotes) {
+    els.modalWeakNotes.hidden = true;
+  }
+  if (els.modalWeakNotesTags) {
+    els.modalWeakNotesTags.innerHTML = '';
+  }
   if (els.modalRegisterHint) {
     els.modalRegisterHint.hidden = true;
     els.modalRegisterHint.innerHTML = '';
@@ -1413,13 +1508,6 @@ function hideSessionModal() {
   if (els.modalDiscover) {
     els.modalDiscover.hidden = true;
     els.modalDiscover.innerHTML = '';
-  }
-  if (els.modalActions) els.modalActions.innerHTML = '';
-  if (els.modalWeakNotes) {
-    els.modalWeakNotes.hidden = true;
-  }
-  if (els.modalWeakNotesTags) {
-    els.modalWeakNotesTags.innerHTML = '';
   }
 }
 
@@ -1820,6 +1908,7 @@ function updateAuthUI() {
   if (els.authUser) els.authUser.hidden = !loggedIn;
   if (els.btnLogout) els.btnLogout.hidden = !loggedIn;
   if (els.authUserName) els.authUserName.textContent = user?.name ?? '';
+  if (els.authUserRank) els.authUserRank.hidden = !loggedIn;
   if (els.btnGoHomework) els.btnGoHomework.hidden = !isStudent;
   if (els.btnGoTeacher) els.btnGoTeacher.hidden = !isTeacher;
   updateSubscriptionUi();
@@ -3003,6 +3092,7 @@ async function refreshRoadmapData(noteStats = null) {
       }
     }
     cachedRoadmapData = data;
+    updateHeaderAvatar();
     if (currentScreen === 'roadmap') {
       renderRoadmapScreen();
     }

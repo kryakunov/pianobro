@@ -8,7 +8,9 @@ declare(strict_types=1);
 /** @var list<array<string, mixed>> $users */
 /** @var int $assetVersion */
 /** @var array{today:int,yesterday:int} $onlineStats */
-/** @var array{periodDays:int,since:string,topPagesByTime:list<array{path:string,label:string,visits:int,totalSeconds:int,avgSeconds:int}>,topSearchQueries:list<array{source:string,sourceLabel:string,query:string,visits:int}>}|null $analyticsStats */
+/** @var array{totalBuyers:int,today:int,yesterday:int} $purchaseStats */
+/** @var list<array<string, mixed>> $plans */
+/** @var string $adminCsrf */
 
 $formatDate = static function (?string $value): string {
   if ($value === null || $value === '') {
@@ -22,22 +24,6 @@ $formatDate = static function (?string $value): string {
   }
 
   return $date->format('d.m.Y H:i');
-};
-
-$formatDuration = static function (int $seconds): string {
-  if ($seconds < 60) {
-    return $seconds . ' сек';
-  }
-
-  $minutes = intdiv($seconds, 60);
-  if ($minutes < 60) {
-    return $minutes . ' мин';
-  }
-
-  $hours = intdiv($minutes, 60);
-  $restMinutes = $minutes % 60;
-
-  return $restMinutes > 0 ? $hours . ' ч ' . $restMinutes . ' мин' : $hours . ' ч';
 };
 
 $stageStatusLabel = static function (array $stage): string {
@@ -64,6 +50,9 @@ $stageStatusLabel = static function (array $stage): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Админ-панель | Piano Bro</title>
+  <?php if (($isAdmin ?? false) && ($adminCsrf ?? '') !== ''): ?>
+  <meta name="admin-csrf" content="<?= htmlspecialchars($adminCsrf, ENT_QUOTES, 'UTF-8') ?>">
+  <?php endif; ?>
   <link rel="stylesheet" href="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/assets/css/style.css'), ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body class="admin-page">
@@ -71,7 +60,7 @@ $stageStatusLabel = static function (array $stage): string {
     <header class="admin__header">
       <div>
         <h1 class="admin__title">Админ-панель</h1>
-        <p class="admin__subtitle">Пользователи, прогресс и статистика действий</p>
+        <p class="admin__subtitle">Пользователи, прогресс и оплаты</p>
       </div>
       <div class="admin__header-actions">
         <a href="/" class="btn btn--secondary btn--sm">На сайт</a>
@@ -116,80 +105,19 @@ $stageStatusLabel = static function (array $stage): string {
         <span class="admin-stat__value"><?= count(array_filter($users, static fn(array $item): bool => $item['lastLoginAt'] !== null)) ?></span>
         <span class="admin-stat__label">С активностью</span>
       </div>
-    </section>
-
-    <?php if ($analyticsStats !== null): ?>
-    <section class="admin-analytics">
-      <div class="admin-analytics__header">
-        <h2 class="admin-analytics__title">Статистика действий</h2>
-        <p class="admin-analytics__subtitle">За последние <?= (int) $analyticsStats['periodDays'] ?> дней · с <?= $formatDate($analyticsStats['since']) ?></p>
+      <div class="admin-stat">
+        <span class="admin-stat__value"><?= (int) $purchaseStats['totalBuyers'] ?></span>
+        <span class="admin-stat__label">Купили тариф</span>
       </div>
-
-      <div class="admin-analytics__grid">
-        <div class="admin-card admin-analytics__card">
-          <h3 class="admin-card__title">Время на страницах</h3>
-          <?php if ($analyticsStats['topPagesByTime'] === []): ?>
-          <p class="admin-analytics__empty">Пока нет данных о времени на страницах.</p>
-          <?php else: ?>
-          <div class="admin-analytics-table-wrap">
-            <table class="admin-analytics-table">
-              <thead>
-                <tr>
-                  <th>Страница</th>
-                  <th>Визиты</th>
-                  <th>Всего</th>
-                  <th>В среднем</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($analyticsStats['topPagesByTime'] as $row): ?>
-                <tr>
-                  <td>
-                    <strong><?= htmlspecialchars((string) $row['label'], ENT_QUOTES, 'UTF-8') ?></strong>
-                    <span class="admin-analytics-table__path"><?= htmlspecialchars((string) $row['path'], ENT_QUOTES, 'UTF-8') ?></span>
-                  </td>
-                  <td class="admin-analytics-table__num"><?= (int) $row['visits'] ?></td>
-                  <td class="admin-analytics-table__num"><?= htmlspecialchars($formatDuration((int) $row['totalSeconds']), ENT_QUOTES, 'UTF-8') ?></td>
-                  <td class="admin-analytics-table__num"><?= htmlspecialchars($formatDuration((int) $row['avgSeconds']), ENT_QUOTES, 'UTF-8') ?></td>
-                </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-          <?php endif; ?>
-        </div>
-
-        <div class="admin-card admin-analytics__card">
-          <h3 class="admin-card__title">Поисковые запросы</h3>
-          <?php if ($analyticsStats['topSearchQueries'] === []): ?>
-          <p class="admin-analytics__empty">Пока нет данных о поисковых переходах.</p>
-          <?php else: ?>
-          <div class="admin-analytics-table-wrap">
-            <table class="admin-analytics-table">
-              <thead>
-                <tr>
-                  <th>Запрос</th>
-                  <th>Источник</th>
-                  <th>Визиты</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($analyticsStats['topSearchQueries'] as $row): ?>
-                <tr>
-                  <td><?= htmlspecialchars((string) $row['query'], ENT_QUOTES, 'UTF-8') ?></td>
-                  <td><?= htmlspecialchars((string) $row['sourceLabel'], ENT_QUOTES, 'UTF-8') ?></td>
-                  <td class="admin-analytics-table__num"><?= (int) $row['visits'] ?></td>
-                </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-          <?php endif; ?>
-          <p class="admin-analytics__note">Google часто не передаёт текст запроса из соображений приватности. Яндекс и UTM-метки обычно доступны.</p>
-        </div>
+      <div class="admin-stat">
+        <span class="admin-stat__value"><?= (int) $purchaseStats['today'] ?></span>
+        <span class="admin-stat__label">Оплат сегодня</span>
+      </div>
+      <div class="admin-stat">
+        <span class="admin-stat__value"><?= (int) $purchaseStats['yesterday'] ?></span>
+        <span class="admin-stat__label">Оплат вчера</span>
       </div>
     </section>
-    <?php endif; ?>
 
     <?php if ($users === []): ?>
     <section class="admin-card">
@@ -202,10 +130,12 @@ $stageStatusLabel = static function (array $stage): string {
           <tr>
             <th>Пользователь</th>
             <th>Роли</th>
+            <th>Тариф</th>
             <th>Регистрация</th>
             <th>Последний заход</th>
             <th>Путь новичка</th>
             <th>Уровни</th>
+            <th>Действия</th>
           </tr>
         </thead>
         <tbody>
@@ -213,6 +143,7 @@ $stageStatusLabel = static function (array $stage): string {
           <?php
             $roadmap = $item['roadmap'];
             $rank = $roadmap['rank'];
+            $sub = $item['subscription'];
             $currentStage = null;
             foreach ($roadmap['stages'] as $stage) {
               if ($stage['id'] === $roadmap['currentStageId']) {
@@ -221,7 +152,21 @@ $stageStatusLabel = static function (array $stage): string {
               }
             }
           ?>
-          <tr>
+          <tr
+            class="<?= !empty($sub['hasPurchased']) ? 'admin-table__row--buyer' : '' ?>"
+            data-admin-user-row
+            data-user-id="<?= (int) $item['id'] ?>"
+            data-user-name="<?= htmlspecialchars((string) $item['name'], ENT_QUOTES, 'UTF-8') ?>"
+            data-user-email="<?= htmlspecialchars((string) $item['email'], ENT_QUOTES, 'UTF-8') ?>"
+            data-is-teacher="<?= !empty($item['isTeacher']) ? '1' : '0' ?>"
+            data-is-student="<?= in_array('student', $item['roles'] ?? [], true) ? '1' : '0' ?>"
+            data-sub-is-premium="<?= !empty($sub['isPremium']) ? '1' : '0' ?>"
+            data-sub-has-purchased="<?= !empty($sub['hasPurchased']) ? '1' : '0' ?>"
+            data-sub-plan-id="<?= htmlspecialchars((string) ($sub['planId'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
+            data-sub-plan-name="<?= htmlspecialchars((string) $sub['planName'], ENT_QUOTES, 'UTF-8') ?>"
+            data-sub-expires-at="<?= htmlspecialchars((string) ($sub['expiresAt'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
+            data-sub-payments-count="<?= (int) ($sub['paymentsCount'] ?? 0) ?>"
+          >
             <td class="admin-table__user">
               <strong><?= htmlspecialchars((string) $item['name'], ENT_QUOTES, 'UTF-8') ?></strong>
               <span class="admin-table__email"><?= htmlspecialchars((string) $item['email'], ENT_QUOTES, 'UTF-8') ?></span>
@@ -230,12 +175,32 @@ $stageStatusLabel = static function (array $stage): string {
             <td class="admin-table__roles" data-admin-roles-cell="<?= (int) $item['id'] ?>">
               <?php if (!empty($item['isTeacher'])): ?>
               <span class="admin-role-badge admin-role-badge--teacher">Педагог</span>
-              <button type="button" class="btn btn--secondary btn--sm" data-admin-teacher-toggle data-user-id="<?= (int) $item['id'] ?>" data-teacher="0">Снять роль</button>
-              <?php else: ?>
-              <button type="button" class="btn btn--primary btn--sm" data-admin-teacher-toggle data-user-id="<?= (int) $item['id'] ?>" data-teacher="1">Назначить педагогом</button>
               <?php endif; ?>
               <?php if (in_array('student', $item['roles'] ?? [], true)): ?>
               <span class="admin-role-badge admin-role-badge--student">Ученик</span>
+              <?php endif; ?>
+              <?php if (empty($item['isTeacher']) && !in_array('student', $item['roles'] ?? [], true)): ?>
+              <span class="admin-table__meta admin-table__meta--muted">—</span>
+              <?php endif; ?>
+            </td>
+            <td class="admin-table__subscription" data-admin-subscription-cell="<?= (int) $item['id'] ?>">
+              <?php if (!empty($sub['isPremium'])): ?>
+              <span class="admin-role-badge admin-role-badge--premium">Premium</span>
+              <span class="admin-table__meta"><?= htmlspecialchars((string) $sub['planName'], ENT_QUOTES, 'UTF-8') ?></span>
+              <?php if ($sub['expiresAt'] !== null): ?>
+              <span class="admin-table__meta">до <?= $formatDate($sub['expiresAt']) ?></span>
+              <?php endif; ?>
+              <?php elseif (!empty($sub['hasPurchased'])): ?>
+              <span class="admin-role-badge admin-role-badge--buyer">Покупал</span>
+              <span class="admin-table__meta"><?= htmlspecialchars((string) $sub['planName'], ENT_QUOTES, 'UTF-8') ?></span>
+              <?php if ($sub['expiresAt'] !== null): ?>
+              <span class="admin-table__meta admin-table__meta--muted">истёк <?= $formatDate($sub['expiresAt']) ?></span>
+              <?php endif; ?>
+              <?php if ((int) $sub['paymentsCount'] > 1): ?>
+              <span class="admin-table__meta admin-table__meta--muted"><?= (int) $sub['paymentsCount'] ?> оплат</span>
+              <?php endif; ?>
+              <?php else: ?>
+              <span class="admin-table__meta admin-table__meta--muted">Бесплатный</span>
               <?php endif; ?>
             </td>
             <td><?= $formatDate($item['createdAt']) ?></td>
@@ -274,6 +239,14 @@ $stageStatusLabel = static function (array $stage): string {
                 <?php endforeach; ?>
               </div>
             </td>
+            <td class="admin-table__manage">
+              <button
+                type="button"
+                class="btn btn--secondary btn--sm admin-table__manage-btn"
+                data-admin-open-manage
+                data-user-id="<?= (int) $item['id'] ?>"
+              >Управление</button>
+            </td>
           </tr>
           <?php endforeach; ?>
         </tbody>
@@ -284,9 +257,79 @@ $stageStatusLabel = static function (array $stage): string {
     </p>
     <?php endif; ?>
     <?php endif; ?>
+
+    <?php if (($isAdmin ?? false) && ($adminConfigured ?? false)): ?>
+    <div class="admin-modal" id="admin-user-modal" hidden aria-hidden="true">
+      <div class="admin-modal__backdrop" data-admin-modal-close></div>
+      <div class="admin-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
+        <header class="admin-modal__header">
+          <div>
+            <h2 class="admin-modal__title" id="admin-modal-title">Управление пользователем</h2>
+            <p class="admin-modal__subtitle" id="admin-modal-user-label"></p>
+          </div>
+          <button type="button" class="admin-modal__close" data-admin-modal-close aria-label="Закрыть">&times;</button>
+        </header>
+
+        <div class="admin-modal__body">
+          <section class="admin-modal__section">
+            <h3 class="admin-modal__section-title">Роли</h3>
+            <div class="admin-modal__status" id="admin-modal-roles-status"></div>
+            <button type="button" class="btn btn--secondary btn--sm" id="admin-modal-teacher-btn" hidden></button>
+          </section>
+
+          <section class="admin-modal__section">
+            <h3 class="admin-modal__section-title">Тариф</h3>
+            <div class="admin-modal__status" id="admin-modal-subscription-status"></div>
+            <label class="admin-modal__field">
+              <span class="admin-modal__field-label">Назначить тариф</span>
+              <select class="admin-modal__select" id="admin-modal-plan-select">
+                <option value="">— выберите —</option>
+                <?php foreach ($plans as $plan): ?>
+                <option value="<?= htmlspecialchars((string) $plan['id'], ENT_QUOTES, 'UTF-8') ?>">
+                  <?= htmlspecialchars((string) ($plan['shortName'] ?? $plan['name']), ENT_QUOTES, 'UTF-8') ?>
+                </option>
+                <?php endforeach; ?>
+              </select>
+            </label>
+            <div class="admin-modal__actions">
+              <button type="button" class="btn btn--primary btn--sm" id="admin-modal-grant-btn">Назначить тариф</button>
+              <button type="button" class="btn btn--secondary btn--sm" id="admin-modal-revoke-btn" hidden>Снять тариф</button>
+            </div>
+          </section>
+
+          <section class="admin-modal__section admin-modal__section--danger">
+            <h3 class="admin-modal__section-title">Опасная зона</h3>
+            <p class="admin-modal__hint">Удаление необратимо: прогресс, статистика и история оплат будут стёрты.</p>
+            <button type="button" class="btn btn--danger btn--sm" id="admin-modal-delete-btn">Удалить пользователя</button>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-confirm" id="admin-confirm" hidden aria-hidden="true">
+      <div class="admin-confirm__backdrop" data-admin-confirm-cancel></div>
+      <div class="admin-confirm__dialog" role="alertdialog" aria-modal="true" aria-labelledby="admin-confirm-title">
+        <h3 class="admin-confirm__title" id="admin-confirm-title">Подтвердите действие</h3>
+        <p class="admin-confirm__text" id="admin-confirm-text"></p>
+        <div class="admin-confirm__actions">
+          <button type="button" class="btn btn--secondary btn--sm" data-admin-confirm-cancel>Отмена</button>
+          <button type="button" class="btn btn--danger btn--sm" id="admin-confirm-ok">Подтвердить</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-toast" id="admin-toast" hidden role="status"></div>
+    <?php endif; ?>
   </div>
 
   <?php if (($isAdmin ?? false) && ($adminConfigured ?? false)): ?>
+  <script type="application/json" id="admin-plans-data"><?= json_encode(array_map(
+    static fn(array $plan): array => [
+      'id' => (string) ($plan['id'] ?? ''),
+      'shortName' => (string) ($plan['shortName'] ?? $plan['name'] ?? ''),
+    ],
+    $plans ?? [],
+  ), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
   <?php require __DIR__ . '/partials/js-import-map.php'; ?>
   <script type="module" src="<?= htmlspecialchars(\PianoTrainer\AssetVersion::versionedUrl('/assets/js/admin.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
   <?php endif; ?>

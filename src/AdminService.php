@@ -73,6 +73,9 @@ final class AdminService
         u.name,
         u.created_at,
         u.last_login_at,
+        u.subscription_status,
+        u.subscription_plan,
+        u.subscription_expires_at,
         (
           SELECT MAX(ts.created_at)
           FROM training_sessions ts
@@ -92,7 +95,17 @@ final class AdminService
           SELECT COUNT(*)
           FROM note_stats ns
           WHERE ns.user_id = u.id
-        ) AS practiced_notes_count
+        ) AS practiced_notes_count,
+        (
+          SELECT COUNT(*)
+          FROM payments p
+          WHERE p.user_id = u.id AND p.status = 'succeeded'
+        ) AS payments_count,
+        (
+          SELECT MAX(COALESCE(p.paid_at, p.created_at))
+          FROM payments p
+          WHERE p.user_id = u.id AND p.status = 'succeeded'
+        ) AS last_paid_at
       FROM users u
       ORDER BY datetime(COALESCE(u.last_login_at, u.created_at)) DESC, u.id DESC
       SQL);
@@ -121,6 +134,7 @@ final class AdminService
         'practicedNotesCount' => (int) $row['practiced_notes_count'],
         'roles' => $roles,
         'isTeacher' => in_array(RoleService::ROLE_TEACHER, $roles, true),
+        'subscription' => $this->summarizeSubscription($row),
         'roadmap' => [
           'totalXp' => (int) ($progress['totalXp'] ?? 0),
           'rank' => $progress['rank'] ?? ['title' => '—', 'emoji' => ''],
@@ -135,14 +149,53 @@ final class AdminService
     return $users;
   }
 
+  /** @return array{id:int,email:string,name:string,isAdmin:bool} */
+  public function resolveManagedUser(int $userId): array
+  {
+    if ($userId <= 0) {
+      throw new \InvalidArgumentException('Некорректный ID пользователя');
+    }
+
+    $stmt = $this->db->prepare('SELECT id, email, name FROM users WHERE id = :id');
+    $stmt->execute(['id' => $userId]);
+    $row = $stmt->fetch();
+    if ($row === false) {
+      throw new \InvalidArgumentException('Пользователь не найден');
+    }
+
+    $email = strtolower((string) $row['email']);
+
+    return [
+      'id' => $userId,
+      'email' => (string) $row['email'],
+      'name' => (string) $row['name'],
+      'isAdmin' => in_array($email, self::adminEmails(), true),
+    ];
+  }
+
+  /** @return array{id:int,email:string,name:string,isAdmin:bool} */
+  public function assertCanModifyUser(int $userId): array
+  {
+    return $this->resolveManagedUser($userId);
+  }
+
+  public function assertCanDeleteUser(int $userId, int $actingAdminId): void
+  {
+    $target = $this->resolveManagedUser($userId);
+
+    if ($userId === $actingAdminId) {
+      throw new \InvalidArgumentException('Нельзя удалить свой аккаунт');
+    }
+
+    if ($target['isAdmin']) {
+      throw new \InvalidArgumentException('Нельзя удалить аккаунт администратора');
+    }
+  }
+
   /** @return array{id:int,roles:list<string>,isTeacher:bool} */
   public function setUserTeacherRole(int $userId, bool $enabled): array
   {
-    $stmt = $this->db->prepare('SELECT id FROM users WHERE id = :id');
-    $stmt->execute(['id' => $userId]);
-    if ($stmt->fetch() === false) {
-      throw new \InvalidArgumentException('Пользователь не найден');
-    }
+    $this->assertCanModifyUser($userId);
 
     if ($enabled) {
       $this->roles->grantRole($userId, RoleService::ROLE_TEACHER);
@@ -157,6 +210,106 @@ final class AdminService
       'roles' => $roles,
       'isTeacher' => in_array(RoleService::ROLE_TEACHER, $roles, true),
     ];
+  }
+
+  /** @return array{isPremium:bool,hasPurchased:bool,planId:?string,planName:string,status:string,expiresAt:?string,paymentsCount:int,lastPaidAt:?string} */
+  public function grantSubscription(int $userId, string $planId): array
+  {
+    $plan = PricingConfig::plan($planId);
+    if ($plan === null) {
+      throw new \InvalidArgumentException('Неизвестный тариф');
+    }
+
+    $this->assertCanModifyUser($userId);
+
+    $now = gmdate('Y-m-d H:i:s');
+    $expires = gmdate('Y-m-d H:i:s', time() + ((int) $plan['durationDays'] * 86400));
+
+    $stmt = $this->db->prepare(
+      'UPDATE users SET
+         subscription_status = :status,
+         subscription_plan = :plan,
+         subscription_started_at = :started_at,
+         subscription_expires_at = :expires_at,
+         payment_provider = :provider,
+         last_payment_id = :payment_id
+       WHERE id = :id',
+    );
+    $stmt->execute([
+      'status' => 'active',
+      'plan' => $planId,
+      'started_at' => $now,
+      'expires_at' => $expires,
+      'provider' => 'admin',
+      'payment_id' => 'admin-grant-' . $now,
+      'id' => $userId,
+    ]);
+
+    return $this->getSubscriptionForUser($userId);
+  }
+
+  /** @return array{isPremium:bool,hasPurchased:bool,planId:?string,planName:string,status:string,expiresAt:?string,paymentsCount:int,lastPaidAt:?string} */
+  public function revokeSubscription(int $userId): array
+  {
+    $this->assertCanModifyUser($userId);
+
+    $stmt = $this->db->prepare(
+      'UPDATE users SET
+         subscription_status = :status,
+         subscription_plan = NULL,
+         subscription_started_at = NULL,
+         subscription_expires_at = NULL,
+         payment_provider = NULL,
+         last_payment_id = NULL
+       WHERE id = :id',
+    );
+    $stmt->execute([
+      'status' => 'free',
+      'id' => $userId,
+    ]);
+
+    return $this->getSubscriptionForUser($userId);
+  }
+
+  public function deleteUser(int $userId, int $actingAdminId): void
+  {
+    $this->assertCanDeleteUser($userId, $actingAdminId);
+
+    $delete = $this->db->prepare('DELETE FROM users WHERE id = :id');
+    $delete->execute(['id' => $userId]);
+    if ($delete->rowCount() === 0) {
+      throw new \InvalidArgumentException('Пользователь не найден');
+    }
+  }
+
+  /** @return array{isPremium:bool,hasPurchased:bool,planId:?string,planName:string,status:string,expiresAt:?string,paymentsCount:int,lastPaidAt:?string} */
+  public function getSubscriptionForUser(int $userId): array
+  {
+    $stmt = $this->db->prepare(<<<'SQL'
+      SELECT
+        subscription_status,
+        subscription_plan,
+        subscription_expires_at,
+        (
+          SELECT COUNT(*)
+          FROM payments p
+          WHERE p.user_id = users.id AND p.status = 'succeeded'
+        ) AS payments_count,
+        (
+          SELECT MAX(COALESCE(p.paid_at, p.created_at))
+          FROM payments p
+          WHERE p.user_id = users.id AND p.status = 'succeeded'
+        ) AS last_paid_at
+      FROM users
+      WHERE id = :id
+      SQL);
+    $stmt->execute(['id' => $userId]);
+    $row = $stmt->fetch();
+    if ($row === false) {
+      throw new \InvalidArgumentException('Пользователь не найден');
+    }
+
+    return $this->summarizeSubscription($row);
   }
 
   /**
@@ -191,6 +344,49 @@ final class AdminService
     }
 
     return $items;
+  }
+
+  /** @param array<string, mixed> $row
+   * @return array{isPremium:bool,hasPurchased:bool,planId:?string,planName:string,status:string,expiresAt:?string,paymentsCount:int,lastPaidAt:?string}
+   */
+  private function summarizeSubscription(array $row): array
+  {
+    $planId = $row['subscription_plan'] !== null && $row['subscription_plan'] !== ''
+      ? (string) $row['subscription_plan']
+      : null;
+    $status = (string) ($row['subscription_status'] ?? 'free');
+    $expiresAt = $row['subscription_expires_at'] !== null && $row['subscription_expires_at'] !== ''
+      ? (string) $row['subscription_expires_at']
+      : null;
+    $isPremium = $status === 'active' && $expiresAt !== null && strtotime($expiresAt) > time();
+    $paymentsCount = (int) ($row['payments_count'] ?? 0);
+    $hasPurchased = $paymentsCount > 0;
+    $lastPaidAt = $row['last_paid_at'] !== null && $row['last_paid_at'] !== ''
+      ? (string) $row['last_paid_at']
+      : null;
+
+    $planConfig = $planId !== null ? PricingConfig::plan($planId) : null;
+    $planName = $planConfig !== null
+      ? (string) ($planConfig['shortName'] ?? $planConfig['name'])
+      : ($planId ?? '—');
+
+    if ($isPremium || $hasPurchased) {
+      $displayStatus = $isPremium ? 'active' : 'expired';
+    } else {
+      $displayStatus = 'free';
+      $planName = 'Бесплатный';
+    }
+
+    return [
+      'isPremium' => $isPremium,
+      'hasPurchased' => $hasPurchased,
+      'planId' => $planId,
+      'planName' => $planName,
+      'status' => $displayStatus,
+      'expiresAt' => $expiresAt,
+      'paymentsCount' => $paymentsCount,
+      'lastPaidAt' => $lastPaidAt,
+    ];
   }
 
   private function resolveLastActivity(?string $lastLogin, ?string $lastSession, ?string $lastAttempt): ?string

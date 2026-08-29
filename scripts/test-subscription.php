@@ -42,6 +42,10 @@ $payments->completeMockPayment(
 
 assert($subscriptions->isPremium($userId) === true, 'user should be premium after mock payment');
 
+$purchaseStats = $payments->getPurchaseStats();
+assert($purchaseStats['totalBuyers'] >= 1, 'purchase stats should count buyer');
+assert($purchaseStats['today'] >= 1, 'purchase stats should count today payment');
+
 $state = $subscriptions->getForUser($userId);
 assert($state['plan'] === 'monthly', 'plan should be monthly');
 assert($state['status'] === 'active', 'status should be active');

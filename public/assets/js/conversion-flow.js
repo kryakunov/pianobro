@@ -16,9 +16,9 @@ import {
 } from './subscription.js';
 import {
   analyzeDiagnosticAttempts,
-  formatWeakNotesList,
   getDiagnosticSessionLimit,
 } from './diagnostic.js';
+import { renderTrainingResultWeakNotes } from './training-result-ui.js';
 import { initPaymentPage, startCheckout, resumePendingCheckout } from './pricing-page.js';
 import { navigateTo, ROUTES } from './routes.js';
 import { isLoggedIn } from './auth.js';
@@ -164,17 +164,28 @@ export function hideDiagnosticModal() {
   if (modal) modal.hidden = true;
 }
 
+function renderDiagnosticWeakNotes(weakNotes = []) {
+  renderTrainingResultWeakNotes({
+    title: document.getElementById('diagnostic-weak-title'),
+    hint: document.getElementById('diagnostic-weak-hint'),
+    tags: document.getElementById('diagnostic-weak-tags'),
+  }, weakNotes);
+}
+
 export function showDiagnosticResult(result) {
   const modal = document.getElementById('diagnostic-modal');
-  const summary = document.getElementById('diagnostic-summary');
-  const weak = document.getElementById('diagnostic-weak');
-  const offer = document.getElementById('diagnostic-offer');
+  const correctEl = document.getElementById('diagnostic-correct');
+  const wrongEl = document.getElementById('diagnostic-wrong');
+  const accuracyEl = document.getElementById('diagnostic-accuracy');
 
-  if (!modal || !summary || !weak || !offer) return;
+  if (!modal || !correctEl || !wrongEl || !accuracyEl) return;
 
-  summary.textContent = `Вы ответили правильно на ${result.correct} из ${result.total} заданий (${result.accuracy}% точности).`;
-  weak.textContent = `PianoBro заметил, что сложнее всего вам даются: ${formatWeakNotesList(result.weakNotes)}.`;
-  offer.textContent = 'Сервис может составить для вас персональную программу тренировок и чаще повторять именно те ноты, которые пока путаются.';
+  const wrong = Math.max(0, result.total - result.correct);
+  correctEl.textContent = String(result.correct);
+  wrongEl.textContent = String(wrong);
+  accuracyEl.textContent = `${result.accuracy}%`;
+
+  renderDiagnosticWeakNotes(result.weakNotes ?? []);
 
   modal.hidden = false;
   trackConversion('diagnostic_completed', {

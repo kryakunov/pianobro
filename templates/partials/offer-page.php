@@ -13,10 +13,11 @@ $sellerEmail = htmlspecialchars($seller['email'], ENT_QUOTES, 'UTF-8');
 $siteUrl = htmlspecialchars(AppUrl::canonical('/'), ENT_QUOTES, 'UTF-8');
 $paymentUrl = htmlspecialchars(AppUrl::canonical('/payment'), ENT_QUOTES, 'UTF-8');
 $offerDate = '28.08.2026';
+$pageHeadingTag = (($page['screen'] ?? '') === 'offer') ? 'h1' : 'h2';
 ?>
 <article class="payment-legal payment-legal--offer">
   <header class="payment-legal__header">
-    <h1 class="payment-legal__title">Публичная оферта</h1>
+    <<?= $pageHeadingTag ?> class="payment-legal__title">Публичная оферта</<?= $pageHeadingTag ?>>
     <p class="payment-legal__lead payment-legal__meta">Редакция от <?= $offerDate ?></p>
   </header>
 

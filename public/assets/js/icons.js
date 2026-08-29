@@ -1,7 +1,7 @@
 const ICON_IDS = [
   'piano', 'melody', 'treble', 'bass', 'notes', 'stats', 'sharp', 'flat',
   'session', 'sessions', 'mastered', 'practice', 'learning', 'warning',
-  'keyboard', 'chart', 'target', 'search', 'upload', 'user', 'midi', 'mic', 'play', 'volume',
+  'keyboard', 'chart', 'target', 'leaf', 'search', 'upload', 'user', 'midi', 'mic', 'play', 'volume',
   'check', 'arrow',
 ];
 
