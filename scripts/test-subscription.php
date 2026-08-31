@@ -50,6 +50,13 @@ $state = $subscriptions->getForUser($userId);
 assert($state['plan'] === 'monthly', 'plan should be monthly');
 assert($state['status'] === 'active', 'status should be active');
 
+try {
+  $payments->createCheckout($userId, 'monthly', 'http://localhost/payment');
+  assert(false, 'premium user should not create another checkout');
+} catch (\InvalidArgumentException $e) {
+  assert(str_contains($e->getMessage(), 'активная подписка'), 'checkout blocked for active subscription');
+}
+
 assert(count(PricingConfig::plans()) === 3, 'should have 3 plans');
 assert(PricingConfig::plan('quarterly')['priceRub'] === 249, 'quarterly price');
 

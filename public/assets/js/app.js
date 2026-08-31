@@ -142,6 +142,7 @@ const els = {
   authUserName: $('#auth-user-name'),
   authUserRank: $('#auth-user-rank'),
   authUserPlan: $('#auth-user-plan'),
+  authUserPlanMeta: $('#auth-user-plan-meta'),
   btnLogout: $('#btn-logout'),
   authModal: $('#auth-modal'),
   authTabs: document.querySelectorAll('[data-auth-tab]'),
@@ -529,10 +530,11 @@ window.pianoUpdateSubscription = updateSubscriptionUi;
 
 function renderSubscriptionBadgeHtml(display) {
   if (!display) return '';
-  return `
-    <span class="subscription-badge ${display.badgeClass}">${escapeHtml(display.badgeText)}</span>
-    ${display.meta ? `<span class="auth-user__plan-meta">${escapeHtml(display.meta)}</span>` : ''}
-  `;
+  return `<span class="subscription-badge ${display.badgeClass}">${escapeHtml(display.badgeText)}</span>`;
+}
+
+function renderSubscriptionMetaText(display) {
+  return display?.meta ? escapeHtml(display.meta) : '';
 }
 
 function renderStatsProfileCard(user, display) {
@@ -598,8 +600,19 @@ function updateSubscriptionUi() {
       els.authUserPlan.hidden = true;
       els.authUserPlan.innerHTML = '';
     } else {
-      els.authUserPlan.hidden = false;
-      els.authUserPlan.innerHTML = renderSubscriptionBadgeHtml(display);
+      const badgeHtml = renderSubscriptionBadgeHtml(display);
+      els.authUserPlan.hidden = !badgeHtml;
+      els.authUserPlan.innerHTML = badgeHtml;
+    }
+  }
+
+  if (els.authUserPlanMeta) {
+    if (!user || !display?.meta) {
+      els.authUserPlanMeta.hidden = true;
+      els.authUserPlanMeta.textContent = '';
+    } else {
+      els.authUserPlanMeta.hidden = false;
+      els.authUserPlanMeta.textContent = display.meta;
     }
   }
 

@@ -76,10 +76,14 @@
             ><?= $isLoggedIn ? htmlspecialchars((string) ($avatar['emoji'] ?? '🎹'), ENT_QUOTES, 'UTF-8') : '' ?></div>
             <div class="auth-user__identity">
               <span class="auth-user__name" id="auth-user-name"><?= $isLoggedIn ? htmlspecialchars((string) $user['name'], ENT_QUOTES, 'UTF-8') : '' ?></span>
-              <span class="auth-user__rank" id="auth-user-rank"<?= $isLoggedIn ? '' : ' hidden' ?>><?= $isLoggedIn ? htmlspecialchars((string) ($avatar['rankTitle'] ?? ''), ENT_QUOTES, 'UTF-8') : '' ?></span>
-              <span class="auth-user__plan" id="auth-user-plan"<?= $isLoggedIn ? '' : ' hidden' ?>></span>
+              <div class="auth-user__secondary">
+                <span class="auth-user__rank" id="auth-user-rank"<?= $isLoggedIn ? '' : ' hidden' ?>><?= $isLoggedIn ? htmlspecialchars((string) ($avatar['rankTitle'] ?? ''), ENT_QUOTES, 'UTF-8') : '' ?></span>
+                <span class="auth-user__plan" id="auth-user-plan" hidden></span>
+              </div>
+              <span class="auth-user__plan-meta" id="auth-user-plan-meta" hidden></span>
             </div>
           </div>
+          <div class="auth-user__toolbar">
           <a href="/statistika" class="btn btn--secondary btn--sm" id="btn-go-stats">
             <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-stats"/></svg>
             Статистика
@@ -96,6 +100,7 @@
             <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-logout"/></svg>
             Выйти
           </button>
+          </div>
         </div>
       </div>
     </header>
@@ -601,7 +606,6 @@
         <h2 class="payment-success__title">Подписка активирована</h2>
         <p class="payment-success__text">Теперь PianoBro будет сохранять ваш прогресс, находить слабые ноты и подбирать персональные тренировки.</p>
         <button type="button" class="btn btn--primary btn--lg" id="btn-payment-success-start">Начать тренировку</button>
-        <a href="/payment" class="payment-success__link">Посмотреть тарифы</a>
       </div>
     </section>
 

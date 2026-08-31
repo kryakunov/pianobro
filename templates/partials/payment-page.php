@@ -14,22 +14,11 @@ $offerUrl = htmlspecialchars(AppUrl::canonical('/oferta'), ENT_QUOTES, 'UTF-8');
 $pageHeadingTag = (($page['screen'] ?? '') === 'payment') ? 'h1' : 'h2';
 ?>
 <article class="payment-legal">
-  <header class="payment-legal__header">
+  <header class="payment-legal__header payment-legal__header--compact">
     <<?= $pageHeadingTag ?> class="payment-legal__title">Оплата подписки PianoBro</<?= $pageHeadingTag ?>>
-    <p class="payment-legal__lead">
-      На этой странице размещены сведения об услугах, фиксированных ценах и порядке получения цифрового доступа
-      для приёма платежей через ЮKassa. Условия оказания услуг — в
-      <a href="<?= $offerUrl ?>">публичной оферте</a>.
-    </p>
   </header>
 
-  <section class="payment-legal__section" aria-labelledby="payment-services-title">
-    <h2 class="payment-legal__h2" id="payment-services-title">Услуги и цены</h2>
-    <p class="payment-legal__p">
-      PianoBro — онлайн-сервис (цифровая услуга) для тренировки чтения нот на фортепиано.
-      Оплата предоставляет доступ к расширенным функциям тренажёра на сайте
-      <a href="<?= $siteUrl ?>">pianobro.ru</a> на фиксированный срок.
-    </p>
+  <section class="payment-legal__section payment-legal__section--pricing" aria-labelledby="payment-services-title">
     <p class="payment-legal__notice" id="payment-status" hidden role="status" aria-live="polite"></p>
     <div class="payment-legal__plans">
       <?php foreach ($plans as $plan): ?>
@@ -70,6 +59,20 @@ $pageHeadingTag = (($page['screen'] ?? '') === 'payment') ? 'h1' : 'h2';
           </div>
         </article>
       <?php endforeach; ?>
+    </div>
+
+    <div class="payment-legal__intro">
+      <p class="payment-legal__lead">
+        На этой странице размещены сведения об услугах, фиксированных ценах и порядке получения цифрового доступа
+        для приёма платежей через ЮKassa. Условия оказания услуг — в
+        <a href="<?= $offerUrl ?>">публичной оферте</a>.
+      </p>
+      <h2 class="payment-legal__h2" id="payment-services-title">Услуги и цены</h2>
+      <p class="payment-legal__p">
+        PianoBro — онлайн-сервис (цифровая услуга) для тренировки чтения нот на фортепиано.
+        Оплата предоставляет доступ к расширенным функциям тренажёра на сайте
+        <a href="<?= $siteUrl ?>">pianobro.ru</a> на фиксированный срок.
+      </p>
     </div>
   </section>
 

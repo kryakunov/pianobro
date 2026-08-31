@@ -4349,8 +4349,8 @@ a.btn--secondary:visited {
 .auth-user {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.625rem;
+  min-width: 0;
 }
 
 .auth-user__profile {
@@ -4358,6 +4358,15 @@ a.btn--secondary:visited {
   align-items: center;
   gap: 0.625rem;
   min-width: 0;
+  flex: 0 1 auto;
+}
+
+.auth-user__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .auth-user__avatar {
@@ -4412,9 +4421,10 @@ a.btn--secondary:visited {
 .auth-user__identity {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  align-items: flex-start;
+  gap: 0.125rem;
   min-width: 0;
-  max-width: 11rem;
+  max-width: 11.5rem;
 }
 
 .auth-user__name {
@@ -4424,6 +4434,16 @@ a.btn--secondary:visited {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
+}
+
+.auth-user__secondary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .auth-user__rank {
@@ -4433,23 +4453,24 @@ a.btn--secondary:visited {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .auth-user__plan {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-  min-width: 0;
+  flex-shrink: 0;
 }
 
 .auth-user__plan-meta {
-  font-size: 0.6875rem;
-  line-height: 1.2;
+  display: block;
+  font-size: 0.625rem;
+  line-height: 1.25;
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .subscription-badge {
@@ -8154,12 +8175,6 @@ body.admin-modal-open {
   color: var(--text-muted);
 }
 
-.payment-success__link {
-  display: inline-block;
-  margin-top: 0.75rem;
-  font-size: 0.875rem;
-}
-
 .payment-page {
   max-width: 48rem;
   margin: 0 auto;
@@ -8167,6 +8182,28 @@ body.admin-modal-open {
 
 .payment-legal__header {
   margin-bottom: 1.5rem;
+}
+
+.payment-legal__header--compact {
+  margin-bottom: 0.85rem;
+}
+
+.payment-legal__section--pricing {
+  margin-bottom: 1.75rem;
+}
+
+.payment-legal__intro {
+  margin-top: 1.5rem;
+  padding-top: 1.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.payment-legal__intro .payment-legal__lead {
+  margin-bottom: 1rem;
+}
+
+.payment-legal__intro .payment-legal__h2 {
+  margin-top: 0;
 }
 
 .payment-legal__title {
@@ -8215,7 +8252,11 @@ body.admin-modal-open {
 .payment-legal__plans {
   display: grid;
   gap: 1rem;
-  margin-top: 1.25rem;
+  margin-top: 0;
+}
+
+.payment-legal__notice + .payment-legal__plans {
+  margin-top: 0.75rem;
 }
 
 .payment-legal__plan {

@@ -1,5 +1,5 @@
 import { getPlan } from './pricing-config.js';
-import { trackConversion, refreshBillingState, isPremiumUser, setPendingAuthAction } from './subscription.js';
+import { trackConversion, refreshBillingState, isPremiumUser, setPendingAuthAction, getSubscription, formatSubscriptionExpiryDate } from './subscription.js';
 import { trackGoal } from './metrika.js';
 import { navigateTo } from './routes.js';
 import { isLoggedIn } from './auth.js';
@@ -17,6 +17,30 @@ async function readJsonResponse(res) {
   } catch {
     throw new Error('Сервер вернул некорректный ответ. Обновите страницу и попробуйте снова.');
   }
+}
+
+function alreadySubscribedMessage() {
+  const expires = formatSubscriptionExpiryDate(getSubscription().expiresAt);
+  return expires
+    ? `У вас уже есть активная подписка (до ${expires}).`
+    : 'У вас уже есть активная подписка.';
+}
+
+function notifyAlreadySubscribed() {
+  showPaymentStatus(alreadySubscribedMessage(), 'info');
+}
+
+function setPaymentBuyButtonsDisabled(disabled) {
+  document.querySelectorAll('.payment-legal__buy[data-plan-id]').forEach((btn) => {
+    btn.disabled = disabled;
+  });
+}
+
+function guardActiveSubscription() {
+  if (!isPremiumUser()) return false;
+  notifyAlreadySubscribed();
+  setPaymentBuyButtonsDisabled(true);
+  return true;
 }
 
 function showPaymentStatus(message, variant = 'info') {
@@ -94,7 +118,8 @@ async function handlePaymentReturn(planId) {
 async function startCheckout(planId, triggerBtn = null) {
   if (checkoutLoading) return;
   if (isPremiumUser()) {
-    navigateTo('/payment/success');
+    notifyAlreadySubscribed();
+    setPaymentBuyButtonsDisabled(true);
     return;
   }
 
@@ -198,6 +223,12 @@ bindPaymentClickDelegation();
 export function initPaymentPage() {
   trackConversion('pricing_view');
 
+  if (guardActiveSubscription()) {
+    return;
+  }
+
+  setPaymentBuyButtonsDisabled(false);
+
   const params = new URLSearchParams(window.location.search);
   if (params.get('payment') === 'return') {
     void handlePaymentReturn(params.get('plan'));
@@ -208,6 +239,11 @@ export async function resumePendingCheckout() {
   const planId = sessionStorage.getItem('piano-pending-checkout-plan');
   if (!planId || !isLoggedIn()) return;
   sessionStorage.removeItem('piano-pending-checkout-plan');
+  if (isPremiumUser()) {
+    notifyAlreadySubscribed();
+    setPaymentBuyButtonsDisabled(true);
+    return;
+  }
   await startCheckout(planId);
 }
 

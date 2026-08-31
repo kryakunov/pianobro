@@ -26,6 +26,10 @@ final class PaymentService
   /** @return array<string, mixed> */
   public function createCheckout(int $userId, string $planId, string $returnUrl): array
   {
+    if ($this->subscriptions->isPremium($userId)) {
+      throw new \InvalidArgumentException('У вас уже есть активная подписка');
+    }
+
     $plan = PricingConfig::plan($planId);
     if ($plan === null) {
       throw new \InvalidArgumentException('Неизвестный тариф');
