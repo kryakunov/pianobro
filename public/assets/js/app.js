@@ -530,7 +530,11 @@ window.pianoUpdateSubscription = updateSubscriptionUi;
 
 function renderSubscriptionBadgeHtml(display) {
   if (!display) return '';
-  return `<span class="subscription-badge ${display.badgeClass}">${escapeHtml(display.badgeText)}</span>`;
+  const label = escapeHtml(display.badgeText);
+  if (display.tier === 'free') {
+    return `<a href="${escapeHtml(ROUTES.payment)}" class="subscription-badge ${display.badgeClass} subscription-badge--link" title="Выбрать тариф">${label}</a>`;
+  }
+  return `<span class="subscription-badge ${display.badgeClass}">${label}</span>`;
 }
 
 function renderSubscriptionMetaText(display) {

@@ -4340,6 +4340,7 @@ a.btn--secondary:visited {
   gap: 0.5rem;
   flex-shrink: 0;
   margin-left: auto;
+  margin-right: 0.65rem;
 }
 
 .header__auth [hidden] {
@@ -4349,7 +4350,7 @@ a.btn--secondary:visited {
 .auth-user {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.85rem;
   min-width: 0;
 }
 
@@ -4359,6 +4360,7 @@ a.btn--secondary:visited {
   gap: 0.625rem;
   min-width: 0;
   flex: 0 1 auto;
+  margin-right: 0.15rem;
 }
 
 .auth-user__toolbar {
@@ -4488,6 +4490,39 @@ a.btn--secondary:visited {
 .subscription-badge--free {
   background: rgba(139, 146, 168, 0.16);
   color: var(--text-muted);
+}
+
+a.subscription-badge {
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+a.subscription-badge--free {
+  border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: #a8bfff;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset;
+}
+
+a.subscription-badge--free::after {
+  content: '→';
+  margin-left: 0.2rem;
+  font-size: 0.8125rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+a.subscription-badge--free:hover {
+  background: color-mix(in srgb, var(--primary) 24%, transparent);
+  color: #c5d4ff;
+  border-color: color-mix(in srgb, var(--primary) 62%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+a.subscription-badge--free:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .subscription-badge--premium {
