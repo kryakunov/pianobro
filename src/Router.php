@@ -509,17 +509,36 @@ final class Router
 
     if ($path === '/api/billing/status' && $method === 'GET') {
       $user = $this->auth->currentUser();
+      $pendingPaymentActivated = false;
+      $subscription = [
+        'status' => 'free',
+        'isPremium' => false,
+        'dailyLimit' => PricingConfig::GUEST_DAILY_SESSIONS,
+        'dailyNotesLimit' => PricingConfig::GUEST_DAILY_NOTES,
+      ];
+
+      if ($user !== null) {
+        $subscription = $this->subscriptions->getForUser($user['id']);
+        if (!($subscription['isPremium'] ?? false) && !$this->payments->isMockMode()) {
+          try {
+            $sync = $this->payments->syncRecentPendingPayments($user['id']);
+            if ($sync !== null) {
+              if ($sync['activated'] ?? false) {
+                $pendingPaymentActivated = true;
+              }
+              $subscription = $sync['subscription'] ?? $subscription;
+            }
+          } catch (\Throwable) {
+            // Возвращаем текущую подписку, если синхронизация с YooKassa недоступна.
+          }
+        }
+      }
+
       $this->json([
         'pricing' => PricingConfig::toPublicArray(),
         'mockMode' => $this->payments->isMockMode(),
-        'subscription' => $user !== null
-          ? $this->subscriptions->getForUser($user['id'])
-          : [
-            'status' => 'free',
-            'isPremium' => false,
-            'dailyLimit' => PricingConfig::GUEST_DAILY_SESSIONS,
-            'dailyNotesLimit' => PricingConfig::GUEST_DAILY_NOTES,
-          ],
+        'subscription' => $subscription,
+        'pendingPaymentActivated' => $pendingPaymentActivated,
         'userId' => $user['id'] ?? null,
       ]);
       return;

@@ -220,8 +220,18 @@ function bindPaymentClickDelegation() {
 
 bindPaymentClickDelegation();
 
-export function initPaymentPage() {
+export async function initPaymentPage() {
   trackConversion('pricing_view');
+  const wasPremium = isPremiumUser();
+  await refreshBillingState();
+  window.pianoUpdateSubscription?.();
+
+  if (!wasPremium && isPremiumUser()) {
+    trackConversion('payment_success', { source: 'background_sync' });
+    trackConversion('subscription_activated', { source: 'background_sync' });
+    navigateTo('/payment/success');
+    return;
+  }
 
   if (guardActiveSubscription()) {
     return;

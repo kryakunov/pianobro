@@ -164,6 +164,7 @@ final class PaymentService
     $stmt = $this->db->prepare(
       'SELECT id FROM payments
        WHERE user_id = :user_id AND status = :status
+         AND datetime(created_at) >= datetime(\'now\', \'-7 days\')
        ORDER BY id DESC
        LIMIT 5',
     );

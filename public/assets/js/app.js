@@ -83,6 +83,7 @@ import {
   refreshBillingState,
   getSubscriptionDisplay,
   getSubscription,
+  trackConversion,
 } from './subscription.js';
 import { applyHeaderAvatar, buildHeaderAvatarState } from './user-avatar.js';
 import { renderTrainingResultWeakNotes } from './training-result-ui.js';
@@ -626,6 +627,25 @@ function updateSubscriptionUi() {
   }
 
   updateHeaderAvatar();
+}
+
+function handleBackgroundPaymentActivation() {
+  const path = window.location.pathname;
+  if (path === '/payment' || path.startsWith('/payment/')) {
+    navigateTo('/payment/success');
+    return;
+  }
+  trackConversion('subscription_activated', { source: 'background_sync' });
+}
+
+async function applyBillingRefresh() {
+  const wasPremium = isPremiumUser();
+  const state = await refreshBillingState();
+  updateNotesPickMonetizationUi();
+  updateSubscriptionUi();
+  if (state?.pendingPaymentActivated && !wasPremium) {
+    handleBackgroundPaymentActivation();
+  }
 }
 
 function updateNotesPickModeUi() {
@@ -2476,9 +2496,7 @@ async function openStatsScreen() {
 
 async function afterAuthSuccess() {
   updateAuthUI();
-  await refreshBillingState();
-  updateNotesPickMonetizationUi();
-  updateSubscriptionUi();
+  await applyBillingRefresh();
   await syncGuestProgressAfterAuth();
   sessionModalSuspendedForAuth = false;
   closeAuthModal();
@@ -3862,10 +3880,7 @@ initConversionFlow({
   hideSessionModal,
   loadNoteStats,
 });
-void refreshBillingState().then(() => {
-  updateNotesPickMonetizationUi();
-  updateSubscriptionUi();
-});
+void applyBillingRefresh();
 void initInviteFromUrl();
 if (window.__USER__ !== undefined) {
   updateAuthUI();
