@@ -107,7 +107,7 @@ final class AdminService
           WHERE p.user_id = u.id AND p.status = 'succeeded'
         ) AS last_paid_at
       FROM users u
-      ORDER BY datetime(COALESCE(u.last_login_at, u.created_at)) DESC, u.id DESC
+      ORDER BY COALESCE(u.last_login_at, u.created_at) DESC, u.id DESC
       SQL);
 
     $rows = $stmt->fetchAll();

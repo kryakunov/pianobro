@@ -256,7 +256,7 @@ TEXT;
     $stmt = $this->db->prepare(
       'SELECT id, teacher_id FROM teacher_invitations
        WHERE email = :email AND status = \'pending\'
-       ORDER BY datetime(created_at) ASC
+       ORDER BY created_at ASC
        LIMIT 1',
     );
     $stmt->execute(['email' => $email]);
@@ -284,7 +284,7 @@ TEXT;
        FROM teacher_students ts
        JOIN users u ON u.id = ts.student_id
        WHERE ts.teacher_id = :teacher_id
-       ORDER BY u.name COLLATE NOCASE',
+       ORDER BY u.name',
     );
     $stmt->execute(['teacher_id' => $teacherId]);
 
@@ -322,7 +322,7 @@ TEXT;
     $stmt = $this->db->prepare(
       'SELECT email, created_at FROM teacher_invitations
        WHERE teacher_id = :teacher_id AND status = \'pending\'
-       ORDER BY datetime(created_at) DESC',
+       ORDER BY created_at DESC',
     );
     $stmt->execute(['teacher_id' => $teacherId]);
 
@@ -429,10 +429,10 @@ TEXT;
     $update = $this->db->prepare(
       'UPDATE student_assignments
        SET teacher_comment = :comment,
-           commented_at = datetime(\'now\')
+           commented_at = :commented_at
        WHERE id = :id',
     );
-    $update->execute(['comment' => $comment, 'id' => $assignmentId]);
+    $update->execute(['comment' => $comment, 'commented_at' => Sql::nowUtc(), 'id' => $assignmentId]);
   }
 
   public function deleteAssignment(int $teacherId, int $assignmentId): void
@@ -461,8 +461,8 @@ TEXT;
        WHERE sa.student_id = :student_id
        ORDER BY
          CASE WHEN sa.status = \'pending\' THEN 0 ELSE 1 END,
-         datetime(sa.due_at) ASC,
-         datetime(sa.created_at) DESC',
+         sa.due_at ASC,
+         sa.created_at DESC',
     );
     $stmt->execute(['student_id' => $studentId]);
 
@@ -519,7 +519,7 @@ TEXT;
          SET status = \'completed\',
              result_json = :result,
              errors_json = :errors,
-             completed_at = datetime(\'now\')
+             completed_at = :completed_at
          WHERE id = :id',
       );
     } else {
@@ -535,6 +535,7 @@ TEXT;
     $update->execute([
       'result' => json_encode($result, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
       'errors' => json_encode($errors, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+      'completed_at' => $passed ? Sql::nowUtc() : null,
       'id' => $assignmentId,
     ]);
   }
@@ -547,7 +548,7 @@ TEXT;
               teacher_comment, commented_at, completed_at, created_at
        FROM student_assignments
        WHERE teacher_id = :teacher_id AND student_id = :student_id
-       ORDER BY datetime(created_at) DESC',
+       ORDER BY created_at DESC',
     );
     $stmt->execute(['teacher_id' => $teacherId, 'student_id' => $studentId]);
 
@@ -663,22 +664,29 @@ TEXT;
 
   private function markInvitationAccepted(int $invitationId, int $studentId): void
   {
+    $now = Sql::nowUtc();
     $stmt = $this->db->prepare(
       'UPDATE teacher_invitations
-       SET status = \'accepted\', accepted_at = datetime(\'now\'), student_id = :student_id
+       SET status = \'accepted\', accepted_at = :accepted_at, student_id = :student_id
        WHERE id = :id',
     );
-    $stmt->execute(['student_id' => $studentId, 'id' => $invitationId]);
+    $stmt->execute(['student_id' => $studentId, 'accepted_at' => $now, 'id' => $invitationId]);
   }
 
   private function markInvitationsAccepted(int $teacherId, string $email, int $studentId): void
   {
+    $now = Sql::nowUtc();
     $stmt = $this->db->prepare(
       'UPDATE teacher_invitations
-       SET status = \'accepted\', accepted_at = datetime(\'now\'), student_id = :student_id
+       SET status = \'accepted\', accepted_at = :accepted_at, student_id = :student_id
        WHERE teacher_id = :teacher_id AND email = :email AND status = \'pending\'',
     );
-    $stmt->execute(['student_id' => $studentId, 'teacher_id' => $teacherId, 'email' => $email]);
+    $stmt->execute([
+      'student_id' => $studentId,
+      'accepted_at' => $now,
+      'teacher_id' => $teacherId,
+      'email' => $email,
+    ]);
   }
 
   /** @return array{id:int,name:string,email:string,createdAt?:string,lastLoginAt?:?string}|null */

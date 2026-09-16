@@ -89,11 +89,7 @@ final class RoadmapService
       throw new \InvalidArgumentException('Уровень не найден');
     }
 
-    $stmt = $this->db->prepare(
-      'INSERT INTO roadmap_capstone_completions (user_id, stage_id)
-       VALUES (:user_id, :stage_id)
-       ON CONFLICT(user_id, stage_id) DO NOTHING',
-    );
+    $stmt = $this->db->prepare(Sql::insertRoadmapCapstoneIgnore());
     $stmt->execute([
       'user_id' => $userId,
       'stage_id' => $stageId,

@@ -40,7 +40,7 @@ final class PaymentService
 
     $stmt = $this->db->prepare(
       'INSERT INTO payments (user_id, plan, amount, currency, status, provider, idempotence_key, created_at)
-       VALUES (:user_id, :plan, :amount, :currency, :status, :provider, :idempotence_key, datetime(\'now\'))',
+       VALUES (:user_id, :plan, :amount, :currency, :status, :provider, :idempotence_key, :created_at)',
     );
     $stmt->execute([
       'user_id' => $userId,
@@ -50,6 +50,7 @@ final class PaymentService
       'status' => 'pending',
       'provider' => self::PROVIDER,
       'idempotence_key' => $idempotenceKey,
+      'created_at' => Sql::nowUtc(),
     ]);
 
     $paymentId = (int) $this->db->lastInsertId();
@@ -161,14 +162,15 @@ final class PaymentService
   /** @return array{payment: array<string, mixed>, subscription: array<string, mixed>, activated: bool, providerStatus?: string}|null} */
   public function syncRecentPendingPayments(int $userId): ?array
   {
+    $since = gmdate('Y-m-d H:i:s', time() - 7 * 86400);
     $stmt = $this->db->prepare(
       'SELECT id FROM payments
        WHERE user_id = :user_id AND status = :status
-         AND datetime(created_at) >= datetime(\'now\', \'-7 days\')
+         AND created_at >= :since
        ORDER BY id DESC
        LIMIT 5',
     );
-    $stmt->execute(['user_id' => $userId, 'status' => 'pending']);
+    $stmt->execute(['user_id' => $userId, 'status' => 'pending', 'since' => $since]);
     $rows = $stmt->fetchAll();
     if ($rows === false || $rows === []) {
       return null;
@@ -369,12 +371,13 @@ final class PaymentService
     }
 
     $update = $this->db->prepare(
-      'UPDATE payments SET status = :status, provider_payment_id = :provider_payment_id, paid_at = datetime(\'now\')
+      'UPDATE payments SET status = :status, provider_payment_id = :provider_payment_id, paid_at = :paid_at
        WHERE id = :id',
     );
     $update->execute([
       'status' => 'succeeded',
       'provider_payment_id' => $providerPaymentId,
+      'paid_at' => Sql::nowUtc(),
       'id' => $paymentId,
     ]);
 

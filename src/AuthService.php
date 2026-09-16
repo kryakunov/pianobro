@@ -316,8 +316,8 @@ final class AuthService
 
   private function touchLastLogin(int $userId): void
   {
-    $stmt = $this->db->prepare('UPDATE users SET last_login_at = datetime(\'now\') WHERE id = :id');
-    $stmt->execute(['id' => $userId]);
+    $stmt = $this->db->prepare('UPDATE users SET last_login_at = :last_login_at WHERE id = :id');
+    $stmt->execute(['id' => $userId, 'last_login_at' => Sql::nowUtc()]);
   }
 
   private function syncRoleFromEnv(int $userId, string $email): void

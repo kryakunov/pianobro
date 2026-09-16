@@ -107,12 +107,7 @@ final class SubscriptionService
     }
 
     $date = gmdate('Y-m-d');
-    $stmt = $this->db->prepare(
-      'INSERT INTO daily_training_usage (user_id, usage_date, session_count)
-       VALUES (:user_id, :usage_date, 1)
-       ON CONFLICT(user_id, usage_date)
-       DO UPDATE SET session_count = session_count + 1',
-    );
+    $stmt = $this->db->prepare(Sql::bumpDailySessionCount());
     $stmt->execute(['user_id' => $userId, 'usage_date' => $date]);
   }
 
@@ -168,12 +163,7 @@ final class SubscriptionService
     }
 
     $date = gmdate('Y-m-d');
-    $stmt = $this->db->prepare(
-      'INSERT INTO daily_training_usage (user_id, usage_date, session_count, note_count)
-       VALUES (:user_id, :usage_date, 0, :insert_note_count)
-       ON CONFLICT(user_id, usage_date)
-       DO UPDATE SET note_count = note_count + :update_note_count',
-    );
+    $stmt = $this->db->prepare(Sql::bumpDailyNoteCount());
     $stmt->execute([
       'user_id' => $userId,
       'usage_date' => $date,
@@ -202,7 +192,7 @@ final class SubscriptionService
       'INSERT INTO diagnostic_results
          (user_id, correct, total, accuracy, avg_response_ms, weak_notes_json, clef_errors_json, created_at)
        VALUES
-         (:user_id, :correct, :total, :accuracy, :avg_response_ms, :weak_notes_json, :clef_errors_json, datetime(\'now\'))',
+         (:user_id, :correct, :total, :accuracy, :avg_response_ms, :weak_notes_json, :clef_errors_json, :created_at)',
     );
     $stmt->execute([
       'user_id' => $userId,
@@ -212,6 +202,7 @@ final class SubscriptionService
       'avg_response_ms' => (int) ($result['avgResponseMs'] ?? 0),
       'weak_notes_json' => json_encode($result['weakNotes'] ?? [], JSON_UNESCAPED_UNICODE),
       'clef_errors_json' => json_encode($result['clefErrors'] ?? [], JSON_UNESCAPED_UNICODE),
+      'created_at' => Sql::nowUtc(),
     ]);
 
     return (int) $this->db->lastInsertId();

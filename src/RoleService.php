@@ -39,9 +39,7 @@ final class RoleService
 
   public function grantRole(int $userId, string $role): void
   {
-    $stmt = $this->db->prepare(
-      'INSERT OR IGNORE INTO user_roles (user_id, role) VALUES (:user_id, :role)',
-    );
+    $stmt = $this->db->prepare(Sql::insertIgnoreUserRole());
     $stmt->execute(['user_id' => $userId, 'role' => $role]);
 
     if ($role === self::ROLE_TEACHER) {

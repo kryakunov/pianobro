@@ -39,19 +39,13 @@ final class StatsRepository
       ]);
       $sessionId = (int) $this->db->lastInsertId();
 
+      $now = Sql::nowUtc();
       $attemptInsert = $this->db->prepare(
         'INSERT INTO note_attempts (user_id, session_id, midi, correct, created_at)
-         VALUES (:user_id, :session_id, :midi, :correct, datetime(\'now\'))',
+         VALUES (:user_id, :session_id, :midi, :correct, :created_at)',
       );
 
-      $upsert = $this->db->prepare(
-        'INSERT INTO note_stats (user_id, midi, correct_count, wrong_count, last_practiced_at)
-         VALUES (:user_id, :midi, :correct, :wrong, datetime(\'now\'))
-         ON CONFLICT(user_id, midi) DO UPDATE SET
-           correct_count = correct_count + excluded.correct_count,
-           wrong_count = wrong_count + excluded.wrong_count,
-           last_practiced_at = datetime(\'now\')',
-      );
+      $upsert = $this->db->prepare(Sql::upsertNoteStats());
 
       $aggregated = [];
       foreach ($attempts as $attempt) {
@@ -75,6 +69,7 @@ final class StatsRepository
           'midi' => $midi,
           'correct' => $counts['correct'],
           'wrong' => $counts['wrong'],
+          'last_practiced_at' => $now,
         ]);
       }
 
@@ -84,6 +79,7 @@ final class StatsRepository
           'session_id' => $sessionId,
           'midi' => (int) $attempt['expectedMidi'],
           'correct' => !empty($attempt['correct']) ? 1 : 0,
+          'created_at' => $now,
         ]);
       }
 
@@ -99,19 +95,13 @@ final class StatsRepository
    */
   public function mergeGuestNoteStats(int $userId, array $entries): int
   {
+    $now = Sql::nowUtc();
     $attemptInsert = $this->db->prepare(
       'INSERT INTO note_attempts (user_id, session_id, midi, correct, created_at)
-       VALUES (:user_id, NULL, :midi, :correct, datetime(\'now\'))',
+       VALUES (:user_id, NULL, :midi, :correct, :created_at)',
     );
 
-    $upsert = $this->db->prepare(
-      'INSERT INTO note_stats (user_id, midi, correct_count, wrong_count, last_practiced_at)
-       VALUES (:user_id, :midi, :correct, :wrong, datetime(\'now\'))
-       ON CONFLICT(user_id, midi) DO UPDATE SET
-         correct_count = correct_count + excluded.correct_count,
-         wrong_count = wrong_count + excluded.wrong_count,
-         last_practiced_at = datetime(\'now\')',
-    );
+    $upsert = $this->db->prepare(Sql::upsertNoteStats());
 
     $merged = 0;
     foreach ($entries as $entry) {
@@ -132,6 +122,7 @@ final class StatsRepository
           'user_id' => $userId,
           'midi' => (int) ($entry['midi'] ?? 0),
           'correct' => $hit ? 1 : 0,
+          'created_at' => $now,
         ]);
       }
 
@@ -140,6 +131,7 @@ final class StatsRepository
         'midi' => (int) ($entry['midi'] ?? 0),
         'correct' => $correct,
         'wrong' => $wrong,
+        'last_practiced_at' => $now,
       ]);
       $merged++;
     }
@@ -242,12 +234,18 @@ final class StatsRepository
 
   public function getDailyGoalToday(int $userId): int
   {
+    $today = gmdate('Y-m-d');
     $stmt = $this->db->prepare(
       'SELECT COUNT(*) AS cnt
        FROM note_attempts
-       WHERE user_id = :user_id AND correct = 1 AND date(created_at) = date(\'now\')',
+       WHERE user_id = :user_id AND correct = 1
+         AND created_at >= :day_start AND created_at < :day_end',
     );
-    $stmt->execute(['user_id' => $userId]);
+    $stmt->execute([
+      'user_id' => $userId,
+      'day_start' => $today . ' 00:00:00',
+      'day_end' => gmdate('Y-m-d', strtotime($today . ' +1 day')) . ' 00:00:00',
+    ]);
 
     return (int) ($stmt->fetch()['cnt'] ?? 0);
   }
@@ -268,11 +266,12 @@ final class StatsRepository
       $byDay[$date] = ['date' => $date, 'learned' => 0, 'repeated' => 0];
     }
 
+    $dayExpr = Sql::dateExpr('created_at');
     $stmt = $this->db->prepare(
-      'SELECT date(created_at) AS day, midi, correct
+      "SELECT {$dayExpr} AS day, midi, correct
        FROM note_attempts
        WHERE user_id = :user_id
-       ORDER BY created_at ASC, id ASC',
+       ORDER BY created_at ASC, id ASC",
     );
     $stmt->execute(['user_id' => $userId]);
 

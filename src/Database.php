@@ -10,9 +10,35 @@ final class Database
 {
   private static ?PDO $pdo = null;
 
+  private static ?string $driver = null;
+
+  public static function driver(): string
+  {
+    if (self::$driver !== null) {
+      return self::$driver;
+    }
+
+    $driver = strtolower(trim(Env::get('DB_DRIVER', 'sqlite')));
+    self::$driver = $driver === 'mysql' ? 'mysql' : 'sqlite';
+
+    return self::$driver;
+  }
+
+  public static function isMysql(): bool
+  {
+    return self::driver() === 'mysql';
+  }
+
   public static function connection(): PDO
   {
     if (self::$pdo !== null) {
+      return self::$pdo;
+    }
+
+    if (self::isMysql()) {
+      self::$pdo = self::connectMysql();
+      self::migrateMysql(self::$pdo);
+
       return self::$pdo;
     }
 
@@ -30,6 +56,64 @@ final class Database
     self::migrate(self::$pdo);
 
     return self::$pdo;
+  }
+
+  private static function connectMysql(): PDO
+  {
+    return MysqlConnection::connect();
+  }
+
+  public static function applyMysqlSchema(PDO $pdo): void
+  {
+    self::migrateMysql($pdo);
+  }
+
+  private static function migrateMysql(PDO $pdo): void
+  {
+    $path = dirname(__DIR__) . '/schema/mysql.sql';
+    if (!is_file($path)) {
+      throw new \RuntimeException('MySQL schema not found: ' . $path);
+    }
+
+    $sql = file_get_contents($path);
+    if ($sql === false) {
+      throw new \RuntimeException('MySQL schema unreadable');
+    }
+
+    foreach (self::splitSqlStatements($sql) as $statement) {
+      $pdo->exec($statement);
+    }
+  }
+
+  /** @return list<string> */
+  public static function splitSqlStatements(string $sql): array
+  {
+    $lines = preg_split('/\R/', $sql) ?: [];
+    $buffer = '';
+    $statements = [];
+
+    foreach ($lines as $line) {
+      $trimmed = trim($line);
+      if ($trimmed === '' || str_starts_with($trimmed, '--')) {
+        continue;
+      }
+
+      $buffer .= $line . "\n";
+      if (str_ends_with(rtrim($line), ';')) {
+        $statement = trim($buffer);
+        $buffer = '';
+        if ($statement !== '') {
+          $statements[] = rtrim($statement, " \t\n\r\0\x0B;");
+        }
+      }
+    }
+
+    $tail = trim($buffer);
+    if ($tail !== '') {
+      $statements[] = rtrim($tail, " \t\n\r\0\x0B;");
+    }
+
+    return $statements;
   }
 
   private static function migrate(PDO $pdo): void
