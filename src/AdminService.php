@@ -412,14 +412,21 @@ final class AdminService
         UNION
         SELECT user_id
         FROM training_sessions
-        WHERE created_at >= :start AND created_at < :end
+        WHERE created_at >= :start_ts AND created_at < :end_ts
         UNION
         SELECT user_id
         FROM note_attempts
-        WHERE created_at >= :start AND created_at < :end
-      )
+        WHERE created_at >= :start_na AND created_at < :end_na
+      ) AS active_users
       SQL);
-    $stmt->execute(['start' => $start, 'end' => $end]);
+    $stmt->execute([
+      'start' => $start,
+      'end' => $end,
+      'start_ts' => $start,
+      'end_ts' => $end,
+      'start_na' => $start,
+      'end_na' => $end,
+    ]);
 
     return (int) $stmt->fetchColumn();
   }

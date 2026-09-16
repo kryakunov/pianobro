@@ -8,8 +8,15 @@ final class Env
 {
   private static bool $loaded = false;
 
-  public static function load(string $path): void
+  private static ?string $loadedPath = null;
+
+  public static function load(string $path, bool $force = false): void
   {
+    if ($force) {
+      self::$loaded = false;
+      self::$loadedPath = null;
+    }
+
     if (self::$loaded || !is_file($path)) {
       return;
     }
@@ -48,6 +55,12 @@ final class Env
     }
 
     self::$loaded = true;
+    self::$loadedPath = $path;
+  }
+
+  public static function loadedPath(): ?string
+  {
+    return self::$loadedPath;
   }
 
   public static function get(string $key, string $default = ''): string
