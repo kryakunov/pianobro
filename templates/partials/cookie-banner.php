@@ -6,10 +6,7 @@ declare(strict_types=1);
 ?>
 <div class="cookie-banner" id="cookie-banner" hidden role="dialog" aria-live="polite" aria-label="Уведомление о cookie">
   <div class="cookie-banner__inner">
-    <p class="cookie-banner__text">
-      Мы используем cookie для работы сайта и сервисов аналитики (Яндекс.Метрика).
-      Нажимая «Принять», вы соглашаетесь с их использованием.
-    </p>
+    <p class="cookie-banner__text">Мы используем файлы cookie.</p>
     <button type="button" class="btn btn--primary btn--sm cookie-banner__accept" id="cookie-banner-accept">
       Принять
     </button>
