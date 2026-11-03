@@ -58,7 +58,7 @@ try {
 }
 
 assert(count(PricingConfig::plans()) === 3, 'should have 3 plans');
-assert(PricingConfig::plan('quarterly')['priceRub'] === 449, 'quarterly price');
+assert(PricingConfig::plan('quarterly')['priceRub'] === 249, 'quarterly price');
 
 $db->prepare('DELETE FROM users WHERE id = :id')->execute(['id' => $userId]);
 

@@ -8,7 +8,7 @@ declare(strict_types=1);
 /** @var list<array<string, mixed>> $users */
 /** @var int $assetVersion */
 /** @var array{today:int,yesterday:int} $onlineStats */
-/** @var array{totalBuyers:int,today:int,yesterday:int} $purchaseStats */
+/** @var array{totalBuyers:int,repeatBuyers:int,today:int,yesterday:int} $purchaseStats */
 /** @var list<array<string, mixed>> $plans */
 /** @var string $adminCsrf */
 
@@ -88,7 +88,7 @@ $stageStatusLabel = static function (array $stage): string {
       <p>Аккаунт <strong><?= htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?></strong> не входит в список администраторов.</p>
     </section>
     <?php else: ?>
-    <section class="admin-summary">
+    <section class="admin-summary" aria-label="Сводка">
       <div class="admin-stat">
         <span class="admin-stat__value"><?= (int) $onlineStats['today'] ?></span>
         <span class="admin-stat__label">Было онлайн сегодня</span>
@@ -102,12 +102,12 @@ $stageStatusLabel = static function (array $stage): string {
         <span class="admin-stat__label">Пользователей</span>
       </div>
       <div class="admin-stat">
-        <span class="admin-stat__value"><?= count(array_filter($users, static fn(array $item): bool => $item['lastLoginAt'] !== null)) ?></span>
-        <span class="admin-stat__label">С активностью</span>
+        <span class="admin-stat__value"><?= (int) $purchaseStats['totalBuyers'] ?></span>
+        <span class="admin-stat__label">Купили (успешные оплаты)</span>
       </div>
       <div class="admin-stat">
-        <span class="admin-stat__value"><?= (int) $purchaseStats['totalBuyers'] ?></span>
-        <span class="admin-stat__label">Купили тариф</span>
+        <span class="admin-stat__value"><?= (int) $purchaseStats['repeatBuyers'] ?></span>
+        <span class="admin-stat__label">Повторные покупки (2+)</span>
       </div>
       <div class="admin-stat">
         <span class="admin-stat__value"><?= (int) $purchaseStats['today'] ?></span>
@@ -119,12 +119,49 @@ $stageStatusLabel = static function (array $stage): string {
       </div>
     </section>
 
+    <section class="admin-filters" aria-label="Выборка по оплатам">
+      <div class="admin-filters__grid admin-filters__grid--compact">
+        <label class="admin-filters__field">
+          <span class="admin-filters__label">Успешных оплат (ровно)</span>
+          <input
+            type="number"
+            class="admin-filters__input admin-filters__input--number"
+            id="admin-filter-payments-count"
+            min="0"
+            step="1"
+            inputmode="numeric"
+            placeholder="Все пользователи"
+            autocomplete="off"
+          >
+          <span class="admin-filters__hint-inline">Пусто — все. Число 2, 3, 4… — только с таким количеством проведённых платежей.</span>
+        </label>
+        <label class="admin-filters__check">
+          <input type="checkbox" id="admin-filter-emails-only">
+          <span>Выводить только email (список для рассылки)</span>
+        </label>
+      </div>
+      <div class="admin-filters__footer">
+        <p class="admin-filters__meta">
+          В выборке <strong id="admin-filter-shown"><?= count($users) ?></strong>
+          из <strong id="admin-filter-total"><?= count($users) ?></strong>
+        </p>
+        <button type="button" class="btn btn--secondary btn--sm" id="admin-filter-reset">Сбросить</button>
+      </div>
+    </section>
+
     <?php if ($users === []): ?>
     <section class="admin-card">
       <p>Пока нет зарегистрированных пользователей.</p>
     </section>
     <?php else: ?>
-    <div class="admin-table-wrap">
+    <div class="admin-email-export" id="admin-email-export" hidden>
+      <div class="admin-email-export__header">
+        <h2 class="admin-email-export__title">Email для рассылки</h2>
+        <button type="button" class="btn btn--secondary btn--sm" id="admin-email-copy">Скопировать</button>
+      </div>
+      <textarea class="admin-email-export__list" id="admin-email-list" readonly rows="12" spellcheck="false" aria-label="Список email"></textarea>
+    </div>
+    <div class="admin-table-wrap" id="admin-users-table-wrap">
       <table class="admin-table">
         <thead>
           <tr>
@@ -170,7 +207,7 @@ $stageStatusLabel = static function (array $stage): string {
             <td class="admin-table__user">
               <strong><?= htmlspecialchars((string) $item['name'], ENT_QUOTES, 'UTF-8') ?></strong>
               <span class="admin-table__email"><?= htmlspecialchars((string) $item['email'], ENT_QUOTES, 'UTF-8') ?></span>
-              <span class="admin-table__meta">ID <?= (int) $item['id'] ?> · <?= (int) $item['sessionsCount'] ?> сессий · <?= (int) $item['practicedNotesCount'] ?> нот в статистике</span>
+              <span class="admin-table__meta">ID <?= (int) $item['id'] ?> · <?= (int) $item['sessionsCount'] ?> сессий · <?= (int) $item['practicedNotesCount'] ?> нот · <?= (int) ($sub['paymentsCount'] ?? 0) ?> успешных оплат</span>
             </td>
             <td class="admin-table__roles" data-admin-roles-cell="<?= (int) $item['id'] ?>">
               <?php if (!empty($item['isTeacher'])): ?>

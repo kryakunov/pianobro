@@ -929,7 +929,7 @@ final class Router
     $isAdmin = $this->admin->isAdmin($user);
     $users = $isAdmin ? $this->admin->listUsersWithRoadmap() : [];
     $onlineStats = $isAdmin ? $this->admin->getDailyOnlineCounts() : ['today' => 0, 'yesterday' => 0];
-    $purchaseStats = $isAdmin ? $this->payments->getPurchaseStats() : ['totalBuyers' => 0, 'today' => 0, 'yesterday' => 0];
+    $purchaseStats = $isAdmin ? $this->payments->getPurchaseStats() : ['totalBuyers' => 0, 'repeatBuyers' => 0, 'today' => 0, 'yesterday' => 0];
     $adminConfigured = AdminService::adminEmails() !== [];
     $plans = PricingConfig::plans();
     $adminCsrf = '';

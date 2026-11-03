@@ -389,6 +389,7 @@ async function deleteUser() {
       method: 'DELETE',
     });
     getUserRow(activeUserId)?.remove();
+    applyAdminFilters();
     closeModal();
     showToast('Пользователь удалён');
   } catch (error) {
@@ -429,5 +430,102 @@ document.addEventListener('keydown', (event) => {
     }
   }
 });
+
+const filterPaymentsCount = document.getElementById('admin-filter-payments-count');
+const filterEmailsOnly = document.getElementById('admin-filter-emails-only');
+const filterReset = document.getElementById('admin-filter-reset');
+const filterShown = document.getElementById('admin-filter-shown');
+const filterTotal = document.getElementById('admin-filter-total');
+const emailExport = document.getElementById('admin-email-export');
+const emailList = document.getElementById('admin-email-list');
+const emailCopyBtn = document.getElementById('admin-email-copy');
+const usersTableWrap = document.getElementById('admin-users-table-wrap');
+const userRows = () => [...document.querySelectorAll('[data-admin-user-row]')];
+
+function parsePaymentsCountFilter() {
+  const raw = filterPaymentsCount?.value.trim() ?? '';
+  if (raw === '') {
+    return null;
+  }
+  const value = Number.parseInt(raw, 10);
+  if (!Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return value;
+}
+
+function rowMatchesPaymentsFilter(row, exactCount) {
+  if (exactCount === null) {
+    return true;
+  }
+  return Number(row.dataset.subPaymentsCount || 0) === exactCount;
+}
+
+function applyAdminFilters() {
+  const exactCount = parsePaymentsCountFilter();
+  const emailsOnly = Boolean(filterEmailsOnly?.checked);
+  const rows = userRows();
+  const emails = [];
+  let shown = 0;
+
+  rows.forEach((row) => {
+    const match = rowMatchesPaymentsFilter(row, exactCount);
+    if (match) {
+      shown += 1;
+      const email = (row.dataset.userEmail || '').trim();
+      if (email !== '') {
+        emails.push(email);
+      }
+    }
+    row.hidden = !match || emailsOnly;
+  });
+
+  if (filterShown) {
+    filterShown.textContent = String(shown);
+  }
+  if (filterTotal) {
+    filterTotal.textContent = String(rows.length);
+  }
+
+  if (emailExport) {
+    emailExport.hidden = !emailsOnly;
+  }
+  if (usersTableWrap) {
+    usersTableWrap.hidden = emailsOnly;
+  }
+  if (emailList) {
+    emailList.value = emails.join('\n');
+  }
+}
+
+filterPaymentsCount?.addEventListener('input', applyAdminFilters);
+filterEmailsOnly?.addEventListener('change', applyAdminFilters);
+
+filterReset?.addEventListener('click', () => {
+  if (filterPaymentsCount) {
+    filterPaymentsCount.value = '';
+  }
+  if (filterEmailsOnly) {
+    filterEmailsOnly.checked = false;
+  }
+  applyAdminFilters();
+});
+
+emailCopyBtn?.addEventListener('click', async () => {
+  const text = emailList?.value ?? '';
+  if (text === '') {
+    showToast('Нет адресов для копирования', true);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Email скопированы');
+  } catch {
+    emailList?.select();
+    showToast('Выделите текст и скопируйте вручную (Ctrl+C)', true);
+  }
+});
+
+applyAdminFilters();
 
 initAnalytics();

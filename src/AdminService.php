@@ -47,26 +47,41 @@ final class AdminService
   /** @return array{today:int,yesterday:int} */
   public function getDailyOnlineCounts(): array
   {
-    $todayStart = new \DateTimeImmutable('today');
-    $todayEnd = $todayStart->modify('+1 day');
-    $yesterdayStart = $todayStart->modify('-1 day');
+    $bounds = $this->getFilterDayBoundsUtc();
 
     return [
-      'today' => $this->countActiveUsersBetween(
-        $todayStart->format('Y-m-d H:i:s'),
-        $todayEnd->format('Y-m-d H:i:s'),
-      ),
-      'yesterday' => $this->countActiveUsersBetween(
-        $yesterdayStart->format('Y-m-d H:i:s'),
-        $todayStart->format('Y-m-d H:i:s'),
-      ),
+      'today' => $this->countActiveUsersBetween($bounds['todayStart'], $bounds['todayEnd']),
+      'yesterday' => $this->countActiveUsersBetween($bounds['yesterdayStart'], $bounds['yesterdayEnd']),
+    ];
+  }
+
+  /**
+   * Границы «сегодня» и «вчера» в APP_TIMEZONE, для SQL — UTC.
+   *
+   * @return array{todayStart:string,todayEnd:string,yesterdayStart:string,yesterdayEnd:string}
+   */
+  public function getFilterDayBoundsUtc(): array
+  {
+    $tz = $this->appTimezone();
+    $todayStart = new \DateTimeImmutable('today', $tz);
+    $todayEnd = $todayStart->modify('+1 day');
+    $yesterdayStart = $todayStart->modify('-1 day');
+    $utc = new \DateTimeZone('UTC');
+
+    return [
+      'todayStart' => $todayStart->setTimezone($utc)->format('Y-m-d H:i:s'),
+      'todayEnd' => $todayEnd->setTimezone($utc)->format('Y-m-d H:i:s'),
+      'yesterdayStart' => $yesterdayStart->setTimezone($utc)->format('Y-m-d H:i:s'),
+      'yesterdayEnd' => $todayStart->setTimezone($utc)->format('Y-m-d H:i:s'),
     ];
   }
 
   /** @return list<array<string, mixed>> */
   public function listUsersWithRoadmap(): array
   {
-    $stmt = $this->db->query(<<<'SQL'
+    $paymentOk = PaymentService::completedPaymentWhere('p');
+
+    $stmt = $this->db->query(<<<SQL
       SELECT
         u.id,
         u.email,
@@ -99,12 +114,12 @@ final class AdminService
         (
           SELECT COUNT(*)
           FROM payments p
-          WHERE p.user_id = u.id AND p.status = 'succeeded'
+          WHERE p.user_id = u.id AND {$paymentOk}
         ) AS payments_count,
         (
-          SELECT MAX(COALESCE(p.paid_at, p.created_at))
+          SELECT MAX(p.paid_at)
           FROM payments p
-          WHERE p.user_id = u.id AND p.status = 'succeeded'
+          WHERE p.user_id = u.id AND {$paymentOk}
         ) AS last_paid_at
       FROM users u
       ORDER BY COALESCE(u.last_login_at, u.created_at) DESC, u.id DESC
@@ -285,7 +300,9 @@ final class AdminService
   /** @return array{isPremium:bool,hasPurchased:bool,planId:?string,planName:string,status:string,expiresAt:?string,paymentsCount:int,lastPaidAt:?string} */
   public function getSubscriptionForUser(int $userId): array
   {
-    $stmt = $this->db->prepare(<<<'SQL'
+    $paymentOk = PaymentService::completedPaymentWhere('p');
+
+    $stmt = $this->db->prepare(<<<SQL
       SELECT
         subscription_status,
         subscription_plan,
@@ -293,12 +310,12 @@ final class AdminService
         (
           SELECT COUNT(*)
           FROM payments p
-          WHERE p.user_id = users.id AND p.status = 'succeeded'
+          WHERE p.user_id = users.id AND {$paymentOk}
         ) AS payments_count,
         (
-          SELECT MAX(COALESCE(p.paid_at, p.created_at))
+          SELECT MAX(p.paid_at)
           FROM payments p
-          WHERE p.user_id = users.id AND p.status = 'succeeded'
+          WHERE p.user_id = users.id AND {$paymentOk}
         ) AS last_paid_at
       FROM users
       WHERE id = :id
@@ -400,6 +417,11 @@ final class AdminService
     usort($candidates, static fn(string $a, string $b): int => strcmp($b, $a));
 
     return $candidates[0];
+  }
+
+  private function appTimezone(): \DateTimeZone
+  {
+    return new \DateTimeZone(trim(Env::get('APP_TIMEZONE', 'Europe/Moscow')) ?: 'Europe/Moscow');
   }
 
   private function countActiveUsersBetween(string $start, string $end): int

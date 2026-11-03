@@ -10,6 +10,16 @@ final class PaymentService
 {
   private const PROVIDER = 'yookassa';
 
+  public const STATUS_SUCCEEDED = 'succeeded';
+
+  /** SQL-условие: только успешно проведённый платёж (не pending / без даты оплаты). */
+  public static function completedPaymentWhere(string $tableAlias = ''): string
+  {
+    $prefix = $tableAlias !== '' ? $tableAlias . '.' : '';
+
+    return "{$prefix}status = '" . self::STATUS_SUCCEEDED . "' AND {$prefix}paid_at IS NOT NULL";
+  }
+
   public function __construct(
     private readonly PDO $db,
     private readonly SubscriptionService $subscriptions,
@@ -384,11 +394,18 @@ final class PaymentService
     $this->subscriptions->activate($userId, (string) $payment['plan'], self::PROVIDER, $providerPaymentId);
   }
 
-  /** @return array{totalBuyers:int,today:int,yesterday:int} */
+  /** @return array{totalBuyers:int,repeatBuyers:int,today:int,yesterday:int} */
   public function getPurchaseStats(): array
   {
+    $completed = self::completedPaymentWhere();
     $totalBuyers = (int) $this->db->query(
-      "SELECT COUNT(DISTINCT user_id) FROM payments WHERE status = 'succeeded'",
+      "SELECT COUNT(DISTINCT user_id) FROM payments WHERE {$completed}",
+    )->fetchColumn();
+
+    $repeatBuyers = (int) $this->db->query(
+      "SELECT COUNT(*) FROM (
+         SELECT user_id FROM payments WHERE {$completed} GROUP BY user_id HAVING COUNT(*) >= 2
+       ) AS repeat_buyers",
     )->fetchColumn();
 
     $tz = new \DateTimeZone(trim(Env::get('APP_TIMEZONE', 'Europe/Moscow')) ?: 'Europe/Moscow');
@@ -398,6 +415,7 @@ final class PaymentService
 
     return [
       'totalBuyers' => $totalBuyers,
+      'repeatBuyers' => $repeatBuyers,
       'today' => $this->countSucceededPaymentsBetween(
         $todayStart->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
         $todayEnd->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
@@ -412,10 +430,10 @@ final class PaymentService
   private function countSucceededPaymentsBetween(string $start, string $end): int
   {
     $stmt = $this->db->prepare(
-      "SELECT COUNT(*) FROM payments
-       WHERE status = 'succeeded'
-         AND COALESCE(paid_at, created_at) >= :start
-         AND COALESCE(paid_at, created_at) < :end",
+      'SELECT COUNT(*) FROM payments
+       WHERE ' . self::completedPaymentWhere() . '
+         AND paid_at >= :start
+         AND paid_at < :end',
     );
     $stmt->execute(['start' => $start, 'end' => $end]);
 
