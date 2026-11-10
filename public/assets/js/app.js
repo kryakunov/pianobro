@@ -101,6 +101,7 @@ const els = {
   mainHeader: $('#main-header'),
   screenHome: $('#screen-home'),
   screenMelodyPick: $('#screen-melody-pick'),
+  screenMelodyLanding: $('#screen-melody-landing'),
   screenNotesPick: $('#screen-notes-pick'),
   screenRhythmPick: $('#screen-rhythm-pick'),
   screenBlog: $('#screen-blog'),
@@ -329,6 +330,7 @@ function showScreen(name) {
   const screens = {
     home: els.screenHome,
     'melody-pick': els.screenMelodyPick,
+    'melody-landing': els.screenMelodyLanding,
     'notes-pick': els.screenNotesPick,
     'rhythm-pick': els.screenRhythmPick,
     blog: els.screenBlog,
@@ -355,6 +357,7 @@ function showScreen(name) {
   const isHome = name === 'home';
   els.app?.classList.toggle('app--practice', isPractice);
   els.app?.classList.toggle('app--home', isHome);
+  els.app?.classList.toggle('app--melody', name === 'melody-landing');
   if (els.mainHeader) els.mainHeader.hidden = isPractice;
   document.body.classList.toggle('body--practice', isPractice);
 
@@ -2911,7 +2914,7 @@ function lessonCardHtml(lesson, { remote = false } = {}) {
 
   const cardOpen = remote
     ? `<button type="button" class="lesson-card lesson-card--remote${lesson.category === 'popular' ? ' lesson-card--popular' : ''}" data-id="${escapeHtml(lesson.id)}" data-remote-id="${lesson.remoteId}">`
-    : `<a href="${escapeHtml(ROUTES.practiceMelody(lesson.id))}" class="lesson-card${lesson.category === 'popular' ? ' lesson-card--popular' : ''}">`;
+    : `<a href="${escapeHtml(ROUTES.melody(lesson.id))}" class="lesson-card${lesson.category === 'popular' ? ' lesson-card--popular' : ''}">`;
   const cardClose = remote ? '</button>' : '</a>';
 
   return `
@@ -3518,11 +3521,10 @@ async function bootApp() {
       await openTeacherScreen();
       break;
     case 'melody-pick':
-      if (boot.redirectToPractice && boot.focusLessonId) {
-        navigateTo(ROUTES.practiceMelody(boot.focusLessonId));
-        break;
-      }
       showScreen('melody-pick');
+      break;
+    case 'melody-landing':
+      showScreen('melody-landing');
       break;
     case 'notes-pick':
       showScreen('notes-pick');

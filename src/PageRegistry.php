@@ -418,32 +418,103 @@ final class PageRegistry
     }
 
     $difficulty = self::difficultyLabel($lesson->difficulty);
-    $composer = $lesson->composer !== '' ? $lesson->composer : 'Неизвестный автор';
+    $composer = self::composerLabel($lesson->composer);
+    $noteCount = (int) $lesson->toArray()['noteCount'];
+    $notesLabel = self::notesCountLabel($noteCount);
+    $hands = $lesson->twoHands ? 'две руки' : 'одна рука';
+    $h1 = 'Ноты «' . $lesson->title . '» для пианино';
+    $path = '/melodii/' . $lesson->id;
+    $practicePath = '/trenirovka/melodiya/' . $lesson->id;
+    $composerBit = $composer !== '' ? " {$composer}." : '';
+    $description = "Ноты «{$lesson->title}» для пианино.{$composerBit} Сыграйте онлайн по нотному стану: уровень {$difficulty}, {$notesLabel}, {$hands}. Подсказки на клавишах, без установки.";
+    $keywords = implode(', ', array_filter([
+      'ноты ' . $lesson->title,
+      'ноты ' . $lesson->title . ' для пианино',
+      $lesson->title . ' пианино',
+      $lesson->title . ' ноты',
+      $composer,
+      'ноты для пианино',
+    ]));
+
+    $levelHint = match ($lesson->difficulty) {
+      'beginner' => 'Фрагмент короткий: ноты идут по одной, следующая клавиша подсвечивается. Подходит, если вы только начинаете читать ноты.',
+      'intermediate' => 'Нужно узнавать ноты на стане. Ошибку можно сразу повторить: тренажёр ждёт верную клавишу и только потом идёт дальше.',
+      'advanced' => 'Диапазон шире и партия длиннее. Если ноты на стане ещё путаются, сначала пройдите тренажёр нот, затем вернитесь к этой мелодии.',
+      default => 'Ноты показаны на стане, верная клавиша подсвечивается.',
+    };
 
     return self::base(
-      screen: 'melody-pick',
-      path: '/melodii/' . $lesson->id,
-      title: "{$lesson->title} — ноты для пианино | Piano Bro",
-      description: "Научитесь играть «{$lesson->title}» ({$composer}) на пианино онлайн. Сложность: {$difficulty}. Нотный стан, прослушивание и подсказки.",
-      keywords: "{$lesson->title}, {$composer}, ноты для пианино, мелодия для начинающих",
+      screen: 'melody-landing',
+      path: $path,
+      title: $h1 . ' | Piano Bro',
+      description: $description,
+      keywords: $keywords,
       boot: [
-        'focusLessonId' => $lesson->id,
-        'redirectToPractice' => true,
-      ],
-      lesson: [
-        'id' => $lesson->id,
-        'title' => $lesson->title,
-        'composer' => $composer,
-        'difficulty' => $difficulty,
-        'noteCount' => $lesson->toArray()['noteCount'],
-        'twoHands' => $lesson->twoHands,
+        'lessonId' => $lesson->id,
       ],
       jsonLd: [
         '@context' => 'https://schema.org',
-        '@type' => 'MusicComposition',
-        'name' => $lesson->title,
-        'composer' => ['@type' => 'Person', 'name' => $composer],
-        'inLanguage' => 'ru',
+        '@graph' => [
+          array_filter([
+            '@type' => 'MusicComposition',
+            'name' => $lesson->title,
+            'composer' => $composer !== '' ? ['@type' => 'Person', 'name' => $composer] : null,
+            'inLanguage' => 'ru',
+            'url' => AppUrl::canonical($path),
+          ]),
+          [
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => [
+              ['@type' => 'ListItem', 'position' => 1, 'name' => 'Piano Bro', 'item' => AppUrl::canonical('/')],
+              ['@type' => 'ListItem', 'position' => 2, 'name' => 'Мелодии', 'item' => AppUrl::canonical('/melodii')],
+              ['@type' => 'ListItem', 'position' => 3, 'name' => $h1, 'item' => AppUrl::canonical($path)],
+            ],
+          ],
+          [
+            '@type' => 'FAQPage',
+            'mainEntity' => [
+              [
+                '@type' => 'Question',
+                'name' => 'Где ноты «' . $lesson->title . '» для пианино?',
+                'acceptedAnswer' => [
+                  '@type' => 'Answer',
+                  'text' => 'На этой странице — партия для тренажёра. Нажмите «Сыграть», и ноты «' . $lesson->title . '» откроются на нотном стане с подсветкой клавиш.',
+                ],
+              ],
+              [
+                '@type' => 'Question',
+                'name' => 'Можно ли сыграть «' . $lesson->title . '» без пианино?',
+                'acceptedAnswer' => [
+                  '@type' => 'Answer',
+                  'text' => 'Да. Подойдут клавиши компьютера. Цифровое пианино подключается по USB в Chrome или Edge.',
+                ],
+              ],
+            ],
+          ],
+        ],
+      ],
+      melodyPage: [
+        'h1' => $h1,
+        'title' => $lesson->title,
+        'lead' => trim($composerBit) !== ''
+          ? $composer . '. Уровень — ' . $difficulty . ', ' . $notesLabel . ', ' . $hands . ', темп ' . $lesson->tempo . '. Играйте по нотному стану в браузере, без установки.'
+          : 'Уровень — ' . $difficulty . ', ' . $notesLabel . ', ' . $hands . ', темп ' . $lesson->tempo . '. Играйте по нотному стану в браузере, без установки.',
+        'levelHint' => $levelHint,
+        'facts' => array_values(array_filter([
+          $composer,
+          $difficulty,
+          $notesLabel,
+          $hands,
+          'темп ' . $lesson->tempo,
+        ])),
+        'practicePath' => $practicePath,
+        'playLabel' => 'Сыграть «' . $lesson->title . '»',
+        'steps' => [
+          'Нажмите «Сыграть» — откроется партия «' . $lesson->title . '».',
+          'Подключите цифровое пианино по USB или играйте клавишами компьютера.',
+          'Нажимайте ноту, которая стоит на стане. Тренировка идёт дальше после верной клавиши.',
+        ],
+        'related' => self::relatedMelodies($lesson, $lessons),
       ],
     );
   }
@@ -471,7 +542,7 @@ final class PageRegistry
       boot: [
         'mode' => 'melody',
         'lessonId' => $lesson->id,
-        'returnPath' => '/melodii',
+        'returnPath' => '/melodii/' . $lesson->id,
       ],
     );
   }
@@ -497,6 +568,7 @@ final class PageRegistry
     ?array $blogPosts = null,
     ?array $blogPost = null,
     ?array $blogRelated = null,
+    ?array $melodyPage = null,
     string $ogType = 'website',
   ): array {
     $page = [
@@ -516,6 +588,7 @@ final class PageRegistry
       'blogPosts' => $blogPosts,
       'blogPost' => $blogPost,
       'blogRelated' => $blogRelated,
+      'melodyPage' => $melodyPage,
     ];
 
     return $page;
@@ -529,5 +602,77 @@ final class PageRegistry
       'advanced' => 'продвинутый',
       default => $difficulty,
     };
+  }
+
+  private static function composerLabel(string $composer): string
+  {
+    $trimmed = trim($composer);
+    if ($trimmed === '' || strcasecmp($trimmed, 'unknown') === 0) {
+      return '';
+    }
+    if (strcasecmp($trimmed, 'traditional') === 0) {
+      return 'Народная мелодия';
+    }
+
+    return $trimmed;
+  }
+
+  private static function notesCountLabel(int $count): string
+  {
+    $n = abs($count) % 100;
+    $n1 = $n % 10;
+    if ($n > 10 && $n < 20) {
+      return $count . ' нот';
+    }
+    if ($n1 === 1) {
+      return $count . ' нота';
+    }
+    if ($n1 >= 2 && $n1 <= 4) {
+      return $count . ' ноты';
+    }
+
+    return $count . ' нот';
+  }
+
+  /**
+   * @return list<array{title: string, path: string, meta: string}>
+   */
+  private static function relatedMelodies(Lesson $lesson, LessonRepository $lessons): array
+  {
+    $pool = array_values(array_filter(
+      $lessons->all(),
+      static function (Lesson $other) use ($lesson): bool {
+        if ($other->id === $lesson->id) {
+          return false;
+        }
+        if ($lesson->category !== 'roadmap' && $other->category === 'roadmap') {
+          return false;
+        }
+
+        return true;
+      },
+    ));
+
+    usort($pool, static function (Lesson $a, Lesson $b) use ($lesson): int {
+      $aScore = ($a->difficulty === $lesson->difficulty ? 0 : 10) + ($a->category === $lesson->category ? 0 : 1);
+      $bScore = ($b->difficulty === $lesson->difficulty ? 0 : 10) + ($b->category === $lesson->category ? 0 : 1);
+      if ($aScore !== $bScore) {
+        return $aScore <=> $bScore;
+      }
+
+      return strcmp($a->title, $b->title);
+    });
+
+    $related = [];
+    foreach (array_slice($pool, 0, 6) as $other) {
+      $composer = self::composerLabel($other->composer);
+      $related[] = [
+        'title' => 'Ноты «' . $other->title . '»',
+        'path' => '/melodii/' . $other->id,
+        'meta' => trim($composer . ($composer !== '' ? ' · ' : '') . self::difficultyLabel($other->difficulty)),
+      ];
+    }
+
+    return $related;
   }
 }

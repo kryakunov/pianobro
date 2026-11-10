@@ -7907,6 +7907,313 @@ body.admin-modal-open {
   text-decoration: underline;
 }
 
+.app--melody {
+  max-width: none;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse 52% 48% at 32% 42%, rgba(92, 68, 42, 0.45), transparent 68%),
+    #14110e;
+}
+
+.app--melody .header {
+  margin-bottom: 0;
+  padding: 0.85rem 1.5rem;
+  border-bottom-color: rgba(232, 210, 176, 0.12);
+  background: rgba(12, 14, 20, 0.62);
+  backdrop-filter: blur(14px);
+}
+
+.melody-stage {
+  position: relative;
+  min-height: calc(100dvh - 4.6rem);
+  padding: 1.25rem 1.5rem 2.25rem;
+  overflow: hidden;
+}
+
+.melody-stage__veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.melody-stage__clef {
+  position: absolute;
+  right: -2rem;
+  bottom: -3rem;
+  width: min(46vw, 520px);
+  height: auto;
+  color: rgba(232, 210, 176, 0.07);
+}
+
+.melody-stage__lines {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 18%;
+  width: 100%;
+  height: 140px;
+  opacity: 0.55;
+}
+
+.melody-stage__frame {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.melody-stage__back {
+  display: inline-flex;
+  margin-bottom: 0.9rem;
+  color: #e7d7bf;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.melody-stage__back:hover {
+  color: #fff8ec;
+}
+
+.melody-stage__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.72fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.score {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1.35rem 1.6rem 0;
+  border-radius: 4px 16px 12px 6px;
+  color: #efe4d4;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(255, 226, 186, 0.08), transparent 42%),
+    radial-gradient(ellipse at 100% 100%, rgba(0, 0, 0, 0.22), transparent 46%),
+    #4a3d32;
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 210, 176, 0.12),
+    inset 0 0 40px rgba(0, 0, 0, 0.18),
+    0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.score__grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.22;
+  mix-blend-mode: soft-light;
+}
+
+.score__mast,
+.score__title,
+.score__facts,
+.score__lead,
+.score__actions,
+.score__hint,
+.score__keys {
+  position: relative;
+  z-index: 1;
+}
+
+.score__mast {
+  margin: 0 -0.4rem 1rem;
+}
+
+.score__staff {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.score__title {
+  margin: 0 0 0.75rem;
+  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.score__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  list-style: none;
+}
+
+.score__facts li {
+  padding: 0.18rem 0.6rem;
+  border: 1px solid rgba(232, 210, 176, 0.22);
+  border-radius: 999px;
+  background: rgba(20, 16, 12, 0.22);
+  color: #e6d7c3;
+  font-size: 0.8125rem;
+}
+
+.score__lead,
+.score__hint {
+  max-width: 62ch;
+  margin: 0 0 0.9rem;
+  color: #e4d5c0;
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.score__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.2rem 0 1rem;
+}
+
+.score__play,
+.score__alt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.score__play {
+  background: #6d5a48;
+  color: #f6efe4;
+  box-shadow: none;
+}
+
+.score__play:hover {
+  background: #7d6854;
+  color: #fffaf2;
+}
+
+.score__alt {
+  border: 1px solid rgba(232, 210, 176, 0.28);
+  color: #efe4d4;
+  background: transparent;
+}
+
+.score__alt:hover {
+  background: rgba(255, 244, 224, 0.06);
+}
+
+.score__keys {
+  display: block;
+  width: calc(100% + 3.2rem);
+  height: 46px;
+  margin: 1.15rem -1.6rem 0;
+}
+
+.melody-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.melody-card {
+  padding: 1.1rem 1.15rem 1.15rem;
+  border: 1px solid rgba(232, 210, 176, 0.14);
+  border-radius: 16px;
+  background: rgba(36, 30, 24, 0.72);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(10px);
+}
+
+.melody-card__title {
+  margin: 0 0 0.7rem;
+  color: #f3e6cf;
+  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.melody-card__steps {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #d9deea;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.melody-card__steps li + li {
+  margin-top: 0.4rem;
+}
+
+.melody-sheets {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.melody-sheets a {
+  display: block;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: #463c33;
+  color: #efe4d4;
+  text-decoration: none;
+}
+
+.melody-sheets a:hover {
+  background: #54483d;
+}
+
+.melody-sheets__name {
+  display: block;
+  font-weight: 650;
+}
+
+.melody-sheets__meta {
+  display: block;
+  margin-top: 0.1rem;
+  color: #cbbba6;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 860px) {
+  .app--melody .header {
+    padding: 0.75rem 1rem;
+  }
+
+  .melody-stage {
+    padding: 1rem 1rem 1.5rem;
+  }
+
+  .melody-stage__layout {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .melody-stage__clef {
+    width: 280px;
+  }
+
+  .score {
+    padding: 1rem 1rem 0;
+  }
+
+  .score__keys {
+    width: calc(100% + 2rem);
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+}
+
 .blog-article__header {
   margin-bottom: 1.25rem;
 }
