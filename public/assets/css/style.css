@@ -9053,6 +9053,31 @@ body.admin-modal-open {
   margin-top: 0;
 }
 
+.session-notes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0 0 1.15rem;
+}
+
+.session-note {
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.session-note--ok {
+  background: rgba(61, 214, 140, 0.16);
+  color: #3dd68c;
+}
+
+.session-note--miss {
+  background: rgba(108, 140, 255, 0.18);
+  color: #9cb4ff;
+}
+
 .diagnostic-offer,
 .session-offer {
   margin: 0 0 1rem;

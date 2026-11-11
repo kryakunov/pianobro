@@ -78,6 +78,7 @@ import {
 import {
   isPremiumUser,
   showPaywall,
+  checkNotesAllowed,
   getNotesQuota,
   formatNotesQuotaLabel,
   refreshBillingState,
@@ -86,7 +87,6 @@ import {
   trackConversion,
 } from './subscription.js';
 import { applyHeaderAvatar, buildHeaderAvatarState } from './user-avatar.js';
-import { renderTrainingResultWeakNotes } from './training-result-ui.js';
 
 const TRAINER_PREFS_KEY = 'piano-trainer-prefs';
 const RHYTHM_PREFS_KEY = 'piano-rhythm-prefs';
@@ -209,10 +209,9 @@ const els = {
   modalWrong: $('#modal-wrong'),
   modalAccuracy: $('#modal-accuracy'),
   modalTitle: $('#modal-title'),
-  modalWeakNotes: $('#modal-weak-notes'),
-  modalWeakNotesTitle: $('#modal-weak-notes-title'),
-  modalWeakNotesHint: $('#modal-weak-notes-hint'),
-  modalWeakNotesTags: $('#modal-weak-notes-tags'),
+  modalSessionNotes: $('#modal-session-notes'),
+  modalSessionClose: $('#modal-session-close'),
+  modalOpenMap: $('#modal-open-map'),
   modalSessionOffer: $('#modal-session-offer'),
   modalActions: $('#modal-actions'),
   modalDiscover: $('#modal-discover'),
@@ -752,6 +751,9 @@ function applySessionModalLayout(stats) {
   if (els.modalActions) {
     els.modalActions.hidden = notesResult;
   }
+  if (els.modalSessionClose) {
+    els.modalSessionClose.hidden = !notesResult;
+  }
   if (notesResult) {
     if (els.modalRegisterHint) {
       els.modalRegisterHint.hidden = true;
@@ -764,23 +766,88 @@ function applySessionModalLayout(stats) {
   }
 }
 
+function sessionNoteResults(stats) {
+  const order = [];
+  const byMidi = new Map();
+  for (const attempt of stats?.attempts ?? []) {
+    const midi = Number(attempt?.expectedMidi);
+    if (!Number.isFinite(midi)) continue;
+    if (!byMidi.has(midi)) {
+      byMidi.set(midi, { midi, name: noteNameFromMidi(midi), correct: 0, wrong: 0 });
+      order.push(midi);
+    }
+    const row = byMidi.get(midi);
+    if (attempt.correct) row.correct += 1;
+    else row.wrong += 1;
+  }
+
+  return order
+    .map((midi) => {
+      const row = byMidi.get(midi);
+      return { ...row, missed: row.wrong > 0 };
+    })
+    .sort((a, b) => Number(b.missed) - Number(a.missed) || a.midi - b.midi);
+}
+
+function notesResultTitle(stats) {
+  const missed = sessionNoteResults(stats).filter((note) => note.missed);
+  if (!missed.length) {
+    const count = Number(stats?.correct) || 0;
+    return count > 0 ? `Все ${count} без ошибок` : 'Без ошибок';
+  }
+  const names = missed.map((note) => note.name);
+  const shown = names.slice(0, 4).join(', ');
+  const extra = names.length > 4 ? ` и ещё ${names.length - 4}` : '';
+  return `Путались: ${shown}${extra}`;
+}
+
 function renderSessionModalWeakNotes(stats) {
+  if (!els.modalSessionNotes) return;
   if (!isNotesTrainingResultLayout(stats)) {
-    if (els.modalWeakNotes) {
-      els.modalWeakNotes.hidden = true;
-    }
-    if (els.modalWeakNotesTags) {
-      els.modalWeakNotesTags.innerHTML = '';
-    }
+    els.modalSessionNotes.hidden = true;
+    els.modalSessionNotes.innerHTML = '';
     return;
   }
 
-  const weakNotes = weakNotesFromSessionStats(stats, { allowDiagnosticFallback: false });
-  renderTrainingResultWeakNotes({
-    title: els.modalWeakNotesTitle,
-    hint: els.modalWeakNotesHint,
-    tags: els.modalWeakNotesTags,
-  }, weakNotes);
+  const notes = sessionNoteResults(stats);
+  if (!notes.length) {
+    els.modalSessionNotes.hidden = true;
+    els.modalSessionNotes.innerHTML = '';
+    return;
+  }
+
+  const nameCounts = new Map();
+  for (const note of notes) {
+    nameCounts.set(note.name, (nameCounts.get(note.name) ?? 0) + 1);
+  }
+
+  els.modalSessionNotes.hidden = false;
+  els.modalSessionNotes.innerHTML = notes.map((note) => {
+    const kind = note.missed ? 'miss' : 'ok';
+    const label = nameCounts.get(note.name) > 1
+      ? `${note.name} · ${sessionOctaveLabel(note.midi)}`
+      : note.name;
+    return `<span class="session-note session-note--${kind}">${escapeHtml(label)}</span>`;
+  }).join('');
+}
+
+function syncNotesResultActions(stats) {
+  const missed = sessionNoteResults(stats).some((note) => note.missed);
+  const retry = document.getElementById('modal-retry-notes');
+  if (retry) {
+    const count = noteTrainer.sessionLimit || Number(stats?.correct) || 10;
+    retry.textContent = missed ? 'Повторить слабые ноты' : `Ещё ${count} нот`;
+  }
+  if (els.modalOpenMap) {
+    els.modalOpenMap.textContent = isLoggedIn() ? 'Моя статистика' : 'Сохранить результат';
+  }
+}
+
+function sessionOctaveLabel(midi) {
+  if (midi >= 72) return '2';
+  if (midi >= 60) return '1';
+  if (midi >= 48) return 'малая';
+  return 'большая';
 }
 
 function noteNameFromMidi(midi) {
@@ -920,6 +987,11 @@ function updateSessionModalTitle(stats) {
     return;
   }
 
+  if (isNotesTrainingResultLayout(stats)) {
+    els.modalTitle.textContent = notesResultTitle(stats);
+    return;
+  }
+
   els.modalTitle.textContent = 'Тренировка завершена!';
 }
 
@@ -980,6 +1052,7 @@ function showSessionModal(stats) {
 
   applySessionModalLayout(stats);
   renderSessionModalWeakNotes(stats);
+  if (isNotesTrainingResultLayout(stats)) syncNotesResultActions(stats);
   els.sessionModal.hidden = false;
   if (!isNotesTrainingResultLayout(stats)) {
     renderSessionModalUi(stats);
@@ -1158,6 +1231,75 @@ function renderSessionModalUi(stats) {
   }).join('');
 }
 
+let notesRepeatFocus = [];
+
+function notesRepeatPaywallContext() {
+  if (!notesRepeatFocus.length) return {};
+  const names = notesRepeatFocus.map((note) => note.name).slice(0, 4);
+  return {
+    title: 'Бесплатные ноты на сегодня закончились',
+    message: `Дальше PianoBro будет чаще давать ${names.join(', ')}. Это в подписке.`,
+    weakNotes: notesRepeatFocus.map((note) => ({ midi: note.midi, name: note.name, count: note.wrong })),
+  };
+}
+
+async function ensureNotesResultRetry(missed, { nameMissedNotes = false } = {}) {
+  if (isPremiumUser()) return true;
+
+  const check = await checkNotesAllowed(1, isLoggedIn());
+  if (check?.allowed) return true;
+
+  const names = missed.map((note) => note.name).slice(0, 4);
+  const quota = getNotesQuota(isLoggedIn());
+  hideSessionModal();
+  showPaywall(check?.reason ?? 'daily_notes_limit', {
+    title: 'Бесплатные ноты на сегодня закончились',
+    message: nameMissedNotes && names.length
+      ? `Дальше PianoBro будет чаще давать ${names.join(', ')}. Это в подписке.`
+      : 'Дальше тренировки без лимита — в подписке.',
+    weakNotes: missed.map((note) => ({ midi: note.midi, name: note.name, count: note.wrong })),
+    limit: quota.limit,
+    used: quota.used,
+    remaining: quota.remaining,
+  });
+  return false;
+}
+
+async function retryNotesFromResult() {
+  const stats = lastSessionStats;
+  const missed = sessionNoteResults(stats).filter((note) => note.missed);
+  trackGoal('modal_retry', { mode: 'notes', missed: missed.length });
+
+  if (!(await ensureNotesResultRetry(missed, { nameMissedNotes: missed.length > 0 }))) return;
+
+  hideSessionModal();
+  if (missed.length) {
+    notesRepeatFocus = missed;
+    const limit = noteTrainer.sessionLimit || savedSessionLimit();
+    const mixed = noteTrainer.prepareWeakRepeat(missed.map((note) => note.midi), limit);
+    noteTrainer.start();
+    showFeedback(mixed ? 'Слабые ноты будут попадаться чаще' : 'Повторяем слабые ноты', 'info');
+    return;
+  }
+
+  notesRepeatFocus = [];
+  const limit = noteTrainer.sessionLimit || savedSessionLimit();
+  noteTrainer.setConfig(noteSettings);
+  noteTrainer.sessionLimit = limit;
+  noteTrainer.start();
+  showFeedback('Новые ноты', 'info');
+}
+
+function openNotesMapFromResult() {
+  trackGoal('modal_stats_click', { mode: 'notes', source: 'session_result' });
+  if (!isLoggedIn()) {
+    pendingSessionModalAuthRedirect = 'stats-map';
+    openAuthModal('register');
+    return;
+  }
+  leavePracticeTo(ROUTES.stats);
+}
+
 function retryPracticeFromModal() {
   hideSessionModal();
   if (appMode === 'melody' && melodyTrainer.lesson) {
@@ -1226,13 +1368,15 @@ function handleSessionModalAction(actionId, dataset) {
 }
 
 function bindSessionModalUi() {
-  document.getElementById('modal-open-plan')?.addEventListener('click', () => {
-    hideSessionModal();
-    trackGoal('modal_premium_click', { mode: appMode });
-    void openPersonalPlan();
+  document.getElementById('modal-retry-notes')?.addEventListener('click', () => {
+    void retryNotesFromResult();
   });
 
-  document.getElementById('modal-close-training')?.addEventListener('click', () => {
+  els.modalOpenMap?.addEventListener('click', () => {
+    openNotesMapFromResult();
+  });
+
+  els.modalSessionClose?.addEventListener('click', () => {
     trackGoal('modal_leave', { mode: appMode });
     leavePractice();
   });
@@ -1595,12 +1739,11 @@ function hideSessionModal() {
     els.modalActions.hidden = false;
     els.modalActions.innerHTML = '';
   }
-  if (els.modalWeakNotes) {
-    els.modalWeakNotes.hidden = true;
+  if (els.modalSessionNotes) {
+    els.modalSessionNotes.hidden = true;
+    els.modalSessionNotes.innerHTML = '';
   }
-  if (els.modalWeakNotesTags) {
-    els.modalWeakNotesTags.innerHTML = '';
-  }
+  if (els.modalSessionClose) els.modalSessionClose.hidden = true;
   if (els.modalRegisterHint) {
     els.modalRegisterHint.hidden = true;
     els.modalRegisterHint.innerHTML = '';
@@ -2573,6 +2716,11 @@ async function afterAuthSuccess() {
     renderSessionModalUi(lastSessionStats);
     return;
   }
+  if (pendingSessionModalAuthRedirect === 'stats-map') {
+    pendingSessionModalAuthRedirect = null;
+    leavePracticeTo(ROUTES.stats);
+    return;
+  }
   pendingSessionModalAuthRedirect = null;
 
   await afterAuthConversionHooks();
@@ -3450,6 +3598,7 @@ function startNotesTraining() {
   els.notesSettingsError.hidden = true;
   saveNoteFormPrefs();
   void gateNotesTrainingStart(() => {
+    notesRepeatFocus = [];
     trackGoal('start_training', { source: 'notes_settings' });
     sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
       settings,
@@ -3724,7 +3873,7 @@ noteTrainer.onNoteChange = (midiNote, { spelling, clef } = {}) => {
 };
 noteTrainer.onAttempt = async () => {
   if (appMode !== 'notes' || conversionIsDiagnostic() || activeHomeworkSubmissionId) return;
-  const ok = await handleNoteAttemptConsumption();
+  const ok = await handleNoteAttemptConsumption(notesRepeatPaywallContext());
   updatePracticeQuotaBanner();
   if (!ok) {
     noteTrainer.stop();

@@ -181,6 +181,61 @@ function shuffleArray(items) {
   return arr;
 }
 
+function spreadIndexes(count, length) {
+  const indexes = [];
+  for (let i = 1; i <= count; i++) {
+    let index = Math.round((i * (length + 1)) / (count + 1)) - 1;
+    index = Math.max(0, Math.min(length - 1, index));
+    while (indexes.includes(index) && index < length - 1) index += 1;
+    indexes.push(index);
+  }
+  return indexes;
+}
+
+function nextFiller(fillers, cursor, previous, nextWeak) {
+  for (let attempt = 0; attempt < fillers.length; attempt++) {
+    const midi = fillers[(cursor + attempt) % fillers.length];
+    if (midi !== previous && midi !== nextWeak) {
+      return { midi, cursor: (cursor + attempt + 1) % fillers.length };
+    }
+  }
+  return { midi: fillers[cursor % fillers.length], cursor: (cursor + 1) % fillers.length };
+}
+
+export function buildWeakRepeatQueue(pool, weakMidis, limit) {
+  const weak = [...new Set(weakMidis.map((midi) => Number(midi)).filter((midi) => Number.isFinite(midi)))]
+    .filter((midi) => pool.includes(midi));
+  const rest = pool.filter((midi) => !weak.includes(midi));
+  const size = Math.max(1, Number(limit) || 0);
+  if (weak.length === 0 || weak.length >= 3 || rest.length === 0) return null;
+
+  if (weak.length === 1) {
+    const fillers = shuffleArray(rest);
+    return Array.from({ length: size }, (_, index) => (
+      index % 2 === 0 ? weak[0] : fillers[Math.floor(index / 2) % fillers.length]
+    ));
+  }
+
+  const weakCount = Math.min(size - 1, Math.max(weak.length, Math.round(size * 0.7)));
+  const fillerAt = new Set(spreadIndexes(size - weakCount, size));
+  const fillers = shuffleArray(rest);
+  const queue = [];
+  let weakIndex = 0;
+  let fillerCursor = 0;
+  for (let index = 0; index < size; index++) {
+    if (fillerAt.has(index)) {
+      const nextWeak = weak[weakIndex % weak.length];
+      const picked = nextFiller(fillers, fillerCursor, queue[index - 1], nextWeak);
+      fillerCursor = picked.cursor;
+      queue.push(picked.midi);
+    } else {
+      queue.push(weak[weakIndex % weak.length]);
+      weakIndex += 1;
+    }
+  }
+  return queue;
+}
+
 export class NoteTrainer {
   constructor(piano) {
     this.piano = piano;
@@ -210,6 +265,8 @@ export class NoteTrainer {
     this.coverAll = false;
     this._noteQueue = [];
     this._queueIndex = 0;
+    this._scripted = false;
+    this._scriptedQueue = null;
     this.setConfig(DEFAULT_NOTE_SETTINGS);
   }
 
@@ -236,7 +293,28 @@ export class NoteTrainer {
     this.personalizedMode = false;
     this.weakMidis = [];
     this.coverAll = coverAll;
+    this._scriptedQueue = null;
     this.reset();
+  }
+
+  prepareWeakRepeat(weakMidis, limit) {
+    const requested = [...new Set(weakMidis.map((midi) => Number(midi)).filter((midi) => Number.isFinite(midi)))];
+    const inPool = requested.filter((midi) => this.pool.includes(midi));
+    const weak = inPool.length ? inPool : requested;
+    const rest = this.pool.filter((midi) => !weak.includes(midi));
+    const size = limit || this.sessionLimit || 10;
+    const queue = buildWeakRepeatQueue(this.pool, weak, size);
+
+    if (!queue || weak.length >= 3 || rest.length === 0) {
+      this._scriptedQueue = null;
+      this.setCustomPool(weak);
+      this.sessionLimit = size;
+      return false;
+    }
+
+    this._scriptedQueue = queue;
+    this.sessionLimit = size;
+    return true;
   }
 
   setCustomPool(midis, { coverAll = false } = {}) {
@@ -252,6 +330,7 @@ export class NoteTrainer {
     this.personalizedMode = false;
     this.weakMidis = [];
     this.coverAll = coverAll;
+    this._scriptedQueue = null;
     this.reset();
   }
 
@@ -269,13 +348,21 @@ export class NoteTrainer {
     this.noteShownAt = 0;
     this.running = true;
 
-    if (this.coverAll) {
+    if (this._scriptedQueue?.length) {
+      this._noteQueue = [...this._scriptedQueue];
+      this._queueIndex = 0;
+      this._scripted = true;
+      this.coverAll = false;
+      this.sessionLimit = this._noteQueue.length;
+    } else if (this.coverAll) {
+      this._scripted = false;
       this._noteQueue = shuffleArray(
         this.pool.flatMap((midi) => Array(COVER_ALL_REPEATS).fill(midi)),
       );
       this._queueIndex = 0;
       this.sessionLimit = this._noteQueue.length;
     } else {
+      this._scripted = false;
       this._noteQueue = [];
       this._queueIndex = 0;
     }
@@ -340,7 +427,7 @@ export class NoteTrainer {
       });
       this._emitUpdate();
 
-      if (this.coverAll) {
+      if (this.coverAll || this._scripted) {
         this._queueIndex++;
         if (this._queueIndex >= this._noteQueue.length) {
           this._finish();
@@ -387,7 +474,7 @@ export class NoteTrainer {
   }
 
   _showCurrentNote() {
-    if (this.coverAll) {
+    if (this.coverAll || this._scripted) {
       this.currentMidi = this._noteQueue[this._queueIndex] ?? null;
     } else if (this.personalizedMode && this.weakMidis.length) {
       this.currentMidi = pickPersonalized(this.pool, this.weakMidis, this.currentMidi);

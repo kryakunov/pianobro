@@ -104,7 +104,7 @@ export async function ensureNotesQuota(minCount = 1) {
   return false;
 }
 
-export async function handleNoteAttemptConsumption() {
+export async function handleNoteAttemptConsumption(context = {}) {
   if (isPremiumUser() || conversionIsDiagnostic()) return true;
 
   const result = await consumeNoteAttempt(1, isLoggedIn());
@@ -118,7 +118,9 @@ export async function handleNoteAttemptConsumption() {
 
   const quota = getNotesQuota(isLoggedIn());
   showPaywall(result.check?.reason ?? 'mid_session', {
-    weakNotes: loadDiagnosticResult()?.weakNotes ?? [],
+    title: context.title,
+    message: context.message,
+    weakNotes: context.weakNotes ?? loadDiagnosticResult()?.weakNotes ?? [],
     limit: quota.limit,
     used: quota.used,
     remaining: quota.remaining,

@@ -1363,6 +1363,7 @@
     <div class="modal" id="session-modal" hidden>
       <div class="modal__backdrop" data-close-session></div>
       <div class="modal__card modal__card--session" id="session-modal-card" role="dialog" aria-labelledby="modal-title">
+        <button type="button" class="modal__close" id="modal-session-close" aria-label="Закрыть" hidden>×</button>
         <div class="session-modal-classic" id="session-modal-classic">
           <div class="modal__icon icon-badge icon-badge--success" aria-hidden="true">
             <svg class="icon icon--badge" viewBox="0 0 24 24"><use href="#ico-check"/></svg>
@@ -1384,22 +1385,10 @@
           </div>
         </div>
         <div class="session-modal-training-result" id="session-modal-training-result" hidden>
-          <div class="diagnostic-result__weak weak-notes-offer" id="modal-weak-notes">
-            <div class="weak-notes-offer__content">
-              <div class="weak-notes-offer__text">
-                <strong id="modal-weak-notes-title">Сложнее всего давались</strong>
-                <p id="modal-weak-notes-hint">PianoBro чаще будет повторять эти ноты в тренировках:</p>
-              </div>
-              <div class="weak-notes-offer__tags" id="modal-weak-notes-tags"></div>
-            </div>
-          </div>
-          <div class="diagnostic-offer" id="modal-session-offer">
-            <strong>Персональный план</strong>
-            <p>Сервис составит программу тренировок и будет чаще показывать ноты, которые пока путаются.</p>
-          </div>
+          <div class="session-notes" id="modal-session-notes" hidden></div>
           <div class="modal__actions">
-            <button type="button" class="btn btn--primary" id="modal-open-plan">Открыть персональный план</button>
-            <button type="button" class="btn btn--secondary" id="modal-close-training">Закрыть</button>
+            <button type="button" class="btn btn--primary" id="modal-retry-notes">Ещё 10 нот</button>
+            <button type="button" class="btn btn--secondary" id="modal-open-map">Сохранить результат</button>
           </div>
         </div>
         <ul class="modal-register-hint" id="modal-register-hint" hidden></ul>
