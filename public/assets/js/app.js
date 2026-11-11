@@ -2,7 +2,7 @@ import { PianoKeyboard } from './piano.js';
 import { MidiInput } from './midi.js';
 import { MicPitchInput } from './mic-pitch.js';
 import { MelodyTrainer } from './trainer.js';
-import { NoteTrainer, DEFAULT_NOTE_SETTINGS, DEFAULT_NOTE_SESSION_LIMIT, DEFAULT_TRAINER_OPTIONS, describeNoteSettings, usesBothClefs } from './note-trainer.js';
+import { NoteTrainer, DEFAULT_NOTE_SETTINGS, DEFAULT_NOTE_SESSION_LIMIT, NOTE_SESSION_LIMITS, DEFAULT_TRAINER_OPTIONS, describeNoteSettings, usesBothClefs } from './note-trainer.js';
 import { loadDiagnosticResult } from './subscription.js';
 import {
   readNoteSettingsFromForm as readNoteSettingsFromFormElement,
@@ -679,6 +679,8 @@ function updateNotesPickModeUi() {
 
   if (diagnostic) {
     applyNoteSettingsToForm(structuredClone(DEFAULT_NOTE_SETTINGS));
+  } else {
+    applySavedNoteForm();
   }
 
   const quotaHint = els.notesFreeTierHint;
@@ -1322,6 +1324,31 @@ function applyRhythmSessionSettings({ speed, lives }) {
   rhythmTrainer.setMaxLives(livesCount);
 }
 
+function normalizeSavedNoteSettings(value) {
+  if (!value || typeof value !== 'object') return null;
+  const treble = value.treble ?? {};
+  const bass = value.bass ?? {};
+  const alteration = value.alteration ?? {};
+  const first = Boolean(treble.first);
+  const second = Boolean(treble.second);
+  const small = Boolean(bass.small);
+  const great = Boolean(bass.great);
+
+  return {
+    treble: { enabled: first || second, first, second },
+    bass: { enabled: small || great, small, great },
+    alteration: {
+      sharp: Boolean(alteration.sharp),
+      flat: Boolean(alteration.flat),
+    },
+  };
+}
+
+function normalizeSavedSessionLimit(value) {
+  const limit = parseInt(value, 10);
+  return NOTE_SESSION_LIMITS.includes(limit) ? limit : DEFAULT_NOTE_SESSION_LIMIT;
+}
+
 function loadTrainerPrefs() {
   try {
     const raw = localStorage.getItem(TRAINER_PREFS_KEY);
@@ -1329,16 +1356,49 @@ function loadTrainerPrefs() {
     const data = JSON.parse(raw);
     return {
       soundEnabled: data.soundEnabled ?? DEFAULT_TRAINER_OPTIONS.soundEnabled,
+      keyboardVisible: data.keyboardVisible !== false,
+      keyboardHints: Boolean(data.keyboardHints),
+      noteSettings: normalizeSavedNoteSettings(data.noteSettings),
+      sessionLimit: data.sessionLimit == null ? null : normalizeSavedSessionLimit(data.sessionLimit),
+      melodyDifficulty: typeof data.melodyDifficulty === 'string' ? data.melodyDifficulty : null,
     };
   } catch {
     return null;
   }
 }
 
-function saveTrainerPrefs(options) {
-  localStorage.setItem(TRAINER_PREFS_KEY, JSON.stringify({
-    soundEnabled: options.soundEnabled,
-  }));
+function saveTrainerPrefs(partial) {
+  let prev = {};
+  try {
+    prev = JSON.parse(localStorage.getItem(TRAINER_PREFS_KEY) ?? '{}') ?? {};
+  } catch {
+    prev = {};
+  }
+  try {
+    localStorage.setItem(TRAINER_PREFS_KEY, JSON.stringify({ ...prev, ...partial }));
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function savedNoteSettings() {
+  return loadTrainerPrefs()?.noteSettings ?? structuredClone(DEFAULT_NOTE_SETTINGS);
+}
+
+function savedSessionLimit() {
+  return loadTrainerPrefs()?.sessionLimit ?? DEFAULT_NOTE_SESSION_LIMIT;
+}
+
+function applySavedNoteForm() {
+  applyNoteSettingsToForm(savedNoteSettings());
+  applySessionLimitToForm(savedSessionLimit());
+}
+
+function saveNoteFormPrefs() {
+  saveTrainerPrefs({
+    noteSettings: readNoteSettingsFromForm(),
+    sessionLimit: readSessionLimitFromForm(),
+  });
 }
 
 function syncSoundToggleUI() {
@@ -1582,7 +1642,8 @@ function prefersTouchInput() {
   );
 }
 
-function setPianoVisible(visible) {
+function setPianoVisible(visible, { persist = false } = {}) {
+  if (persist) saveTrainerPrefs({ keyboardVisible: Boolean(visible) });
   els.practiceKeyboardArea.hidden = !visible;
   els.practiceKeyboardArea.classList.toggle('practice-keyboard-area--hidden', !visible);
   els.practiceLayout?.classList.toggle('practice-layout--keyboard-hidden', !visible);
@@ -1612,6 +1673,7 @@ function setPianoVisible(visible) {
 function setKeyboardHints(enabled, { persist = true } = {}) {
   if (persist) {
     keyboardHints = enabled;
+    saveTrainerPrefs({ keyboardHints: Boolean(enabled) });
   }
   melodyTrainer.showKeyboardHints = enabled;
   noteTrainer.showKeyboardHints = enabled;
@@ -1772,7 +1834,7 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
   updateInputStatusBanner();
   showScreen('practice');
   resetPracticeProgress();
-  setPianoVisible(true);
+  setPianoVisible(loadTrainerPrefs()?.keyboardVisible !== false);
   if (mode === 'notes') {
     updatePracticeQuotaBanner();
   }
@@ -3386,6 +3448,7 @@ function startNotesTraining() {
   }
 
   els.notesSettingsError.hidden = true;
+  saveNoteFormPrefs();
   void gateNotesTrainingStart(() => {
     trackGoal('start_training', { source: 'notes_settings' });
     sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
@@ -3448,9 +3511,9 @@ function bootNotesPractice(homework = null) {
     activeHomeworkSubmissionId = homework.submissionId;
   }
 
-  const settings = homework?.settings ?? config?.settings ?? structuredClone(DEFAULT_NOTE_SETTINGS);
+  const settings = homework?.settings ?? config?.settings ?? savedNoteSettings();
   const options = homework?.options ?? config?.options ?? readTrainerOptionsFromPrefs();
-  const sessionLimit = homework?.sessionLimit ?? config?.sessionLimit ?? DEFAULT_NOTE_SESSION_LIMIT;
+  const sessionLimit = homework?.sessionLimit ?? config?.sessionLimit ?? savedSessionLimit();
   const returnPath = homework?.returnPath ?? config?.returnPath ?? ROUTES.notes;
 
   saveTrainerPrefs(options);
@@ -3708,6 +3771,7 @@ els.notesSettingsForm?.addEventListener('submit', (e) => {
 
 els.notesSettingsForm?.addEventListener('change', () => {
   if (!els.notesSettingsError.hidden) els.notesSettingsError.hidden = true;
+  if (!isDiagnosticPickMode()) saveNoteFormPrefs();
 });
 
 els.rhythmSettingsForm?.addEventListener('submit', (e) => {
@@ -3719,6 +3783,12 @@ els.rhythmSettingsForm?.addEventListener('change', () => {
   if (els.rhythmSettingsError && !els.rhythmSettingsError.hidden) {
     els.rhythmSettingsError.hidden = true;
   }
+  const { noteSettings: rhythmNotes, durations, speed, lives } = readRhythmSettingsFromForm(els.rhythmSettingsForm);
+  rhythmSettings = rhythmNotes;
+  rhythmDurations = durations;
+  rhythmSpeed = speed;
+  rhythmLives = lives;
+  saveRhythmPrefs({ noteSettings: rhythmNotes, durations, speed, lives });
 });
 
 function openNotesPickScreen() {
@@ -3727,7 +3797,7 @@ function openNotesPickScreen() {
 
 els.keyboardToggleTabs?.forEach((tab) => {
   tab.addEventListener('click', () => {
-    setPianoVisible(tab.dataset.keyboard === 'on');
+    setPianoVisible(tab.dataset.keyboard === 'on', { persist: true });
   });
 });
 
@@ -3800,6 +3870,7 @@ els.melodySearch?.addEventListener('search', () => {
 els.difficultyTabs?.forEach((tab) => {
   tab.addEventListener('click', () => {
     selectedDifficultyFilter = tab.dataset.difficulty ?? 'all';
+    saveTrainerPrefs({ melodyDifficulty: selectedDifficultyFilter });
     els.difficultyTabs.forEach((item) => {
       item.classList.toggle('difficulty-tab--active', item === tab);
     });
@@ -3908,15 +3979,23 @@ initAuth().then(async () => {
   await syncGuestProgressAfterAuth();
   await bootApp();
 });
-applyNoteSettingsToForm(DEFAULT_NOTE_SETTINGS);
-applySessionLimitToForm(DEFAULT_NOTE_SESSION_LIMIT);
+applySavedNoteForm();
 applyRhythmPrefsToState(loadRhythmPrefs());
-noteTrainer.sessionLimit = DEFAULT_NOTE_SESSION_LIMIT;
+noteTrainer.sessionLimit = savedSessionLimit();
 noteTrainer.setOptions(loadTrainerPrefs() ?? DEFAULT_TRAINER_OPTIONS);
+keyboardHints = Boolean(loadTrainerPrefs()?.keyboardHints);
+setKeyboardHints(keyboardHints, { persist: false });
 setPianoVisible(false);
-melodyTrainer.showKeyboardHints = false;
-noteTrainer.showKeyboardHints = false;
-rhythmTrainer.showKeyboardHints = false;
+const savedMelodyDifficulty = loadTrainerPrefs()?.melodyDifficulty;
+if (savedMelodyDifficulty && els.difficultyTabs?.length) {
+  const savedTab = [...els.difficultyTabs].find((tab) => tab.dataset.difficulty === savedMelodyDifficulty);
+  if (savedTab) {
+    selectedDifficultyFilter = savedMelodyDifficulty;
+    els.difficultyTabs.forEach((tab) => {
+      tab.classList.toggle('difficulty-tab--active', tab === savedTab);
+    });
+  }
+}
 
 const savedMidiId = loadSavedMidiDeviceId();
 if (savedMidiId) midi.selectedInputId = savedMidiId;
