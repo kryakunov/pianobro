@@ -1,0 +1,66 @@
+{
+    "id": "lesnik",
+    "title": "Лесник",
+    "composer": "Король и Шут",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 108,
+    "aliases": [
+        "лесник",
+        "король и шут"
+    ],
+    "notes": [
+        {
+            "midi": 69,
+            "duration": 340
+        },
+        {
+            "midi": 72,
+            "duration": 340
+        },
+        {
+            "midi": 74,
+            "duration": 340
+        },
+        {
+            "midi": 76,
+            "duration": 340
+        },
+        {
+            "midi": 74,
+            "duration": 340
+        },
+        {
+            "midi": 72,
+            "duration": 340
+        },
+        {
+            "midi": 69,
+            "duration": 340
+        },
+        {
+            "midi": 67,
+            "duration": 340
+        },
+        {
+            "midi": 69,
+            "duration": 340
+        },
+        {
+            "midi": 72,
+            "duration": 340
+        },
+        {
+            "midi": 74,
+            "duration": 340
+        },
+        {
+            "midi": 72,
+            "duration": 340
+        },
+        {
+            "midi": 69,
+            "duration": 680
+        }
+    ]
+}

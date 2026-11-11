@@ -1,0 +1,86 @@
+{
+    "id": "titanic",
+    "title": "Титаник",
+    "composer": "Дж. Хорнер",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 80,
+    "aliases": [
+        "титаник",
+        "my heart will go on"
+    ],
+    "notes": [
+        {
+            "midi": 76,
+            "duration": 400
+        },
+        {
+            "midi": 78,
+            "duration": 400
+        },
+        {
+            "midi": 80,
+            "duration": 400
+        },
+        {
+            "midi": 76,
+            "duration": 400
+        },
+        {
+            "midi": 78,
+            "duration": 400
+        },
+        {
+            "midi": 80,
+            "duration": 400
+        },
+        {
+            "midi": 83,
+            "duration": 400
+        },
+        {
+            "midi": 81,
+            "duration": 400
+        },
+        {
+            "midi": 80,
+            "duration": 400
+        },
+        {
+            "midi": 76,
+            "duration": 400
+        },
+        {
+            "midi": 78,
+            "duration": 400
+        },
+        {
+            "midi": 80,
+            "duration": 400
+        },
+        {
+            "midi": 76,
+            "duration": 400
+        },
+        {
+            "midi": 78,
+            "duration": 400
+        },
+        {
+            "midi": 80,
+            "duration": 400
+        },
+        {
+            "midi": 83,
+            "duration": 400
+        },
+        {
+            "midi": 81,
+            "duration": 400
+        },
+        {
+            "midi": 80,
+            "duration": 800
+        }
+    ]
+}

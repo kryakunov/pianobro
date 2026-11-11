@@ -1,0 +1,89 @@
+{
+    "id": "prekrasnoe-daleko",
+    "title": "Прекрасное далёко",
+    "composer": "Е. Крылатов",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 96,
+    "aliases": [
+        "прекрасное далеко"
+    ],
+    "notes": [
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 69,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 65,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 69,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 62,
+            "duration": 380
+        },
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 65,
+            "duration": 380
+        },
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 65,
+            "duration": 380
+        },
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 62,
+            "duration": 380
+        },
+        {
+            "midi": 60,
+            "duration": 760
+        }
+    ]
+}

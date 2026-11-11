@@ -1,0 +1,66 @@
+{
+    "id": "gravity-falls",
+    "title": "Гравити Фолз",
+    "composer": "Gravity Falls",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 112,
+    "aliases": [
+        "гравити фолз",
+        "gravity falls"
+    ],
+    "notes": [
+        {
+            "midi": 67,
+            "duration": 320
+        },
+        {
+            "midi": 70,
+            "duration": 320
+        },
+        {
+            "midi": 72,
+            "duration": 320
+        },
+        {
+            "midi": 74,
+            "duration": 320
+        },
+        {
+            "midi": 75,
+            "duration": 320
+        },
+        {
+            "midi": 74,
+            "duration": 320
+        },
+        {
+            "midi": 72,
+            "duration": 320
+        },
+        {
+            "midi": 70,
+            "duration": 320
+        },
+        {
+            "midi": 72,
+            "duration": 320
+        },
+        {
+            "midi": 74,
+            "duration": 320
+        },
+        {
+            "midi": 72,
+            "duration": 320
+        },
+        {
+            "midi": 70,
+            "duration": 320
+        },
+        {
+            "midi": 67,
+            "duration": 640
+        }
+    ]
+}

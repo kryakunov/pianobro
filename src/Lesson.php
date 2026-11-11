@@ -20,6 +20,7 @@ final class Lesson
     public readonly array $notes,
     public readonly array $events,
     public readonly bool $twoHands,
+    public readonly array $aliases = [],
   ) {}
 
   public function toArray(): array
@@ -49,6 +50,7 @@ final class Lesson
       'eventCount' => count($this->events),
       'events' => $events,
       'notes' => $this->legacyNotes(),
+      'aliases' => array_values($this->aliases),
     ];
   }
 

@@ -1,6 +1,7 @@
 {
     "id": "moonlight",
     "title": "Лунная соната (тема)",
+    "aliases": ["лунная соната", "бетховен", "moonlight"],
     "composer": "Beethoven",
     "difficulty": "intermediate",
     "tempo": 60,

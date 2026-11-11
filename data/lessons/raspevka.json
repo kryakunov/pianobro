@@ -1,0 +1,81 @@
+{
+    "id": "raspevka",
+    "title": "Распевка",
+    "composer": "Упражнение",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 84,
+    "aliases": [
+        "распевка"
+    ],
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 340
+        },
+        {
+            "midi": 62,
+            "duration": 340
+        },
+        {
+            "midi": 64,
+            "duration": 340
+        },
+        {
+            "midi": 65,
+            "duration": 340
+        },
+        {
+            "midi": 67,
+            "duration": 340
+        },
+        {
+            "midi": 65,
+            "duration": 340
+        },
+        {
+            "midi": 64,
+            "duration": 340
+        },
+        {
+            "midi": 62,
+            "duration": 340
+        },
+        {
+            "midi": 60,
+            "duration": 340
+        },
+        {
+            "midi": 62,
+            "duration": 340
+        },
+        {
+            "midi": 64,
+            "duration": 340
+        },
+        {
+            "midi": 65,
+            "duration": 340
+        },
+        {
+            "midi": 67,
+            "duration": 340
+        },
+        {
+            "midi": 65,
+            "duration": 340
+        },
+        {
+            "midi": 64,
+            "duration": 340
+        },
+        {
+            "midi": 62,
+            "duration": 340
+        },
+        {
+            "midi": 60,
+            "duration": 680
+        }
+    ]
+}

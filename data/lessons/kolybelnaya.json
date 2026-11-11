@@ -1,0 +1,74 @@
+{
+    "id": "kolybelnaya",
+    "title": "Колыбельная",
+    "composer": "И. Брамс",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 72,
+    "aliases": [
+        "колыбельная",
+        "брамс"
+    ],
+    "notes": [
+        {
+            "midi": 64,
+            "duration": 460
+        },
+        {
+            "midi": 64,
+            "duration": 460
+        },
+        {
+            "midi": 67,
+            "duration": 460
+        },
+        {
+            "midi": 64,
+            "duration": 460
+        },
+        {
+            "midi": 64,
+            "duration": 460
+        },
+        {
+            "midi": 67,
+            "duration": 460
+        },
+        {
+            "midi": 64,
+            "duration": 460
+        },
+        {
+            "midi": 67,
+            "duration": 460
+        },
+        {
+            "midi": 72,
+            "duration": 460
+        },
+        {
+            "midi": 71,
+            "duration": 460
+        },
+        {
+            "midi": 69,
+            "duration": 460
+        },
+        {
+            "midi": 69,
+            "duration": 460
+        },
+        {
+            "midi": 65,
+            "duration": 460
+        },
+        {
+            "midi": 62,
+            "duration": 460
+        },
+        {
+            "midi": 64,
+            "duration": 920
+        }
+    ]
+}

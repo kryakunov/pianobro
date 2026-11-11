@@ -36,6 +36,7 @@ final class PageRegistry
       $path === '/personal-plan' => self::personalPlan(),
       preg_match('#^/blog/([a-z0-9\-]+)$#', $path, $m) === 1 => self::blogArticle($m[1], $blog),
       preg_match('#^/melodii/([a-z0-9\-]+)$#', $path, $m) === 1 => self::melodyDetail($m[1], $lessons),
+      preg_match('#^/pianino/([a-z0-9\-]+)$#', $path, $m) === 1 => self::pianoLanding($m[1], $lessons),
       preg_match('#^/trenirovka/melodiya/([a-z0-9\-]+)$#', $path, $m) === 1 => self::practiceMelody($m[1], $lessons),
       default => null,
     };
@@ -54,6 +55,10 @@ final class PageRegistry
       '/payment',
       '/oferta',
     ];
+
+    foreach (PianoLandings::paths() as $landingPath) {
+      $paths[] = $landingPath;
+    }
 
     foreach ($lessons->all() as $lesson) {
       $paths[] = '/melodii/' . $lesson->id;
@@ -422,33 +427,27 @@ final class PageRegistry
     $noteCount = (int) $lesson->toArray()['noteCount'];
     $notesLabel = self::notesCountLabel($noteCount);
     $hands = $lesson->twoHands ? 'две руки' : 'одна рука';
-    $h1 = 'Ноты «' . $lesson->title . '» для пианино';
     $path = '/melodii/' . $lesson->id;
     $practicePath = '/trenirovka/melodiya/' . $lesson->id;
-    $composerBit = $composer !== '' ? " {$composer}." : '';
-    $description = "Ноты «{$lesson->title}» для пианино.{$composerBit} Сыграйте онлайн по нотному стану: уровень {$difficulty}, {$notesLabel}, {$hands}. Подсказки на клавишах, без установки.";
-    $keywords = implode(', ', array_filter([
-      'ноты ' . $lesson->title,
-      'ноты ' . $lesson->title . ' для пианино',
-      $lesson->title . ' пианино',
-      $lesson->title . ' ноты',
-      $composer,
-      'ноты для пианино',
-    ]));
-
-    $levelHint = match ($lesson->difficulty) {
-      'beginner' => 'Фрагмент короткий: ноты идут по одной, следующая клавиша подсвечивается. Подходит, если вы только начинаете читать ноты.',
-      'intermediate' => 'Нужно узнавать ноты на стане. Ошибку можно сразу повторить: тренажёр ждёт верную клавишу и только потом идёт дальше.',
-      'advanced' => 'Диапазон шире и партия длиннее. Если ноты на стане ещё путаются, сначала пройдите тренажёр нот, затем вернитесь к этой мелодии.',
-      default => 'Ноты показаны на стане, верная клавиша подсвечивается.',
-    };
+    $seo = MelodySeo::forLesson($lesson, $difficulty, $composer, $notesLabel, $hands);
+    $faqEntities = [];
+    foreach ($seo['faqs'] as $faq) {
+      $faqEntities[] = [
+        '@type' => 'Question',
+        'name' => $faq['q'],
+        'acceptedAnswer' => [
+          '@type' => 'Answer',
+          'text' => $faq['a'],
+        ],
+      ];
+    }
 
     return self::base(
       screen: 'melody-landing',
       path: $path,
-      title: $h1 . ' | Piano Bro',
-      description: $description,
-      keywords: $keywords,
+      title: $seo['title'],
+      description: $seo['description'],
+      keywords: $seo['keywords'],
       boot: [
         'lessonId' => $lesson->id,
       ],
@@ -458,7 +457,7 @@ final class PageRegistry
           array_filter([
             '@type' => 'MusicComposition',
             'name' => $lesson->title,
-            'composer' => $composer !== '' ? ['@type' => 'Person', 'name' => $composer] : null,
+            'composer' => $composer !== '' ? ['@type' => 'Person', 'name' => $lesson->id === 'fur-elise' ? 'Людвиг ван Бетховен' : $composer] : null,
             'inLanguage' => 'ru',
             'url' => AppUrl::canonical($path),
           ]),
@@ -467,54 +466,105 @@ final class PageRegistry
             'itemListElement' => [
               ['@type' => 'ListItem', 'position' => 1, 'name' => 'Piano Bro', 'item' => AppUrl::canonical('/')],
               ['@type' => 'ListItem', 'position' => 2, 'name' => 'Мелодии', 'item' => AppUrl::canonical('/melodii')],
-              ['@type' => 'ListItem', 'position' => 3, 'name' => $h1, 'item' => AppUrl::canonical($path)],
+              ['@type' => 'ListItem', 'position' => 3, 'name' => $seo['h1'], 'item' => AppUrl::canonical($path)],
             ],
           ],
           [
             '@type' => 'FAQPage',
-            'mainEntity' => [
-              [
-                '@type' => 'Question',
-                'name' => 'Где ноты «' . $lesson->title . '» для пианино?',
-                'acceptedAnswer' => [
-                  '@type' => 'Answer',
-                  'text' => 'На этой странице — партия для тренажёра. Нажмите «Сыграть», и ноты «' . $lesson->title . '» откроются на нотном стане с подсветкой клавиш.',
-                ],
-              ],
-              [
-                '@type' => 'Question',
-                'name' => 'Можно ли сыграть «' . $lesson->title . '» без пианино?',
-                'acceptedAnswer' => [
-                  '@type' => 'Answer',
-                  'text' => 'Да. Подойдут клавиши компьютера. Цифровое пианино подключается по USB в Chrome или Edge.',
-                ],
-              ],
-            ],
+            'mainEntity' => $faqEntities,
           ],
         ],
       ],
       melodyPage: [
-        'h1' => $h1,
+        'h1' => $seo['h1'],
         'title' => $lesson->title,
-        'lead' => trim($composerBit) !== ''
-          ? $composer . '. Уровень — ' . $difficulty . ', ' . $notesLabel . ', ' . $hands . ', темп ' . $lesson->tempo . '. Играйте по нотному стану в браузере, без установки.'
-          : 'Уровень — ' . $difficulty . ', ' . $notesLabel . ', ' . $hands . ', темп ' . $lesson->tempo . '. Играйте по нотному стану в браузере, без установки.',
-        'levelHint' => $levelHint,
-        'facts' => array_values(array_filter([
-          $composer,
-          $difficulty,
-          $notesLabel,
-          $hands,
-          'темп ' . $lesson->tempo,
-        ])),
+        'lead' => $seo['lead'],
+        'facts' => $seo['facts'],
+        'sections' => $seo['sections'],
+        'faqs' => $seo['faqs'],
+        'notes' => $seo['notes'],
         'practicePath' => $practicePath,
-        'playLabel' => 'Сыграть «' . $lesson->title . '»',
-        'steps' => [
-          'Нажмите «Сыграть» — откроется партия «' . $lesson->title . '».',
-          'Подключите цифровое пианино по USB или играйте клавишами компьютера.',
-          'Нажимайте ноту, которая стоит на стане. Тренировка идёт дальше после верной клавиши.',
-        ],
+        'playLabel' => 'Сыграть ноты',
         'related' => self::relatedMelodies($lesson, $lessons),
+        'relatedHeading' => 'Другие ноты для фортепиано',
+      ],
+    );
+  }
+
+  /**
+   * @return array<string, mixed>|null
+   */
+  private static function pianoLanding(string $slug, ?LessonRepository $lessons): ?array
+  {
+    $landing = PianoLandings::find($slug);
+    if ($landing === null) {
+      return null;
+    }
+
+    $path = '/pianino/' . $slug;
+    $faqEntities = [];
+    foreach ($landing['faqs'] as $faq) {
+      $faqEntities[] = [
+        '@type' => 'Question',
+        'name' => $faq['q'],
+        'acceptedAnswer' => [
+          '@type' => 'Answer',
+          'text' => $faq['a'],
+        ],
+      ];
+    }
+
+    $related = [];
+    if ($lessons !== null) {
+      foreach ($landing['relatedIds'] as $id) {
+        $other = $lessons->find($id);
+        if ($other === null) {
+          continue;
+        }
+        $composer = self::composerLabel($other->composer);
+        $related[] = [
+          'title' => 'Ноты «' . $other->title . '»',
+          'path' => '/melodii/' . $other->id,
+          'meta' => trim($composer . ($composer !== '' ? ' · ' : '') . self::difficultyLabel($other->difficulty)),
+        ];
+      }
+    }
+
+    return self::base(
+      screen: 'melody-landing',
+      path: $path,
+      title: $landing['title'],
+      description: $landing['description'],
+      keywords: $landing['keywords'],
+      jsonLd: [
+        '@context' => 'https://schema.org',
+        '@graph' => [
+          [
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => [
+              ['@type' => 'ListItem', 'position' => 1, 'name' => 'Piano Bro', 'item' => AppUrl::canonical('/')],
+              ['@type' => 'ListItem', 'position' => 2, 'name' => 'Мелодии', 'item' => AppUrl::canonical('/melodii')],
+              ['@type' => 'ListItem', 'position' => 3, 'name' => $landing['h1'], 'item' => AppUrl::canonical($path)],
+            ],
+          ],
+          [
+            '@type' => 'FAQPage',
+            'mainEntity' => $faqEntities,
+          ],
+        ],
+      ],
+      melodyPage: [
+        'h1' => $landing['h1'],
+        'title' => $landing['h1'],
+        'lead' => $landing['lead'],
+        'facts' => $landing['facts'],
+        'sections' => $landing['sections'],
+        'faqs' => $landing['faqs'],
+        'notes' => [],
+        'practicePath' => $landing['practicePath'],
+        'playLabel' => 'Сыграть ноты',
+        'related' => $related,
+        'relatedHeading' => $landing['relatedHeading'],
       ],
     );
   }

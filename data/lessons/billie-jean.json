@@ -1,0 +1,62 @@
+{
+    "id": "billie-jean",
+    "title": "Billie Jean",
+    "composer": "Майкл Джексон",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 116,
+    "aliases": [
+        "майкл джексон",
+        "billie jean"
+    ],
+    "notes": [
+        {
+            "midi": 54,
+            "duration": 280
+        },
+        {
+            "midi": 61,
+            "duration": 280
+        },
+        {
+            "midi": 64,
+            "duration": 280
+        },
+        {
+            "midi": 66,
+            "duration": 280
+        },
+        {
+            "midi": 54,
+            "duration": 280
+        },
+        {
+            "midi": 61,
+            "duration": 280
+        },
+        {
+            "midi": 64,
+            "duration": 280
+        },
+        {
+            "midi": 66,
+            "duration": 280
+        },
+        {
+            "midi": 54,
+            "duration": 280
+        },
+        {
+            "midi": 61,
+            "duration": 280
+        },
+        {
+            "midi": 64,
+            "duration": 280
+        },
+        {
+            "midi": 66,
+            "duration": 560
+        }
+    ]
+}

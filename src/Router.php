@@ -206,6 +206,7 @@ final class Router
             'noteCount' => $a['noteCount'],
             'eventCount' => $a['eventCount'],
             'twoHands' => $a['twoHands'],
+            'aliases' => $a['aliases'],
           ];
         },
         $items,

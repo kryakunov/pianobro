@@ -1,0 +1,69 @@
+{
+    "id": "v-krayu-magnoliy",
+    "title": "В краю магнолий",
+    "composer": "Народная обработка",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 88,
+    "aliases": [
+        "в краю магнолий"
+    ],
+    "notes": [
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 69,
+            "duration": 380
+        },
+        {
+            "midi": 72,
+            "duration": 380
+        },
+        {
+            "midi": 69,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 65,
+            "duration": 380
+        },
+        {
+            "midi": 69,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 62,
+            "duration": 380
+        },
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 65,
+            "duration": 380
+        },
+        {
+            "midi": 64,
+            "duration": 760
+        }
+    ]
+}

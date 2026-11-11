@@ -2865,8 +2865,10 @@ function filterLocalLessons(query) {
       return false;
     }
     if (!needle) return true;
+    const aliases = Array.isArray(lesson.aliases) ? lesson.aliases.join(' ') : '';
     return lesson.title.toLowerCase().includes(needle)
-      || lesson.composer.toLowerCase().includes(needle);
+      || lesson.composer.toLowerCase().includes(needle)
+      || aliases.toLowerCase().includes(needle);
   });
 }
 

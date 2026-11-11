@@ -1,0 +1,63 @@
+{
+    "id": "minecraft",
+    "title": "Майнкрафт",
+    "composer": "C418",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 72,
+    "aliases": [
+        "майнкрафт",
+        "minecraft",
+        "sweden"
+    ],
+    "notes": [
+        {
+            "midi": 74,
+            "duration": 480
+        },
+        {
+            "midi": 76,
+            "duration": 480
+        },
+        {
+            "midi": 77,
+            "duration": 480
+        },
+        {
+            "midi": 81,
+            "duration": 480
+        },
+        {
+            "midi": 79,
+            "duration": 480
+        },
+        {
+            "midi": 77,
+            "duration": 480
+        },
+        {
+            "midi": 76,
+            "duration": 480
+        },
+        {
+            "midi": 74,
+            "duration": 480
+        },
+        {
+            "midi": 72,
+            "duration": 480
+        },
+        {
+            "midi": 74,
+            "duration": 480
+        },
+        {
+            "midi": 76,
+            "duration": 480
+        },
+        {
+            "midi": 72,
+            "duration": 960
+        }
+    ]
+}

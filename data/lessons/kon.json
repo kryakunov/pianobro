@@ -1,0 +1,62 @@
+{
+    "id": "kon",
+    "title": "Конь",
+    "composer": "И. Матвиенко",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 100,
+    "aliases": [
+        "конь",
+        "любэ"
+    ],
+    "notes": [
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 64,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 69,
+            "duration": 380
+        },
+        {
+            "midi": 71,
+            "duration": 380
+        },
+        {
+            "midi": 69,
+            "duration": 380
+        },
+        {
+            "midi": 67,
+            "duration": 380
+        },
+        {
+            "midi": 69,
+            "duration": 380
+        },
+        {
+            "midi": 71,
+            "duration": 380
+        },
+        {
+            "midi": 72,
+            "duration": 380
+        },
+        {
+            "midi": 71,
+            "duration": 380
+        },
+        {
+            "midi": 69,
+            "duration": 760
+        }
+    ]
+}

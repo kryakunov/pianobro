@@ -1,0 +1,59 @@
+{
+    "id": "gruppa-krovi",
+    "title": "Группа крови",
+    "composer": "В. Цой",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 120,
+    "aliases": [
+        "цой",
+        "группа крови",
+        "кино"
+    ],
+    "notes": [
+        {
+            "midi": 74,
+            "duration": 280
+        },
+        {
+            "midi": 72,
+            "duration": 280
+        },
+        {
+            "midi": 69,
+            "duration": 280
+        },
+        {
+            "midi": 67,
+            "duration": 280
+        },
+        {
+            "midi": 74,
+            "duration": 280
+        },
+        {
+            "midi": 72,
+            "duration": 280
+        },
+        {
+            "midi": 69,
+            "duration": 280
+        },
+        {
+            "midi": 67,
+            "duration": 280
+        },
+        {
+            "midi": 65,
+            "duration": 280
+        },
+        {
+            "midi": 67,
+            "duration": 280
+        },
+        {
+            "midi": 69,
+            "duration": 560
+        }
+    ]
+}

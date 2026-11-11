@@ -1,7 +1,8 @@
 {
     "id": "chopsticks",
-    "title": "Чопстикс",
+    "title": "Собачий вальс",
     "composer": "A. Allen",
+    "aliases": ["чопстикс", "chopsticks", "собачий вальс"],
     "difficulty": "beginner",
     "category": "popular",
     "tempo": 116,

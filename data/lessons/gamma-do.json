@@ -1,0 +1,74 @@
+{
+    "id": "gamma-do",
+    "title": "Гамма до мажор",
+    "composer": "Упражнение",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 80,
+    "aliases": [
+        "гаммы",
+        "гамма до мажор"
+    ],
+    "notes": [
+        {
+            "midi": 60,
+            "duration": 320
+        },
+        {
+            "midi": 62,
+            "duration": 320
+        },
+        {
+            "midi": 64,
+            "duration": 320
+        },
+        {
+            "midi": 65,
+            "duration": 320
+        },
+        {
+            "midi": 67,
+            "duration": 320
+        },
+        {
+            "midi": 69,
+            "duration": 320
+        },
+        {
+            "midi": 71,
+            "duration": 320
+        },
+        {
+            "midi": 72,
+            "duration": 320
+        },
+        {
+            "midi": 71,
+            "duration": 320
+        },
+        {
+            "midi": 69,
+            "duration": 320
+        },
+        {
+            "midi": 67,
+            "duration": 320
+        },
+        {
+            "midi": 65,
+            "duration": 320
+        },
+        {
+            "midi": 64,
+            "duration": 320
+        },
+        {
+            "midi": 62,
+            "duration": 320
+        },
+        {
+            "midi": 60,
+            "duration": 640
+        }
+    ]
+}

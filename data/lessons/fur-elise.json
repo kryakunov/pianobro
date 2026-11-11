@@ -2,6 +2,7 @@
     "id": "fur-elise",
     "title": "К Элизе",
     "composer": "Beethoven",
+    "aliases": ["к элизе", "бетховен", "письмо к элизе"],
     "difficulty": "intermediate",
     "tempo": 100,
     "notes": [

@@ -1,0 +1,59 @@
+{
+    "id": "old-doll",
+    "title": "Old Doll",
+    "composer": "Sen",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 76,
+    "aliases": [
+        "old doll",
+        "старая кукла",
+        "mad father"
+    ],
+    "notes": [
+        {
+            "midi": 67,
+            "duration": 420
+        },
+        {
+            "midi": 65,
+            "duration": 420
+        },
+        {
+            "midi": 69,
+            "duration": 420
+        },
+        {
+            "midi": 63,
+            "duration": 420
+        },
+        {
+            "midi": 67,
+            "duration": 420
+        },
+        {
+            "midi": 66,
+            "duration": 420
+        },
+        {
+            "midi": 67,
+            "duration": 420
+        },
+        {
+            "midi": 71,
+            "duration": 420
+        },
+        {
+            "midi": 74,
+            "duration": 420
+        },
+        {
+            "midi": 67,
+            "duration": 420
+        },
+        {
+            "midi": 65,
+            "duration": 840
+        }
+    ]
+}

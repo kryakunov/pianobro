@@ -1,0 +1,78 @@
+{
+    "id": "golden-brown",
+    "title": "Golden Brown",
+    "composer": "The Stranglers",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 112,
+    "aliases": [
+        "golden brown",
+        "голден браун"
+    ],
+    "notes": [
+        {
+            "midi": 64,
+            "duration": 240
+        },
+        {
+            "midi": 69,
+            "duration": 240
+        },
+        {
+            "midi": 72,
+            "duration": 240
+        },
+        {
+            "midi": 76,
+            "duration": 240
+        },
+        {
+            "midi": 62,
+            "duration": 240
+        },
+        {
+            "midi": 67,
+            "duration": 240
+        },
+        {
+            "midi": 71,
+            "duration": 240
+        },
+        {
+            "midi": 74,
+            "duration": 240
+        },
+        {
+            "midi": 60,
+            "duration": 240
+        },
+        {
+            "midi": 65,
+            "duration": 240
+        },
+        {
+            "midi": 69,
+            "duration": 240
+        },
+        {
+            "midi": 72,
+            "duration": 240
+        },
+        {
+            "midi": 59,
+            "duration": 240
+        },
+        {
+            "midi": 64,
+            "duration": 240
+        },
+        {
+            "midi": 67,
+            "duration": 240
+        },
+        {
+            "midi": 71,
+            "duration": 480
+        }
+    ]
+}

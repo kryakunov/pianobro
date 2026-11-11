@@ -718,111 +718,73 @@
 
     <!-- Страница мелодии -->
     <?php $melodyPage = is_array($page['melodyPage'] ?? null) ? $page['melodyPage'] : null; ?>
-    <section class="screen melody-stage<?= $screenActive('melody-landing') ?>" id="screen-melody-landing"<?= $screenHidden('melody-landing') ?>>
-      <div class="melody-stage__veil" aria-hidden="true">
-        <svg class="melody-stage__clef" viewBox="0 0 24 24"><use href="#ico-treble"/></svg>
-        <svg class="melody-stage__lines" viewBox="0 0 1200 140" preserveAspectRatio="none">
-          <g stroke="rgba(232,210,176,0.22)" stroke-width="1.2">
-            <line x1="0" y1="30" x2="1200" y2="30"/>
-            <line x1="0" y1="48" x2="1200" y2="48"/>
-            <line x1="0" y1="66" x2="1200" y2="66"/>
-            <line x1="0" y1="84" x2="1200" y2="84"/>
-            <line x1="0" y1="102" x2="1200" y2="102"/>
-          </g>
-        </svg>
-      </div>
+    <section class="screen melody-seo<?= $screenActive('melody-landing') ?>" id="screen-melody-landing"<?= $screenHidden('melody-landing') ?>>
       <?php if ($melodyPage): ?>
-      <div class="melody-stage__frame">
-        <a href="/melodii" class="melody-stage__back" id="btn-back-melody-landing">← Все мелодии</a>
-        <div class="melody-stage__layout">
-          <article class="score">
-            <svg class="score__grain" aria-hidden="true" preserveAspectRatio="none">
-              <filter id="melody-paper" x="0" y="0" width="100%" height="100%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch"/>
-                <feColorMatrix type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.3  0 0 0 0 0.16  0 0 0 0.22 0"/>
-              </filter>
-              <rect width="100%" height="100%" filter="url(#melody-paper)"/>
-            </svg>
-            <div class="score__mast" aria-hidden="true">
-              <svg class="score__staff" viewBox="0 0 680 108">
-                <g stroke="#e6d7c3" stroke-width="1.15" opacity="0.55">
-                  <line x1="8" y1="34" x2="668" y2="34"/>
-                  <line x1="8" y1="48" x2="668" y2="48"/>
-                  <line x1="8" y1="62" x2="668" y2="62"/>
-                  <line x1="8" y1="76" x2="668" y2="76"/>
-                  <line x1="8" y1="90" x2="668" y2="90"/>
-                </g>
-                <use href="#ico-treble" x="12" y="22" width="46" height="78" style="color:#e6d7c3"/>
-                <g fill="#e6d7c3">
-                  <ellipse cx="118" cy="76" rx="8" ry="6"/><path d="M126 76 V42" stroke="#e6d7c3" stroke-width="1.6"/>
-                  <ellipse cx="168" cy="62" rx="8" ry="6"/><path d="M176 62 V28" stroke="#e6d7c3" stroke-width="1.6"/>
-                  <ellipse cx="218" cy="69" rx="8" ry="6"/><path d="M226 69 V35" stroke="#e6d7c3" stroke-width="1.6"/>
-                  <ellipse cx="278" cy="48" rx="8" ry="6"/><path d="M286 48 V14" stroke="#e6d7c3" stroke-width="1.6"/>
-                  <ellipse cx="328" cy="55" rx="8" ry="6"/><path d="M336 55 V21" stroke="#e6d7c3" stroke-width="1.6"/>
-                  <ellipse cx="388" cy="83" rx="8" ry="6"/><path d="M396 83 V49" stroke="#e6d7c3" stroke-width="1.6"/>
-                  <ellipse cx="448" cy="62" rx="8" ry="6"/><path d="M456 62 V28" stroke="#e6d7c3" stroke-width="1.6"/>
-                  <ellipse cx="520" cy="41" rx="8" ry="6" transform="rotate(-18 520 41)"/>
-                  <path d="M512 46 V16" stroke="#e6d7c3" stroke-width="1.6"/>
-                  <path d="M512 16 H548" stroke="#e6d7c3" stroke-width="2.2" stroke-linecap="round"/>
-                </g>
-              </svg>
-            </div>
-            <h1 class="score__title"><?= htmlspecialchars((string) $melodyPage['h1'], ENT_QUOTES, 'UTF-8') ?></h1>
-            <?php if (!empty($melodyPage['facts']) && is_array($melodyPage['facts'])): ?>
-            <ul class="score__facts">
-              <?php foreach ($melodyPage['facts'] as $fact): ?>
-              <li><?= htmlspecialchars((string) $fact, ENT_QUOTES, 'UTF-8') ?></li>
+      <article class="melody-seo">
+        <header class="melody-seo__hero">
+          <a href="/melodii" class="melody-seo__back">← Все мелодии</a>
+          <h1 class="melody-seo__h1"><?= htmlspecialchars((string) ($melodyPage['h1'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h1>
+          <?php if (!empty($melodyPage['facts']) && is_array($melodyPage['facts'])): ?>
+          <ul class="melody-seo__facts">
+            <?php foreach ($melodyPage['facts'] as $fact): ?>
+            <li><?= htmlspecialchars((string) $fact, ENT_QUOTES, 'UTF-8') ?></li>
+            <?php endforeach; ?>
+          </ul>
+          <?php endif; ?>
+          <p class="melody-seo__lead"><?= htmlspecialchars((string) ($melodyPage['lead'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
+          <div class="melody-seo__actions">
+            <a class="btn btn--primary btn--lg" href="<?= htmlspecialchars((string) ($melodyPage['practicePath'] ?? '/melodii'), ENT_QUOTES, 'UTF-8') ?>">
+              <?= htmlspecialchars((string) ($melodyPage['playLabel'] ?? 'Сыграть ноты'), ENT_QUOTES, 'UTF-8') ?>
+            </a>
+            <a class="btn btn--secondary btn--lg" href="/noty">Тренажёр нот</a>
+          </div>
+        </header>
+        <div class="melody-seo__body">
+          <div class="melody-seo__copy">
+            <?php foreach (($melodyPage['sections'] ?? []) as $section): ?>
+              <?php if (!is_array($section)) continue; ?>
+              <h2 class="melody-seo__h2"><?= htmlspecialchars((string) ($section['h2'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h2>
+              <?php foreach (($section['paragraphs'] ?? []) as $paragraph): ?>
+              <p class="melody-seo__p"><?= htmlspecialchars((string) $paragraph, ENT_QUOTES, 'UTF-8') ?></p>
               <?php endforeach; ?>
-            </ul>
-            <?php endif; ?>
-            <p class="score__lead"><?= htmlspecialchars((string) ($melodyPage['lead'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
-            <div class="score__actions">
-              <a class="score__play" href="<?= htmlspecialchars((string) ($melodyPage['practicePath'] ?? '/melodii'), ENT_QUOTES, 'UTF-8') ?>">
-                <?= htmlspecialchars((string) ($melodyPage['playLabel'] ?? 'Сыграть'), ENT_QUOTES, 'UTF-8') ?>
-              </a>
-              <a class="score__alt" href="/noty">Тренажёр нот</a>
+            <?php endforeach; ?>
+            <div class="melody-seo__actions">
+              <a class="btn btn--primary btn--lg" href="<?= htmlspecialchars((string) ($melodyPage['practicePath'] ?? '/melodii'), ENT_QUOTES, 'UTF-8') ?>">Сыграть ноты</a>
             </div>
-            <?php if (!empty($melodyPage['levelHint'])): ?>
-            <p class="score__hint"><?= htmlspecialchars((string) $melodyPage['levelHint'], ENT_QUOTES, 'UTF-8') ?></p>
-            <?php endif; ?>
-            <svg class="score__keys" viewBox="0 0 600 46" preserveAspectRatio="none" aria-hidden="true">
-              <?php for ($key = 0; $key < 15; $key++): ?>
-              <rect x="<?= $key * 40 ?>" y="0" width="39" height="46" rx="1.5" fill="#5c5044" stroke="#3e352c"/>
-              <?php endfor; ?>
-              <?php foreach ([0, 1, 3, 4, 5, 7, 8, 10, 11, 12] as $black): ?>
-              <rect x="<?= $black * 40 + 28 ?>" y="0" width="22" height="28" rx="1" fill="#1c1814"/>
+          </div>
+          <?php if (!empty($melodyPage['faqs']) && is_array($melodyPage['faqs'])): ?>
+          <aside class="melody-seo__aside">
+            <h2 class="melody-seo__h2">Вопросы</h2>
+            <div class="melody-seo__faq">
+              <?php foreach ($melodyPage['faqs'] as $faq): ?>
+                <?php if (!is_array($faq)) continue; ?>
+              <details class="melody-seo__item">
+                <summary><?= htmlspecialchars((string) ($faq['q'] ?? ''), ENT_QUOTES, 'UTF-8') ?></summary>
+                <p><?= htmlspecialchars((string) ($faq['a'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
+              </details>
               <?php endforeach; ?>
-            </svg>
-          </article>
-          <aside class="melody-side">
-            <section class="melody-card">
-              <h2 class="melody-card__title">Как сыграть «<?= htmlspecialchars((string) ($melodyPage['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>»</h2>
-              <ol class="melody-card__steps">
-                <?php foreach (($melodyPage['steps'] ?? []) as $step): ?>
-                <li><?= htmlspecialchars((string) $step, ENT_QUOTES, 'UTF-8') ?></li>
-                <?php endforeach; ?>
-              </ol>
-            </section>
-            <?php if (!empty($melodyPage['related']) && is_array($melodyPage['related'])): ?>
-            <section class="melody-card">
-              <h2 class="melody-card__title">Другие ноты</h2>
-              <ul class="melody-sheets">
-                <?php foreach ($melodyPage['related'] as $related): ?>
-                <li>
-                  <a href="<?= htmlspecialchars((string) ($related['path'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
-                    <span class="melody-sheets__name"><?= htmlspecialchars((string) ($related['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
-                    <?php if (!empty($related['meta'])): ?>
-                    <span class="melody-sheets__meta"><?= htmlspecialchars((string) $related['meta'], ENT_QUOTES, 'UTF-8') ?></span>
-                    <?php endif; ?>
-                  </a>
-                </li>
-                <?php endforeach; ?>
-              </ul>
-            </section>
-            <?php endif; ?>
+            </div>
           </aside>
+          <?php endif; ?>
         </div>
-      </div>
+        <?php if (!empty($melodyPage['related']) && is_array($melodyPage['related'])): ?>
+        <section class="melody-seo__more">
+          <h2 class="melody-seo__h2"><?= htmlspecialchars((string) ($melodyPage['relatedHeading'] ?? 'Другие ноты для фортепиано'), ENT_QUOTES, 'UTF-8') ?></h2>
+          <ul class="melody-seo__related">
+            <?php foreach ($melodyPage['related'] as $related): ?>
+            <li>
+              <a href="<?= htmlspecialchars((string) ($related['path'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                <?= htmlspecialchars((string) ($related['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+              </a>
+              <?php if (!empty($related['meta'])): ?>
+              <span><?= htmlspecialchars((string) $related['meta'], ENT_QUOTES, 'UTF-8') ?></span>
+              <?php endif; ?>
+            </li>
+            <?php endforeach; ?>
+          </ul>
+        </section>
+        <?php endif; ?>
+      </article>
       <?php endif; ?>
     </section>
 

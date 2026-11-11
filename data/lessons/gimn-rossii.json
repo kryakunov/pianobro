@@ -1,0 +1,74 @@
+{
+    "id": "gimn-rossii",
+    "title": "Гимн России",
+    "composer": "А. Александров",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 84,
+    "aliases": [
+        "гимн россии",
+        "гимн российской федерации"
+    ],
+    "notes": [
+        {
+            "midi": 72,
+            "duration": 420
+        },
+        {
+            "midi": 76,
+            "duration": 420
+        },
+        {
+            "midi": 79,
+            "duration": 420
+        },
+        {
+            "midi": 79,
+            "duration": 420
+        },
+        {
+            "midi": 77,
+            "duration": 420
+        },
+        {
+            "midi": 76,
+            "duration": 420
+        },
+        {
+            "midi": 74,
+            "duration": 420
+        },
+        {
+            "midi": 72,
+            "duration": 420
+        },
+        {
+            "midi": 74,
+            "duration": 420
+        },
+        {
+            "midi": 76,
+            "duration": 420
+        },
+        {
+            "midi": 79,
+            "duration": 420
+        },
+        {
+            "midi": 77,
+            "duration": 420
+        },
+        {
+            "midi": 76,
+            "duration": 420
+        },
+        {
+            "midi": 74,
+            "duration": 420
+        },
+        {
+            "midi": 72,
+            "duration": 840
+        }
+    ]
+}

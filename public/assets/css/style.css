@@ -7913,8 +7913,8 @@ body.admin-modal-open {
   min-height: 100vh;
   min-height: 100dvh;
   background:
-    radial-gradient(ellipse 52% 48% at 32% 42%, rgba(92, 68, 42, 0.45), transparent 68%),
-    #14110e;
+    radial-gradient(ellipse 80% 42% at 8% -10%, rgba(108, 140, 255, 0.16), transparent 58%),
+    var(--bg);
 }
 
 .app--melody .header {
@@ -9140,3 +9140,168 @@ body.admin-modal-open {
   }
 }
 
+
+.melody-seo {
+  width: min(1120px, calc(100% - 3rem));
+  margin: 0 auto;
+  padding: 1.75rem 0 3.5rem;
+}
+
+.melody-seo__hero {
+  padding-bottom: 1.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.melody-seo__body {
+  display: grid;
+  gap: 1.5rem 2.5rem;
+  align-items: start;
+  padding-top: 0.35rem;
+}
+
+.melody-seo__body:has(.melody-seo__aside) {
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.75fr);
+}
+
+.melody-seo__more {
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+}
+
+.melody-seo__back {
+  display: inline-flex;
+  margin-bottom: 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.melody-seo__back:hover {
+  color: var(--text);
+}
+
+.melody-seo__h1 {
+  max-width: 18ch;
+  margin: 0 0 0.85rem;
+  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  font-size: clamp(2.1rem, 4.2vw, 3.15rem);
+  font-weight: 560;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+
+.melody-seo__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  list-style: none;
+}
+
+.melody-seo__facts li {
+  padding: 0.18rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.melody-seo__lead,
+.melody-seo__p,
+.melody-seo__item p {
+  margin: 0 0 0.85rem;
+  max-width: 62ch;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.melody-seo__lead {
+  font-size: 1.125rem;
+}
+
+.melody-seo__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.2rem 0 1.4rem;
+}
+
+.melody-seo__h2 {
+  margin: 1.35rem 0 0.55rem;
+  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 560;
+  line-height: 1.25;
+}
+
+.melody-seo__faq {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.melody-seo__item {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.melody-seo__item summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.melody-seo__item p {
+  margin: 0.55rem 0 0;
+}
+
+.melody-seo__related {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.melody-seo__related li {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.melody-seo__related a {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.melody-seo__related a:hover {
+  color: var(--primary);
+}
+
+.melody-seo__related span {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 860px) {
+  .melody-seo {
+    width: min(1120px, calc(100% - 1.5rem));
+  }
+
+  .melody-seo__body:has(.melody-seo__aside),
+  .melody-seo__related {
+    grid-template-columns: 1fr;
+  }
+
+  .melody-seo__h1 {
+    max-width: none;
+  }
+}

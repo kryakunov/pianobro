@@ -66,7 +66,9 @@ final class LessonRepository
         $title = mb_strtolower($lesson->title);
         $composer = mb_strtolower($lesson->composer);
 
-        return str_contains($title, $needle) || str_contains($composer, $needle);
+        $aliases = mb_strtolower(implode(' ', $lesson->aliases));
+
+        return str_contains($title, $needle) || str_contains($composer, $needle) || str_contains($aliases, $needle);
       },
     ));
   }
@@ -93,6 +95,7 @@ final class LessonRepository
       notes: $data['notes'] ?? [],
       events: self::buildEvents($data),
       twoHands: (bool) ($data['twoHands'] ?? self::detectTwoHands($data)),
+      aliases: self::aliases($data),
     );
   }
 
@@ -139,6 +142,26 @@ final class LessonRepository
       ];
     }
     return $events;
+  }
+
+  /** @param array<string, mixed> $data
+   * @return list<string>
+   */
+  private static function aliases(array $data): array
+  {
+    if (!isset($data['aliases']) || !is_array($data['aliases'])) {
+      return [];
+    }
+
+    $aliases = [];
+    foreach ($data['aliases'] as $alias) {
+      $alias = trim((string) $alias);
+      if ($alias !== '') {
+        $aliases[] = $alias;
+      }
+    }
+
+    return $aliases;
   }
 
   /** @param array<string, mixed> $data */

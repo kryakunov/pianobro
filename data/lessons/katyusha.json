@@ -1,0 +1,129 @@
+{
+    "id": "katyusha",
+    "title": "Катюша",
+    "composer": "М. Блантер",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 108,
+    "aliases": [
+        "катюша"
+    ],
+    "notes": [
+        {
+            "midi": 67,
+            "duration": 360
+        },
+        {
+            "midi": 69,
+            "duration": 360
+        },
+        {
+            "midi": 71,
+            "duration": 360
+        },
+        {
+            "midi": 72,
+            "duration": 360
+        },
+        {
+            "midi": 71,
+            "duration": 360
+        },
+        {
+            "midi": 69,
+            "duration": 360
+        },
+        {
+            "midi": 67,
+            "duration": 360
+        },
+        {
+            "midi": 69,
+            "duration": 360
+        },
+        {
+            "midi": 71,
+            "duration": 360
+        },
+        {
+            "midi": 74,
+            "duration": 360
+        },
+        {
+            "midi": 72,
+            "duration": 360
+        },
+        {
+            "midi": 71,
+            "duration": 360
+        },
+        {
+            "midi": 69,
+            "duration": 360
+        },
+        {
+            "midi": 67,
+            "duration": 360
+        },
+        {
+            "midi": 64,
+            "duration": 360
+        },
+        {
+            "midi": 67,
+            "duration": 360
+        },
+        {
+            "midi": 67,
+            "duration": 360
+        },
+        {
+            "midi": 69,
+            "duration": 360
+        },
+        {
+            "midi": 67,
+            "duration": 360
+        },
+        {
+            "midi": 65,
+            "duration": 360
+        },
+        {
+            "midi": 64,
+            "duration": 360
+        },
+        {
+            "midi": 62,
+            "duration": 360
+        },
+        {
+            "midi": 60,
+            "duration": 360
+        },
+        {
+            "midi": 62,
+            "duration": 360
+        },
+        {
+            "midi": 64,
+            "duration": 360
+        },
+        {
+            "midi": 65,
+            "duration": 360
+        },
+        {
+            "midi": 64,
+            "duration": 360
+        },
+        {
+            "midi": 62,
+            "duration": 360
+        },
+        {
+            "midi": 60,
+            "duration": 720
+        }
+    ]
+}

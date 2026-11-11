@@ -1,0 +1,65 @@
+{
+    "id": "sedaya-noch",
+    "title": "Седая ночь",
+    "composer": "С. Кузнецов",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 104,
+    "aliases": [
+        "седая ночь"
+    ],
+    "notes": [
+        {
+            "midi": 69,
+            "duration": 340
+        },
+        {
+            "midi": 72,
+            "duration": 340
+        },
+        {
+            "midi": 74,
+            "duration": 340
+        },
+        {
+            "midi": 76,
+            "duration": 340
+        },
+        {
+            "midi": 74,
+            "duration": 340
+        },
+        {
+            "midi": 72,
+            "duration": 340
+        },
+        {
+            "midi": 69,
+            "duration": 340
+        },
+        {
+            "midi": 72,
+            "duration": 340
+        },
+        {
+            "midi": 74,
+            "duration": 340
+        },
+        {
+            "midi": 76,
+            "duration": 340
+        },
+        {
+            "midi": 74,
+            "duration": 340
+        },
+        {
+            "midi": 72,
+            "duration": 340
+        },
+        {
+            "midi": 69,
+            "duration": 680
+        }
+    ]
+}

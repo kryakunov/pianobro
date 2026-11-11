@@ -1,0 +1,62 @@
+{
+    "id": "kukla-kolduna",
+    "title": "Кукла колдуна",
+    "composer": "Король и Шут",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 126,
+    "aliases": [
+        "кукла колдуна",
+        "король и шут"
+    ],
+    "notes": [
+        {
+            "midi": 69,
+            "duration": 280
+        },
+        {
+            "midi": 69,
+            "duration": 280
+        },
+        {
+            "midi": 72,
+            "duration": 280
+        },
+        {
+            "midi": 74,
+            "duration": 280
+        },
+        {
+            "midi": 72,
+            "duration": 280
+        },
+        {
+            "midi": 69,
+            "duration": 280
+        },
+        {
+            "midi": 69,
+            "duration": 280
+        },
+        {
+            "midi": 72,
+            "duration": 280
+        },
+        {
+            "midi": 74,
+            "duration": 280
+        },
+        {
+            "midi": 76,
+            "duration": 280
+        },
+        {
+            "midi": 74,
+            "duration": 280
+        },
+        {
+            "midi": 72,
+            "duration": 560
+        }
+    ]
+}

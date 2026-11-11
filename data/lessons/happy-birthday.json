@@ -1,6 +1,7 @@
 {
     "id": "happy-birthday",
     "title": "С днём рождения",
+    "aliases": ["happy birthday", "хэппи бездей", "с днем рождения"],
     "composer": "Traditional",
     "difficulty": "beginner",
     "tempo": 100,

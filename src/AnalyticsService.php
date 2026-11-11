@@ -148,6 +148,10 @@ final class AnalyticsService
       return 'Страница мелодии';
     }
 
+    if (preg_match('#^/pianino/[^/]+$#', $path) === 1) {
+      return 'Посадочная нот на пианино';
+    }
+
     if (preg_match('#^/trenirovka/melodiya/[^/]+$#', $path) === 1) {
       return 'Тренировка мелодии';
     }

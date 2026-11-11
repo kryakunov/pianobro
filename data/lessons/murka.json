@@ -1,0 +1,77 @@
+{
+    "id": "murka",
+    "title": "Мурка",
+    "composer": "Народная",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 92,
+    "aliases": [
+        "мурка"
+    ],
+    "notes": [
+        {
+            "midi": 69,
+            "duration": 360
+        },
+        {
+            "midi": 69,
+            "duration": 360
+        },
+        {
+            "midi": 67,
+            "duration": 360
+        },
+        {
+            "midi": 65,
+            "duration": 360
+        },
+        {
+            "midi": 64,
+            "duration": 360
+        },
+        {
+            "midi": 69,
+            "duration": 360
+        },
+        {
+            "midi": 69,
+            "duration": 360
+        },
+        {
+            "midi": 67,
+            "duration": 360
+        },
+        {
+            "midi": 65,
+            "duration": 360
+        },
+        {
+            "midi": 64,
+            "duration": 360
+        },
+        {
+            "midi": 62,
+            "duration": 360
+        },
+        {
+            "midi": 62,
+            "duration": 360
+        },
+        {
+            "midi": 60,
+            "duration": 360
+        },
+        {
+            "midi": 64,
+            "duration": 360
+        },
+        {
+            "midi": 65,
+            "duration": 360
+        },
+        {
+            "midi": 64,
+            "duration": 720
+        }
+    ]
+}

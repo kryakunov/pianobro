@@ -1,0 +1,74 @@
+{
+    "id": "svyashchennaya-voyna",
+    "title": "Священная война",
+    "composer": "А. Александров",
+    "difficulty": "beginner",
+    "category": "popular",
+    "tempo": 76,
+    "aliases": [
+        "священная война",
+        "урал гайсин"
+    ],
+    "notes": [
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 70,
+            "duration": 400
+        },
+        {
+            "midi": 74,
+            "duration": 400
+        },
+        {
+            "midi": 74,
+            "duration": 400
+        },
+        {
+            "midi": 75,
+            "duration": 400
+        },
+        {
+            "midi": 74,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 70,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 400
+        },
+        {
+            "midi": 70,
+            "duration": 400
+        },
+        {
+            "midi": 72,
+            "duration": 400
+        },
+        {
+            "midi": 70,
+            "duration": 400
+        },
+        {
+            "midi": 68,
+            "duration": 400
+        },
+        {
+            "midi": 67,
+            "duration": 800
+        }
+    ]
+}
