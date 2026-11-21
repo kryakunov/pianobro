@@ -28,7 +28,7 @@ import { midiToLesson } from './midi-import.js';
 import { KEYBOARD_MAP, midiToName, PIANO_START, PIANO_END } from './notes.js';
 import { initAuth, getUser, hasRole, isTeacherUser, isLoggedIn, login, register, logout, saveSessionStats, loadNoteStats, mergeGuestNoteStats, loadOAuthProviders, redirectToOAuth, setInviteToken, getInviteToken } from './auth.js';
 import { icon, iconBadgeColored } from './icons.js';
-import { playTrainerNote, warmupTrainerSound, unlockTrainerSoundFromGesture } from './trainer-sounds.js';
+import { playTrainerNote, warmupTrainerSound, unlockTrainerSoundFromGesture, preloadTrainerNotes } from './trainer-sounds.js';
 import {
   playMelodyPreview,
   stopMelodyPreview,
@@ -955,6 +955,20 @@ function updateRhythmUI(state) {
 function updateMelodyUI(state) {
   updatePracticeProgress(state);
   staffView.update(state);
+  focusMelodyKeys(state);
+}
+
+function focusMelodyKeys(state) {
+  const event = state?.currentEvent;
+  if (!event?.notes?.length || !piano?.container) return;
+  const midis = event.notes.map((note) => note.midi).filter((midi) => Number.isFinite(midi));
+  if (!midis.length) return;
+
+  if (melodyTrainer.showKeyboardHints || prefersTouchInput()) {
+    piano.setTargets(midis, event.notes);
+  }
+  piano.scrollKeyIntoView(midis[0]);
+  preloadTrainerNotes(midis);
 }
 
 function updateSessionModalTitle(stats) {
@@ -1989,11 +2003,15 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      piano.relayout({ scrollToDefault: true });
+      const melodyFocus = mode === 'melody'
+        ? melodyTrainer.lesson?.events?.[melodyTrainer.index]?.notes?.[0]?.midi ?? null
+        : null;
+      piano.relayout({ scrollToDefault: mode !== 'melody', focusMidi: melodyFocus });
       if (mode === 'melody' && melodyTrainer.lesson) {
         staffView.loadLesson(melodyTrainer.staffLesson);
         els.staffViewport.classList.toggle('staff-viewport--grand', melodyTrainer.lesson.twoHands);
         melodyTrainer.start();
+        preloadTrainerNotes(melodyTrainer.lesson.events.flatMap((event) => event.notes.map((note) => note.midi)));
       } else if (mode === 'notes') {
         els.staffViewport.classList.toggle('staff-viewport--grand', usesBothClefs(noteTrainer.settings));
         noteTrainer.start();
@@ -2001,7 +2019,12 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
       } else if (mode === 'rhythm') {
         bootRhythmPractice();
       }
-      setTimeout(() => piano.relayout({ scrollToDefault: true }), 150);
+      setTimeout(() => {
+        const nextFocus = mode === 'melody'
+          ? melodyTrainer.lesson?.events?.[melodyTrainer.index]?.notes?.[0]?.midi ?? null
+          : null;
+        piano.relayout({ scrollToDefault: mode !== 'melody', focusMidi: nextFocus });
+      }, 150);
       syncPreviewButton();
     });
   });
@@ -3802,6 +3825,25 @@ midi.onNoteOn = onNoteOn;
 midi.onNoteOff = onNoteOff;
 micPitch.onNoteOn = onNoteOn;
 micPitch.onNoteOff = onNoteOff;
+
+let staffNotePointer = null;
+els.staffViewport?.addEventListener('pointerdown', (event) => {
+  const note = event.target.closest?.('.staff-note');
+  staffNotePointer = note
+    ? { id: event.pointerId, x: event.clientX, y: event.clientY, note }
+    : null;
+});
+els.staffViewport?.addEventListener('pointerup', (event) => {
+  if (!staffNotePointer || staffNotePointer.id !== event.pointerId) return;
+  const { x, y, note } = staffNotePointer;
+  staffNotePointer = null;
+  if (Math.hypot(event.clientX - x, event.clientY - y) > 12) return;
+  if (appMode !== 'melody' || !melodyTrainer.running || melodyTrainer.paused) return;
+  const eventIndex = Number(note.dataset.eventIndex);
+  const midi = Number(note.dataset.midi);
+  if (eventIndex !== melodyTrainer.index || !Number.isFinite(midi)) return;
+  onNoteOn(midi);
+});
 
 micPitch.onStatusChange = () => {
   updateInputStatusBanner();

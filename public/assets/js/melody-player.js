@@ -15,8 +15,9 @@ export class MelodyPlayer {
   }
 
   async ensureReady() {
-    this.synth.onLoadState = (s) => this.onLoadState?.(s);
-    return this.synth.ensureReady();
+    this.synth.unlockFromUserGesture();
+    if (this.synth.ctx?.state === 'suspended') await this.synth.ctx.resume();
+    return this.synth.ctx;
   }
 
   async play(lesson, callbacks = {}) {

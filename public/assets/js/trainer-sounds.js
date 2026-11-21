@@ -10,13 +10,11 @@ export function playTrainerNote(midi, durationSec = 0.42) {
   if (!Number.isFinite(midi)) return;
 
   const start = () => {
-    try {
-      if (synth.isReady && synth.ctx?.state === 'running' && synth.playNow(midi, durationSec)) return;
-    } catch {
-      /* samples are unavailable, use the oscillator */
-    }
-    synth.playFallback(midi, durationSec);
-    void synth.ensureReady();
+    void synth.playSample(midi, durationSec).then((played) => {
+      if (!played) synth.playFallback(midi, durationSec);
+    }).catch(() => {
+      synth.playFallback(midi, durationSec);
+    });
   };
 
   try {
@@ -31,10 +29,16 @@ export function playTrainerNote(midi, durationSec = 0.42) {
   }
 }
 
+export function preloadTrainerNotes(midis) {
+  const unique = [...new Set(midis.map((midi) => Number(midi)).filter((midi) => Number.isFinite(midi)))];
+  if (!unique.length) return;
+  synth.preload(unique.slice(0, 48));
+}
+
 export async function playTrainerWrong() {
   try {
     synth.unlockFromUserGesture();
-    await synth.ensureReady();
+    if (synth.ctx?.state === 'suspended') await synth.ctx.resume();
     const ctx = synth.ctx;
     if (!ctx) return;
 
@@ -58,7 +62,7 @@ export async function playTrainerWrong() {
 export async function warmupTrainerSound() {
   try {
     synth.unlockFromUserGesture();
-    await synth.ensureReady();
+    if (synth.ctx?.state === 'suspended') await synth.ctx.resume();
   } catch {
     /* ignore */
   }

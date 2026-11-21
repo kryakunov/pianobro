@@ -250,13 +250,27 @@ export class PianoKeyboard {
     host.scrollLeft = Math.max(0, Math.min(target, host.scrollWidth - host.clientWidth));
   }
 
-  relayout({ scrollToDefault = false } = {}) {
+  scrollKeyIntoView(midi) {
+    const host = this._getScrollHost();
+    const key = this.keys.get(Number(midi));
+    if (!host || !key || host.clientWidth <= 0 || this._isFullWidthLayout()) return;
+
+    const hostRect = host.getBoundingClientRect();
+    const keyRect = key.getBoundingClientRect();
+    const keyCenterOnScreen = (keyRect.left + keyRect.right) / 2;
+    const keyCenterInHost = host.scrollLeft + (keyCenterOnScreen - hostRect.left);
+    const target = keyCenterInHost - host.clientWidth / 2;
+    host.scrollLeft = Math.max(0, Math.min(target, host.scrollWidth - host.clientWidth));
+  }
+
+  relayout({ scrollToDefault = false, focusMidi = null } = {}) {
     if (!this.container) return;
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         this._positionBlackKeys();
         this._positionOctaveMarkers();
-        if (scrollToDefault) this.scrollToDefaultView();
+        if (focusMidi != null) this.scrollKeyIntoView(focusMidi);
+        else if (scrollToDefault) this.scrollToDefaultView();
       });
     });
   }

@@ -1,13 +1,6 @@
 import { midiToSoundFontName } from './notes.js';
 
-let soundfontModule = null;
-
-async function loadSoundfontLib() {
-  if (!soundfontModule) {
-    soundfontModule = await import('https://esm.sh/soundfont-player@0.12.0');
-  }
-  return soundfontModule.default ?? soundfontModule;
-}
+const SAMPLE_BASE = 'https://gleitz.github.io/midi-js-soundfonts/MusyngKite/acoustic_grand_piano-mp3/';
 
 function getAudioContextClass() {
   return window.AudioContext || window.webkitAudioContext || null;
@@ -16,13 +9,14 @@ function getAudioContextClass() {
 export class PianoSynth {
   constructor() {
     this.ctx = null;
-    this.instrument = null;
-    this._loading = null;
+    this.buffers = new Map();
+    this.loadingBuffers = new Map();
+    this._active = new Set();
     this.onLoadState = null;
   }
 
   get isReady() {
-    return this.instrument !== null;
+    return this.ctx !== null;
   }
 
   /** Must run synchronously inside a user gesture (tap / click). */
@@ -31,7 +25,6 @@ export class PianoSynth {
       const Ctx = getAudioContextClass();
       if (!Ctx) return;
       this.ctx = new Ctx({ latencyHint: 'interactive' });
-      this._startLoadingInstrument();
     }
 
     const { ctx } = this;
@@ -51,67 +44,86 @@ export class PianoSynth {
     }
   }
 
-  _startLoadingInstrument() {
-    if (this._loading || this.instrument || !this.ctx) return;
-    this._loading = this._loadInstrument();
-  }
-
-  async _loadInstrument() {
-    this.onLoadState?.('loading');
-    try {
-      const Soundfont = await loadSoundfontLib();
-      this.instrument = await Soundfont.instrument(this.ctx, 'acoustic_grand_piano', {
-        soundfont: 'FatBoy',
-        format: 'mp3',
-      });
-      this.onLoadState?.('ready');
-      return this.instrument;
-    } finally {
-      this._loading = null;
+  preload(midis) {
+    if (!this.ctx) this.unlockFromUserGesture();
+    for (const midi of midis) {
+      void this.loadBuffer(midi).catch(() => {});
     }
   }
 
-  async ensureReady() {
-    if (!this.ctx) {
-      this.unlockFromUserGesture();
-    }
-    if (!this.ctx) return null;
-
-    if (this.ctx.state === 'suspended') {
-      await this.ctx.resume();
-    }
-
-    if (this.instrument) return this.instrument;
-    if (this._loading) return this._loading;
-
-    this._startLoadingInstrument();
-    return this._loading;
-  }
-
-  playNow(midi, durationSec) {
-    if (!this.ctx || !this.instrument || !Number.isFinite(midi)) return false;
+  async loadBuffer(midi) {
+    if (!this.ctx || !Number.isFinite(midi)) return null;
     const name = midiToSoundFontName(midi);
-    const node = this.instrument.play(name, this.ctx.currentTime, {
-      duration: durationSec,
-      gain: 0.9,
-    });
-    return Boolean(node);
+    if (this.buffers.has(name)) return this.buffers.get(name);
+    if (this.loadingBuffers.has(name)) return this.loadingBuffers.get(name);
+
+    const task = (async () => {
+      const response = await fetch(`${SAMPLE_BASE}${name}.mp3`);
+      if (!response.ok) throw new Error(`sample ${name}`);
+      const data = await response.arrayBuffer();
+      const buffer = await this.ctx.decodeAudioData(data.slice(0));
+      this.buffers.set(name, buffer);
+      return buffer;
+    })();
+
+    this.loadingBuffers.set(name, task);
+    try {
+      return await task;
+    } finally {
+      this.loadingBuffers.delete(name);
+    }
+  }
+
+  playBuffer(buffer, durationSec) {
+    if (!this.ctx || !buffer) return false;
+    const source = this.ctx.createBufferSource();
+    const gain = this.ctx.createGain();
+    const now = this.ctx.currentTime;
+    const releaseAt = now + Math.max(0.12, durationSec);
+
+    source.buffer = buffer;
+    gain.gain.setValueAtTime(0.95, now);
+    gain.gain.setValueAtTime(0.95, releaseAt);
+    gain.gain.exponentialRampToValueAtTime(0.0001, releaseAt + 0.12);
+    source.connect(gain);
+    gain.connect(this.ctx.destination);
+    source.start(now);
+    source.stop(releaseAt + 0.14);
+    this._active.add(source);
+    source.onended = () => this._active.delete(source);
+    return true;
+  }
+
+  async playSample(midi, durationSec) {
+    if (!this.ctx) this.unlockFromUserGesture();
+    if (!this.ctx) return false;
+    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    const buffer = await this.loadBuffer(midi);
+    return this.playBuffer(buffer, durationSec);
   }
 
   async play(midi, durationSec, whenSec = 0) {
-    await this.ensureReady();
-    if (!this.ctx || !this.instrument) return;
+    if (!this.ctx) this.unlockFromUserGesture();
+    if (!this.ctx) return false;
+    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    const buffer = await this.loadBuffer(midi);
+    if (!buffer) return false;
 
-    if (this.ctx.state === 'suspended') {
-      await this.ctx.resume();
-    }
-
-    const name = midiToSoundFontName(midi);
-    const start = this.ctx.currentTime + whenSec;
-    return this.instrument.play(name, start, {
-      duration: durationSec,
-      gain: midi < 48 ? 1.25 : 1.1,
-    });
+    const source = this.ctx.createBufferSource();
+    const gain = this.ctx.createGain();
+    const startAt = this.ctx.currentTime + Math.max(0, whenSec);
+    const releaseAt = startAt + Math.max(0.12, durationSec);
+    source.buffer = buffer;
+    gain.gain.setValueAtTime(0.95, startAt);
+    gain.gain.setValueAtTime(0.95, releaseAt);
+    gain.gain.exponentialRampToValueAtTime(0.0001, releaseAt + 0.12);
+    source.connect(gain);
+    gain.connect(this.ctx.destination);
+    source.start(startAt);
+    source.stop(releaseAt + 0.14);
+    this._active.add(source);
+    source.onended = () => this._active.delete(source);
+    return true;
   }
 
   playFallback(midi, durationSec = 0.42) {
@@ -143,8 +155,13 @@ export class PianoSynth {
   }
 
   stopAll() {
-    if (this.instrument?.stop) {
-      this.instrument.stop();
+    for (const source of this._active) {
+      try {
+        source.stop();
+      } catch {
+        /* already stopped */
+      }
     }
+    this._active.clear();
   }
 }
