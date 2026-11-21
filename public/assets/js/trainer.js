@@ -133,13 +133,14 @@ export class MelodyTrainer {
     this.onFeedback?.('Верно!', 'correct');
     this.index++;
     this._held.clear();
-    this._emitUpdate();
 
     if (this.index >= this.lesson.events.length) {
       this._finish();
-    } else {
-      this._highlightCurrent();
+      return true;
     }
+
+    this._highlightCurrent();
+    this._emitUpdate();
     return true;
   }
 

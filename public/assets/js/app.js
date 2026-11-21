@@ -959,16 +959,20 @@ function updateMelodyUI(state) {
 }
 
 function focusMelodyKeys(state) {
-  const event = state?.currentEvent;
-  if (!event?.notes?.length || !piano?.container) return;
-  const midis = event.notes.map((note) => note.midi).filter((midi) => Number.isFinite(midi));
-  if (!midis.length) return;
+  try {
+    const event = state?.currentEvent;
+    if (!event?.notes?.length || !piano?.container) return;
+    const midis = event.notes.map((note) => note.midi).filter((midi) => Number.isFinite(midi));
+    if (!midis.length) return;
 
-  if (melodyTrainer.showKeyboardHints || prefersTouchInput()) {
-    piano.setTargets(midis, event.notes);
+    if (melodyTrainer.showKeyboardHints || prefersTouchInput()) {
+      piano.setTargets(midis, event.notes);
+    }
+    piano.scrollKeyIntoView(midis[0]);
+    preloadTrainerNotes(midis);
+  } catch {
+    /* a highlight or sample failure must not stop the melody */
   }
-  piano.scrollKeyIntoView(midis[0]);
-  preloadTrainerNotes(midis);
 }
 
 function updateSessionModalTitle(stats) {
@@ -2011,7 +2015,10 @@ function enterPractice(mode, title, { keyboardHints: hintsOverride, returnTo, re
         staffView.loadLesson(melodyTrainer.staffLesson);
         els.staffViewport.classList.toggle('staff-viewport--grand', melodyTrainer.lesson.twoHands);
         melodyTrainer.start();
-        preloadTrainerNotes(melodyTrainer.lesson.events.flatMap((event) => event.notes.map((note) => note.midi)));
+        const upcoming = melodyTrainer.lesson.events
+          .slice(melodyTrainer.index, melodyTrainer.index + 3)
+          .flatMap((event) => event.notes.map((note) => note.midi));
+        preloadTrainerNotes(upcoming);
       } else if (mode === 'notes') {
         els.staffViewport.classList.toggle('staff-viewport--grand', usesBothClefs(noteTrainer.settings));
         noteTrainer.start();
@@ -3821,6 +3828,9 @@ function onNoteOff(midiNote) {
 
 piano.onNoteOn = onNoteOn;
 piano.onNoteOff = onNoteOff;
+els.piano?.addEventListener('touchend', () => {
+  unlockTrainerSoundFromGesture();
+}, { passive: true });
 midi.onNoteOn = onNoteOn;
 midi.onNoteOff = onNoteOff;
 micPitch.onNoteOn = onNoteOn;

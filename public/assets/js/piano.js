@@ -366,17 +366,22 @@ export class PianoKeyboard {
 
     const release = () => this._triggerNoteOff(midi);
 
+    const playTouchTap = () => {
+      if (!touchTap || touchTap.played || touchTap.cancelled) return;
+      touchTap.played = true;
+      this._triggerNoteOn(midi);
+      release();
+    };
+
     btn.addEventListener('pointerdown', (e) => {
       if (this._usesDeferredTouchTap() && e.pointerType !== 'mouse') {
-        const scrollHost = this._getScrollHost();
         touchTap = {
           pointerId: e.pointerId,
           startX: e.clientX,
           startY: e.clientY,
-          startScrollLeft: scrollHost?.scrollLeft ?? 0,
           cancelled: false,
+          played: false,
         };
-        btn.setPointerCapture?.(e.pointerId);
         return;
       }
 
@@ -390,29 +395,15 @@ export class PianoKeyboard {
 
       const dx = e.clientX - touchTap.startX;
       const dy = e.clientY - touchTap.startY;
-      const scrollHost = this._getScrollHost();
-      const scrolled = scrollHost
-        ? Math.abs(scrollHost.scrollLeft - touchTap.startScrollLeft) > 2
-        : false;
-
-      if (Math.hypot(dx, dy) > TAP_MOVE_THRESHOLD || scrolled) {
+      if (Math.hypot(dx, dy) > TAP_MOVE_THRESHOLD) {
         touchTap.cancelled = true;
       }
     });
 
     btn.addEventListener('pointerup', (e) => {
       if (touchTap?.pointerId === e.pointerId) {
-        const playOnTouchEnd = !touchTap.cancelled && e.pointerType !== 'mouse';
-        if (!touchTap.cancelled && !playOnTouchEnd) {
-          this._triggerNoteOn(midi);
-          release();
-          clearTouchTap();
-        } else if (playOnTouchEnd) {
-          touchTap.playOnTouchEnd = true;
-        } else {
-          clearTouchTap();
-        }
-        btn.releasePointerCapture?.(e.pointerId);
+        playTouchTap();
+        clearTouchTap();
         return;
       }
 
@@ -420,13 +411,10 @@ export class PianoKeyboard {
     });
 
     btn.addEventListener('touchend', () => {
-      if (!touchTap?.playOnTouchEnd || touchTap.cancelled) {
-        if (touchTap) clearTouchTap();
-        return;
-      }
+      // iOS accepts audio resume on touchend. This also covers phones
+      // where touchend arrives before pointerup and used to drop the tap.
+      playTouchTap();
       clearTouchTap();
-      this._triggerNoteOn(midi);
-      release();
     });
 
     btn.addEventListener('pointercancel', (e) => {

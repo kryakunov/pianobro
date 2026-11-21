@@ -45,7 +45,7 @@ export class PianoSynth {
   }
 
   preload(midis) {
-    if (!this.ctx) this.unlockFromUserGesture();
+    if (!this.ctx) return;
     for (const midi of midis) {
       void this.loadBuffer(midi).catch(() => {});
     }
@@ -58,12 +58,18 @@ export class PianoSynth {
     if (this.loadingBuffers.has(name)) return this.loadingBuffers.get(name);
 
     const task = (async () => {
-      const response = await fetch(`${SAMPLE_BASE}${name}.mp3`);
-      if (!response.ok) throw new Error(`sample ${name}`);
-      const data = await response.arrayBuffer();
-      const buffer = await this.ctx.decodeAudioData(data.slice(0));
-      this.buffers.set(name, buffer);
-      return buffer;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+      try {
+        const response = await fetch(`${SAMPLE_BASE}${name}.mp3`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`sample ${name}`);
+        const data = await response.arrayBuffer();
+        const buffer = await this.ctx.decodeAudioData(data.slice(0));
+        this.buffers.set(name, buffer);
+        return buffer;
+      } finally {
+        clearTimeout(timer);
+      }
     })();
 
     this.loadingBuffers.set(name, task);
