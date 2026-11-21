@@ -308,23 +308,59 @@ body {
 
   .header {
     flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .header__brand {
-    flex: 1 1 100%;
-  }
-
-  .app--home .header {
-    flex-wrap: nowrap;
-    align-items: center;
-  }
-
-  .app--home .header__brand {
     flex: 1 1 auto;
     min-width: 0;
   }
 
-  .app--home .header__auth {
+  .header:has(#auth-user:not([hidden])) .header__auth,
+  .app--home .header:has(#auth-user:not([hidden])) .header__auth {
+    flex: 1 1 100%;
+    order: 2;
+    margin-left: 0;
+    margin-right: 0;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .header:has(#auth-user:not([hidden])) .auth-user,
+  .app--home .header:has(#auth-user:not([hidden])) .auth-user {
+    flex-wrap: wrap;
+    width: 100%;
+    align-items: center;
+    row-gap: 0.65rem;
+  }
+
+  .header:has(#auth-user:not([hidden])) .auth-user__profile {
+    flex: 1 1 auto;
+    max-width: 100%;
+  }
+
+  .header:has(#auth-user:not([hidden])) .auth-user__toolbar {
+    flex: 1 1 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .header:has(#auth-user:not([hidden])) .auth-user__toolbar .btn {
+    flex: 0 1 auto;
+    white-space: nowrap;
+  }
+
+  .app--home .header:not(:has(#auth-user:not([hidden]))) {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .app--home .header:not(:has(#auth-user:not([hidden]))) .header__brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .app--home .header:not(:has(#auth-user:not([hidden]))) .header__auth {
     flex: 0 0 auto;
     order: 0;
     margin-left: auto;
@@ -5527,19 +5563,21 @@ body.body--modal-open {
     flex: 1 1 100%;
     order: 3;
     margin-left: 0;
+    margin-right: 0;
     justify-content: flex-end;
   }
 
-  .app--home .header {
+  .app--home .header:not(:has(#auth-user:not([hidden]))) {
     flex-wrap: nowrap;
+    align-items: center;
   }
 
-  .app--home .header__brand {
+  .app--home .header:not(:has(#auth-user:not([hidden]))) .header__brand {
     flex: 1 1 auto;
     min-width: 0;
   }
 
-  .app--home .header__auth {
+  .app--home .header:not(:has(#auth-user:not([hidden]))) .header__auth {
     flex: 0 0 auto;
     order: 0;
     margin-left: auto;

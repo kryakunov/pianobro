@@ -6,18 +6,26 @@ export function unlockTrainerSoundFromGesture() {
   synth.unlockFromUserGesture();
 }
 
-export async function playTrainerNote(midi, durationSec = 0.42) {
+export function playTrainerNote(midi, durationSec = 0.42) {
   if (!Number.isFinite(midi)) return;
+
+  const start = () => {
+    try {
+      if (synth.isReady && synth.ctx?.state === 'running' && synth.playNow(midi, durationSec)) return;
+    } catch {
+      /* samples are unavailable, use the oscillator */
+    }
+    synth.playFallback(midi, durationSec);
+    void synth.ensureReady();
+  };
+
   try {
     synth.unlockFromUserGesture();
-
-    if (!synth.isReady) {
-      synth.playFallback(midi, durationSec);
-      void synth.ensureReady();
+    if (synth.ctx?.state === 'suspended') {
+      synth.ctx.resume().then(start).catch(start);
       return;
     }
-
-    await synth.play(midi, durationSec);
+    start();
   } catch {
     synth.playFallback(midi, durationSec);
   }

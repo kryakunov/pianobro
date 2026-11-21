@@ -30,7 +30,7 @@ export class PianoSynth {
     if (!this.ctx) {
       const Ctx = getAudioContextClass();
       if (!Ctx) return;
-      this.ctx = new Ctx();
+      this.ctx = new Ctx({ latencyHint: 'interactive' });
       this._startLoadingInstrument();
     }
 
@@ -86,6 +86,16 @@ export class PianoSynth {
 
     this._startLoadingInstrument();
     return this._loading;
+  }
+
+  playNow(midi, durationSec) {
+    if (!this.ctx || !this.instrument || !Number.isFinite(midi)) return false;
+    const name = midiToSoundFontName(midi);
+    const node = this.instrument.play(name, this.ctx.currentTime, {
+      duration: durationSec,
+      gain: 0.9,
+    });
+    return Boolean(node);
   }
 
   async play(midi, durationSec, whenSec = 0) {

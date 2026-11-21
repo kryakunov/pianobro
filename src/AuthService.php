@@ -8,6 +8,8 @@ use PDO;
 
 final class AuthService
 {
+  private const SESSION_LIFETIME = 60 * 60 * 24 * 7;
+
   private ?TeacherService $teacher = null;
   private ?RoleService $roles = null;
   private ?SubscriptionService $subscriptions = null;
@@ -31,15 +33,38 @@ final class AuthService
 
   public function startSession(): void
   {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-      session_set_cookie_params([
-        'lifetime' => 60 * 60 * 24 * 30,
-        'path' => '/',
-        'httponly' => true,
-        'samesite' => 'Lax',
-      ]);
-      session_start();
+    if (session_status() === PHP_SESSION_ACTIVE) {
+      return;
     }
+
+    $directory = dirname(__DIR__) . '/data/sessions';
+    if (!is_dir($directory)) {
+      mkdir($directory, 0700, true);
+    }
+
+    ini_set('session.gc_maxlifetime', (string) self::SESSION_LIFETIME);
+    ini_set('session.cookie_lifetime', (string) self::SESSION_LIFETIME);
+    if (is_dir($directory) && is_writable($directory)) {
+      ini_set('session.save_path', $directory);
+    }
+
+    session_set_cookie_params([
+      'lifetime' => self::SESSION_LIFETIME,
+      'path' => '/',
+      'httponly' => true,
+      'samesite' => 'Lax',
+    ]);
+    session_start();
+
+    $params = session_get_cookie_params();
+    setcookie(session_name(), session_id(), [
+      'expires' => time() + self::SESSION_LIFETIME,
+      'path' => $params['path'],
+      'domain' => $params['domain'],
+      'secure' => (bool) $params['secure'],
+      'httponly' => (bool) $params['httponly'],
+      'samesite' => $params['samesite'] ?? 'Lax',
+    ]);
   }
 
   public function adminCsrfToken(): string

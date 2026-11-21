@@ -2,4 +2,5 @@
 composer.lock
 /data/app.sqlite
 /data/mail-log/
+/data/sessions/
 .env

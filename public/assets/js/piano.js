@@ -388,16 +388,31 @@ export class PianoKeyboard {
 
     btn.addEventListener('pointerup', (e) => {
       if (touchTap?.pointerId === e.pointerId) {
-        if (!touchTap.cancelled) {
+        const playOnTouchEnd = !touchTap.cancelled && e.pointerType !== 'mouse';
+        if (!touchTap.cancelled && !playOnTouchEnd) {
           this._triggerNoteOn(midi);
           release();
+          clearTouchTap();
+        } else if (playOnTouchEnd) {
+          touchTap.playOnTouchEnd = true;
+        } else {
+          clearTouchTap();
         }
-        clearTouchTap();
         btn.releasePointerCapture?.(e.pointerId);
         return;
       }
 
       if (e.pointerType === 'mouse') release();
+    });
+
+    btn.addEventListener('touchend', () => {
+      if (!touchTap?.playOnTouchEnd || touchTap.cancelled) {
+        if (touchTap) clearTouchTap();
+        return;
+      }
+      clearTouchTap();
+      this._triggerNoteOn(midi);
+      release();
     });
 
     btn.addEventListener('pointercancel', (e) => {
