@@ -2247,6 +2247,14 @@ function bindCriticalUi() {
     navigateTo(ROUTES.melodies);
   });
 
+  els.btnStartNotes?.addEventListener('click', () => {
+    if (isDiagnosticPickMode()) {
+      startDiagnosticFromForm();
+      return;
+    }
+    startNotesTraining();
+  });
+
   els.btnGoNotes?.addEventListener('click', (event) => {
     event.preventDefault();
     clearDiagnosticPickMode();
@@ -3612,6 +3620,8 @@ function startDiagnosticFromForm() {
 }
 
 function startNotesTraining() {
+  if (els.btnStartNotes?.dataset.starting === '1') return;
+
   activeRoadmapStageId = null;
   const settings = readNoteSettingsFromForm();
   const sessionLimit = readSessionLimitFromForm();
@@ -3620,23 +3630,43 @@ function startNotesTraining() {
   const error = validateNoteSettings(settings);
 
   if (error) {
-    els.notesSettingsError.textContent = error;
-    els.notesSettingsError.hidden = false;
+    if (els.notesSettingsError) {
+      els.notesSettingsError.textContent = error;
+      els.notesSettingsError.hidden = false;
+      els.notesSettingsError.scrollIntoView({ block: 'nearest' });
+    }
     return;
   }
 
-  els.notesSettingsError.hidden = true;
+  if (els.notesSettingsError) els.notesSettingsError.hidden = true;
   saveNoteFormPrefs();
-  void gateNotesTrainingStart(() => {
+
+  const openPractice = () => {
+    try {
+      sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
+        settings,
+        options,
+        sessionLimit,
+      }));
+    } catch {
+      /* private mode still opens training with the saved form */
+    }
     notesRepeatFocus = [];
     trackGoal('start_training', { source: 'notes_settings' });
-    sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
-      settings,
-      options,
-      sessionLimit,
-    }));
     navigateTo(ROUTES.practiceNotes);
-  });
+  };
+
+  if (els.btnStartNotes) els.btnStartNotes.dataset.starting = '1';
+
+  void gateNotesTrainingStart(openPractice)
+    .catch(() => {
+      openPractice();
+    })
+    .finally(() => {
+      if (els.btnStartNotes && location.pathname !== ROUTES.practiceNotes) {
+        delete els.btnStartNotes.dataset.starting;
+      }
+    });
 }
 
 function readPendingHomework() {
@@ -3667,49 +3697,59 @@ function applyNoteTrainerPersonalization(weakMidis = []) {
 
 function bootNotesPractice(homework = null) {
   void (async () => {
-    if (!(await bootPracticeGate(homework, conversionIsDiagnostic()))) {
-      return;
-    }
-
-    activeRoadmapStageId = null;
-    let config = null;
-
-  if (!homework) {
     try {
-      const raw = sessionStorage.getItem(PENDING_NOTES_PRACTICE_KEY);
-      if (raw) {
-        config = JSON.parse(raw);
-        sessionStorage.removeItem(PENDING_NOTES_PRACTICE_KEY);
+      if (!(await bootPracticeGate(homework, conversionIsDiagnostic()))) {
+        return;
       }
-    } catch {
-      config = null;
+
+      activeRoadmapStageId = null;
+      let config = null;
+
+      if (!homework) {
+        try {
+          const raw = sessionStorage.getItem(PENDING_NOTES_PRACTICE_KEY);
+          if (raw) {
+            config = JSON.parse(raw);
+            sessionStorage.removeItem(PENDING_NOTES_PRACTICE_KEY);
+          }
+        } catch {
+          config = null;
+        }
+      }
+
+      if (homework?.submissionId) {
+        activeHomeworkSubmissionId = homework.submissionId;
+      }
+
+      const settings = homework?.settings ?? config?.settings ?? savedNoteSettings();
+      const options = homework?.options ?? config?.options ?? readTrainerOptionsFromPrefs();
+      const sessionLimit = homework?.sessionLimit ?? config?.sessionLimit ?? savedSessionLimit();
+      const returnPath = homework?.returnPath ?? config?.returnPath ?? ROUTES.notes;
+
+      saveTrainerPrefs(options);
+      noteSettings = settings;
+      noteTrainer.setConfig(settings);
+      noteTrainer.setOptions(options);
+      noteTrainer.sessionLimit = sessionLimit;
+
+      if (isPremiumUser() && !homework && !conversionIsDiagnostic()) {
+        try {
+          const weakNotes = await getWeakNotesForPersonalization(loadNoteStats);
+          applyNoteTrainerPersonalization(weakNotes.map((note) => note.midi));
+        } catch {
+          applyNoteTrainerPersonalization([]);
+        }
+      } else {
+        applyNoteTrainerPersonalization([]);
+      }
+
+      enterPractice('notes', describeNoteSettings(settings), { returnPath });
+      updatePracticeQuotaBanner();
+    } catch (error) {
+      console.error(error);
+      noteTrainer.setConfig(savedNoteSettings());
+      enterPractice('notes', 'Тренировка нот', { returnPath: ROUTES.notes });
     }
-  }
-
-  if (homework?.submissionId) {
-    activeHomeworkSubmissionId = homework.submissionId;
-  }
-
-  const settings = homework?.settings ?? config?.settings ?? savedNoteSettings();
-  const options = homework?.options ?? config?.options ?? readTrainerOptionsFromPrefs();
-  const sessionLimit = homework?.sessionLimit ?? config?.sessionLimit ?? savedSessionLimit();
-  const returnPath = homework?.returnPath ?? config?.returnPath ?? ROUTES.notes;
-
-  saveTrainerPrefs(options);
-  noteSettings = settings;
-  noteTrainer.setConfig(settings);
-  noteTrainer.setOptions(options);
-  noteTrainer.sessionLimit = sessionLimit;
-
-  if (isPremiumUser() && !homework && !conversionIsDiagnostic()) {
-    const weakNotes = await getWeakNotesForPersonalization(loadNoteStats);
-    applyNoteTrainerPersonalization(weakNotes.map((note) => note.midi));
-  } else {
-    applyNoteTrainerPersonalization([]);
-  }
-
-  enterPractice('notes', describeNoteSettings(settings), { returnPath });
-  updatePracticeQuotaBanner();
   })();
 }
 
