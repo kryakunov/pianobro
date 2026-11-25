@@ -5,6 +5,7 @@ import {
   checkNotesAllowed,
   consumeNoteAttempt,
   showPaywall,
+  whenPaywallDismissed,
   bindPaywallUi,
   trackConversion,
   persistDiagnosticResult,
@@ -334,11 +335,19 @@ export async function afterAuthConversionHooks() {
 
 export async function bootPracticeGate(homework, isDiagnostic = false) {
   if (homework || isDiagnostic) return true;
-  if (!(await ensureNotesQuota(1))) {
+  if (await ensureNotesQuota(1)) return true;
+
+  const modal = document.getElementById('paywall-modal');
+  if (!modal || modal.hidden) {
     navigateTo(ROUTES.notes);
     return false;
   }
-  return true;
+
+  whenPaywallDismissed((reason) => {
+    if (reason === 'plan') return;
+    navigateTo(ROUTES.notes);
+  });
+  return false;
 }
 
 export async function getWeakNotesForPersonalization(loadNoteStats) {

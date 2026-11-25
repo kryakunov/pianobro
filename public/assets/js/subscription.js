@@ -352,6 +352,27 @@ function renderPaywallQuota(context = {}) {
     : `Бесплатно сегодня: ${used} из ${limit} нот.`;
 }
 
+const OVERLAY_GUARD_MS = 700;
+let paywallDismissedHandler = null;
+
+export function armOverlayGuard(modal) {
+  if (!modal) return;
+  modal.dataset.overlayGuardUntil = String(performance.now() + OVERLAY_GUARD_MS);
+  if (modal.dataset.overlayGuardBound === '1') return;
+  modal.dataset.overlayGuardBound = '1';
+  const blockGhostClick = (event) => {
+    if (performance.now() >= Number(modal.dataset.overlayGuardUntil || 0)) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  modal.addEventListener('click', blockGhostClick, true);
+  modal.addEventListener('pointerup', blockGhostClick, true);
+}
+
+export function whenPaywallDismissed(handler) {
+  paywallDismissedHandler = handler;
+}
+
 export function showPaywall(source = 'unknown', context = {}) {
   if (isPremiumUser()) return false;
 
@@ -368,13 +389,17 @@ export function showPaywall(source = 'unknown', context = {}) {
   renderPaywallQuota(context);
 
   modal.hidden = false;
+  armOverlayGuard(modal);
   trackConversion('paywall_shown', { source, ...context });
   return true;
 }
 
-export function hidePaywall() {
+export function hidePaywall(reason = 'dismiss') {
   const modal = document.getElementById('paywall-modal');
   if (modal) modal.hidden = true;
+  const handler = paywallDismissedHandler;
+  paywallDismissedHandler = null;
+  handler?.(reason);
 }
 
 export function saveDiagnosticResult(result) {
@@ -421,11 +446,11 @@ export function consumePendingAuthAction() {
 }
 
 export function bindPaywallUi() {
-  document.getElementById('paywall-close')?.addEventListener('click', hidePaywall);
+  document.getElementById('paywall-close')?.addEventListener('click', () => hidePaywall());
   document.getElementById('paywall-modal')?.querySelector('[data-close-paywall]')
-    ?.addEventListener('click', hidePaywall);
+    ?.addEventListener('click', () => hidePaywall());
   document.getElementById('paywall-choose-plan')?.addEventListener('click', () => {
-    hidePaywall();
+    hidePaywall('plan');
     trackConversion('tariff_selected', { source: 'paywall' });
     window.pianoNavigate?.('/payment');
   });

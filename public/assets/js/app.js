@@ -78,6 +78,7 @@ import {
 import {
   isPremiumUser,
   showPaywall,
+  armOverlayGuard,
   checkNotesAllowed,
   getNotesQuota,
   formatNotesQuotaLabel,
@@ -1012,6 +1013,7 @@ function showRhythmGameOver(stats) {
   applySessionModalLayout({ ...stats, mode: 'rhythm' });
   renderSessionModalWeakNotes({ ...stats, mode: 'rhythm' });
   els.sessionModal.hidden = false;
+  armOverlayGuard(els.sessionModal);
   renderSessionModalUi({ ...stats, mode: 'rhythm' });
   trackGoal('finish_training', {
     mode: stats.mode ?? appMode,
@@ -1054,6 +1056,7 @@ function showSessionModal(stats) {
   renderSessionModalWeakNotes(stats);
   if (isNotesTrainingResultLayout(stats)) syncNotesResultActions(stats);
   els.sessionModal.hidden = false;
+  armOverlayGuard(els.sessionModal);
   if (!isNotesTrainingResultLayout(stats)) {
     renderSessionModalUi(stats);
   }

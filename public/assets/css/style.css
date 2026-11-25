@@ -3910,6 +3910,13 @@ a.btn--secondary:visited {
   backdrop-filter: blur(4px);
 }
 
+@media (hover: none), (pointer: coarse) {
+  .modal__backdrop {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 .modal__card {
   position: relative;
   z-index: 1;
