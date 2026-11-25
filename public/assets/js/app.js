@@ -220,6 +220,14 @@ const els = {
   practiceQuota: $('#practice-quota'),
 };
 
+els.btnStartNotes?.addEventListener('click', () => {
+  if (isDiagnosticPickMode()) {
+    startDiagnosticFromForm();
+    return;
+  }
+  startNotesTraining();
+});
+
 let practiceWidgetsReady = true;
 
 /** @type {PianoKeyboard} */
@@ -3600,15 +3608,23 @@ function startNotesTraining() {
 
   els.notesSettingsError.hidden = true;
   saveNoteFormPrefs();
-  void gateNotesTrainingStart(() => {
+  const openPractice = () => {
     notesRepeatFocus = [];
     trackGoal('start_training', { source: 'notes_settings' });
-    sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
-      settings,
-      options,
-      sessionLimit,
-    }));
+    try {
+      sessionStorage.setItem(PENDING_NOTES_PRACTICE_KEY, JSON.stringify({
+        settings,
+        options,
+        sessionLimit,
+      }));
+    } catch {
+      // Safari в приватном режиме может запретить sessionStorage — тренировка всё равно откроется.
+    }
     navigateTo(ROUTES.practiceNotes);
+  };
+  void gateNotesTrainingStart(openPractice).catch((error) => {
+    console.error(error);
+    openPractice();
   });
 }
 

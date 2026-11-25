@@ -32,23 +32,57 @@ final class AssetVersion
   public static function versionedUrl(string $publicPath): string
   {
     $path = self::normalizePublicPath($publicPath);
+    $extension = pathinfo($path, PATHINFO_EXTENSION);
+
+    if ($extension === 'js' || $extension === 'css') {
+      return $path . '?v=' . self::compute();
+    }
+
     $mtime = self::fileMtime($path);
 
     return $mtime > 0 ? $path . '?v=' . $mtime : $path;
   }
 
-  /** @return array{scopes: array<string, array<string, string>>} */
+  /**
+   * Safari на iPhone не применяет import map к модулю, адрес которого уже содержит ?v=.
+   * Тогда соседние файлы грузятся без версии и остаются в кэше после выкладки.
+   * Версию дописываем прямо в import, чтобы браузер запрашивал новый адрес.
+   */
+  public static function rewriteJsImports(string $code, int $version): string
+  {
+    $rewritten = preg_replace_callback(
+      '/(?P<prefix>\b(?:from|import)\s*\(?\s*[\'"])(?P<path>(?:\.|\.\.)\/[^\'"]+?\.js)(?P<suffix>[\'"])/',
+      static function (array $match) use ($version): string {
+        if (str_contains($match['path'], '?')) {
+          return $match[0];
+        }
+
+        return $match['prefix'] . $match['path'] . '?v=' . $version . $match['suffix'];
+      },
+      $code
+    );
+
+    return is_string($rewritten) ? $rewritten : $code;
+  }
+
+  /** @return array{imports: array<string, string>, scopes: array<string, array<string, string>>} */
   public static function jsImportMap(): array
   {
+    $version = self::compute();
+    $imports = [];
     $scope = [];
 
     foreach (self::jsFiles() as $file) {
       $base = basename($file);
-      $mtime = (int) filemtime($file);
-      $scope['./' . $base] = self::JS_DIR . '/' . $base . '?v=' . $mtime;
+      $versioned = self::JS_DIR . '/' . $base . '?v=' . $version;
+      $imports[self::JS_DIR . '/' . $base] = $versioned;
+      $imports['./' . $base] = $versioned;
+      $scope['./' . $base] = $versioned;
+      $scope[self::JS_DIR . '/' . $base] = $versioned;
     }
 
     return [
+      'imports' => $imports,
       'scopes' => [
         self::JS_DIR . '/' => $scope,
       ],

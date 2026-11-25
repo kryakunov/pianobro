@@ -205,12 +205,15 @@ export async function checkNotesAllowed(count = 1, isLoggedIn = false) {
     return checkGuestNotesAllowed(count);
   }
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
   try {
     const res = await fetch('/api/billing/check-notes', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ count }),
+      signal: controller.signal,
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -219,6 +222,8 @@ export async function checkNotesAllowed(count = 1, isLoggedIn = false) {
     return await res.json();
   } catch {
     return { allowed: true };
+  } finally {
+    clearTimeout(timer);
   }
 }
 

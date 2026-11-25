@@ -953,7 +953,7 @@
             <p class="settings-error" id="notes-settings-error" hidden></p>
             <div class="notes-settings__footer-actions">
               <p class="settings-hint" id="notes-pick-hint">Отметьте, что хотите тренировать, и нажмите «Начать».</p>
-              <button type="submit" class="btn btn--primary notes-settings__submit" id="btn-start-notes">
+              <button type="button" class="btn btn--primary notes-settings__submit" id="btn-start-notes">
                 <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-play"/></svg>
                 Начать тренировку
               </button>

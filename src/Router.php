@@ -854,20 +854,33 @@ final class Router
       'ico' => 'image/x-icon',
     ];
 
+    $version = AssetVersion::compute();
+    $requestedVersion = isset($_GET['v']) ? (int) $_GET['v'] : 0;
+    $isVersionedAsset = ($ext === 'js' || $ext === 'css') && $requestedVersion === $version;
+
     if ($ext === 'js' || $ext === 'css') {
-      $mtime = (int) filemtime($file);
-      $requestedVersion = isset($_GET['v']) ? (int) $_GET['v'] : null;
-
-      header('ETag: "' . $mtime . '"');
-
-      if ($requestedVersion === $mtime) {
+      if ($isVersionedAsset) {
         header('Cache-Control: public, max-age=31536000, immutable');
+        header('ETag: "' . $version . '"');
       } else {
-        header('Cache-Control: no-cache, must-revalidate');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
       }
     }
 
     header('Content-Type: ' . ($contentType ?? $types[$ext] ?? 'application/octet-stream'));
+
+    if ($ext === 'js') {
+      $code = file_get_contents($file);
+      if ($code === false) {
+        http_response_code(404);
+        echo '404';
+        return;
+      }
+      echo AssetVersion::rewriteJsImports($code, $version);
+      return;
+    }
+
     readfile($file);
   }
 
