@@ -136,14 +136,22 @@ export class PianoKeyboard {
     }
   }
 
+  _isTouchPractice() {
+    return Boolean(this.container?.closest('.practice-keyboard'))
+      && window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  }
+
   _isFullWidthLayout() {
     if (!this.container.closest('.practice-keyboard')) return false;
+    if (this._isTouchPractice()) return false;
     return !window.matchMedia(MOBILE_MAX_WIDTH).matches;
   }
 
   _getWhiteKeyWidth() {
-    if (this._isFullWidthLayout()) return WHITE_KEY_WIDTH;
-    if (this.container?.closest('.practice-keyboard') && window.matchMedia(MOBILE_MAX_WIDTH).matches) {
+    if (
+      this.container?.closest('.practice-keyboard')
+      && (this._isTouchPractice() || window.matchMedia(MOBILE_MAX_WIDTH).matches)
+    ) {
       return MOBILE_WHITE_KEY_WIDTH;
     }
     return WHITE_KEY_WIDTH;

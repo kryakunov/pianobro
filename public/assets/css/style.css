@@ -4225,7 +4225,7 @@ a.btn--secondary:visited {
   }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .practice-layout:not(.practice-layout--keyboard-hidden) .practice-keyboard__viewport {
     overflow-x: hidden;
     overflow-y: visible;
@@ -4361,6 +4361,39 @@ a.btn--secondary:visited {
   .practice-keyboard .piano-key--white {
     flex: none;
     width: 36px;
+  }
+
+  .practice-keyboard .piano-key {
+    touch-action: pan-x;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .practice-layout:not(.practice-layout--keyboard-hidden) .practice-keyboard__viewport,
+  .practice-keyboard__viewport {
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+  }
+
+  .practice-keyboard__viewport .piano-case {
+    width: max-content;
+    min-width: max-content;
+    max-width: none;
+  }
+
+  .practice-keyboard .piano,
+  .practice-keyboard .piano__keys,
+  .practice-keyboard .piano__whites,
+  .practice-keyboard .piano__octaves,
+  .practice-keyboard .piano__blacks {
+    width: auto;
+  }
+
+  .practice-keyboard .piano-key--white {
+    flex: none;
+    width: 36px;
+    min-width: 36px;
   }
 
   .practice-keyboard .piano-key {
