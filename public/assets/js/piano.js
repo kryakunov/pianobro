@@ -184,8 +184,6 @@ export class PianoKeyboard {
       if (host?.clientWidth > 0) return host.clientWidth;
     }
 
-    const measured = this._whitesLayer?.offsetWidth ?? 0;
-    if (measured > 0) return measured;
     const whites = this.whiteMidis.length;
     if (!whites) return 0;
     const whiteWidth = this._getWhiteKeyWidth();
@@ -279,6 +277,8 @@ export class PianoKeyboard {
     if (!totalWidth) return;
 
     this._octavesLayer.style.width = `${totalWidth}px`;
+    const whiteWidth = this._isFullWidthLayout() ? 0 : this._getWhiteKeyWidth();
+    const step = whiteWidth > 0 ? whiteWidth - 1 : 0;
 
     segments.forEach((seg, index) => {
       const count = this.whiteMidis.filter((m) => m >= seg.startMidi && m <= seg.endMidi).length;
@@ -286,7 +286,12 @@ export class PianoKeyboard {
 
       const div = document.createElement('div');
       div.className = `piano-octave${index > 0 ? ' piano-octave--bordered' : ''}`;
-      div.style.flex = `${count} 1 0`;
+      if (step > 0) {
+        div.style.flex = 'none';
+        div.style.width = `${count * step + (index === 0 ? 1 : 0)}px`;
+      } else {
+        div.style.flex = `${count} 1 0`;
+      }
 
       const label = document.createElement('span');
       label.className = 'piano-octave__label';
@@ -298,8 +303,13 @@ export class PianoKeyboard {
   }
 
   _positionBlackKeys() {
+    const width = this._getKeysWidth();
+    if (width) this._applyKeysWidth(width);
+
     const layerRect = this._blacksLayer.getBoundingClientRect();
     const blackWidth = this._getBlackKeyWidth();
+    const useFixedStep = !this._isFullWidthLayout();
+    const step = this._getWhiteKeyWidth() - 1;
 
     for (let midi = this.startMidi; midi <= this.endMidi; midi++) {
       if (!isBlackKey(midi)) continue;
@@ -309,18 +319,22 @@ export class PianoKeyboard {
       const rightWhite = this.keys.get(midi + 1);
       if (!el || !leftWhite || !rightWhite) continue;
 
-      const leftRect = leftWhite.getBoundingClientRect();
-      const rightRect = rightWhite.getBoundingClientRect();
-      const center = (leftRect.right + rightRect.left) / 2;
-      const left = center - layerRect.left - blackWidth / 2;
+      let left;
+      if (useFixedStep) {
+        const leftIndex = this.whiteMidis.indexOf(midi - 1);
+        if (leftIndex < 0) continue;
+        const center = leftIndex * step + this._getWhiteKeyWidth() - 0.5;
+        left = center - blackWidth / 2;
+      } else {
+        const leftRect = leftWhite.getBoundingClientRect();
+        const rightRect = rightWhite.getBoundingClientRect();
+        const center = (leftRect.right + rightRect.left) / 2;
+        left = center - layerRect.left - blackWidth / 2;
+      }
       el.style.width = `${blackWidth}px`;
       el.style.left = `${left}px`;
       el.style.top = '0';
     }
-
-    const width = this._getKeysWidth();
-    if (!width) return;
-    this._applyKeysWidth(width);
   }
 
   _createKey(midi, type) {

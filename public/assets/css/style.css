@@ -4387,13 +4387,18 @@ a.btn--secondary:visited {
   .practice-keyboard .piano__whites,
   .practice-keyboard .piano__octaves,
   .practice-keyboard .piano__blacks {
-    width: auto;
+    width: max-content;
+    min-width: max-content;
   }
 
   .practice-keyboard .piano-key--white {
     flex: none;
     width: 36px;
     min-width: 36px;
+  }
+
+  .practice-keyboard .piano-key--black {
+    min-width: 21px;
   }
 
   .practice-keyboard .piano-key {
