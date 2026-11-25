@@ -159,12 +159,6 @@
             <p class="landing-hero__lead">
               PianoBro запоминает ваши ошибки и подбирает персональные упражнения, чтобы вы быстрее читали ноты в скрипичном и басовом ключе.
             </p>
-            <div class="landing-hero__actions">
-              <button type="button" class="btn btn--secondary btn--lg landing-hero__cta" id="btn-start-diagnostic">
-                <svg class="icon icon--btn" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-chart"/></svg>
-                Узнать, какие ноты путаю
-              </button>
-            </div>
             <nav class="landing-nav" aria-label="Разделы тренажёра">
               <a href="/put-novichka" class="landing-nav__item landing-nav__item--roadmap" id="btn-go-roadmap">
                 <span class="landing-nav__icon icon-badge icon-badge--roadmap" aria-hidden="true">
